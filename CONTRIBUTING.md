@@ -1,5 +1,16 @@
 # 许可证与贡献
 
+## 📋 文档导航
+
+在参与贡献前，建议先阅读以下文档：
+
+- 📘 [主项目文档](README.md) - 项目总览、快速开始、功能说明
+- 📗 [Python版本详解](src/python/README.md) - Python模块化架构和扩展指南
+- 📕 [C++版本详解](src/CPP/README.md) - C++版本编译和使用说明
+- 📝 **本文档**: 贡献指南和开发规范
+
+---
+
 ## 📜 许可证
 
 本项目仅供学习和研究使用。您可以自由地:
@@ -93,6 +104,14 @@
 - **Python版本**: 3.7+
 - **OpenCV版本**: 4.5+
 - **CMake版本**: 3.10+
+
+### Python版本架构
+Python版本采用 **MVC (Model-View-Controller)** 架构：
+- **Model (`src/python/core/`)**: 核心图像处理算法
+- **View (`src/python/UI/`)**: 用户界面组件
+- **Controller (`src/python/controller.py`)**: 应用控制器
+
+详见 [Python版本文档](src/python/README.md)
 
 ---
 
