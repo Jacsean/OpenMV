@@ -368,9 +368,12 @@ class ProjectManager:
                     wf_filename = f"workflow_{i+1}.json"
                     workflow.file_path = f"workflows/{wf_filename}"
                     
-                    # 保存节点图数据
+                    # 保存节点图数据 - 使用session_to_dict()然后写入文件
                     wf_full_path = os.path.join(save_dir, workflow.file_path)
-                    workflow.node_graph.serialize_session(wf_full_path)
+                    session_data = workflow.node_graph.session_to_dict()
+                    with open(wf_full_path, 'w', encoding='utf-8') as f:
+                        json.dump(session_data, f, indent=2, ensure_ascii=False)
+                    
                     workflow.mark_saved()
                     print(f"  💾 保存工作流 {i+1}: {workflow.name}")
                     

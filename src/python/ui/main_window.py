@@ -910,7 +910,12 @@ class MainWindow(QtWidgets.QMainWindow):
         
         if file_path:
             try:
-                self.current_node_graph.serialize_session(file_path)
+                # 使用session_to_dict()获取数据，然后写入文件
+                session_data = self.current_node_graph.session_to_dict()
+                import json
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(session_data, f, indent=2, ensure_ascii=False)
+                
                 print(f"节点图已保存到: {file_path}")
                 
                 QtWidgets.QMessageBox.information(
@@ -941,7 +946,12 @@ class MainWindow(QtWidgets.QMainWindow):
         
         if file_path:
             try:
-                self.current_node_graph.deserialize_session(file_path)
+                # 读取JSON文件，然后使用deserialize_session()
+                import json
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    session_data = json.load(f)
+                self.current_node_graph.deserialize_session(session_data)
+                
                 print(f"节点图已从 {file_path} 加载")
                 
                 QtWidgets.QMessageBox.information(
@@ -1196,10 +1206,15 @@ class MainWindow(QtWidgets.QMainWindow):
                     wf_full_path = os.path.join(project_dir, workflow.file_path)
                     if os.path.exists(wf_full_path):
                         try:
-                            node_graph.deserialize_session(wf_full_path)
+                            import json
+                            with open(wf_full_path, 'r', encoding='utf-8') as f:
+                                session_data = json.load(f)
+                            node_graph.deserialize_session(session_data)
                             print(f"✅ 加载工作流: {workflow.name}")
                         except Exception as e:
                             print(f"❌ 加载工作流失败: {e}")
+                            import traceback
+                            traceback.print_exc()
                 
                 # 连接信号
                 node_graph.node_created.connect(lambda n, wf=workflow: self._on_node_created(n, wf))
@@ -1264,8 +1279,12 @@ class MainWindow(QtWidgets.QMainWindow):
                         
                         wf_full_path = os.path.join(workflows_dir, wf_filename)
                         
-                        # 保存NodeGraph数据
-                        workflow.node_graph.serialize_session(wf_full_path)
+                        # 保存NodeGraph数据 - 使用session_to_dict()然后写入文件
+                        session_data = workflow.node_graph.session_to_dict()
+                        import json
+                        with open(wf_full_path, 'w', encoding='utf-8') as f:
+                            json.dump(session_data, f, indent=2, ensure_ascii=False)
+                        
                         workflow.file_path = f"workflows/{wf_filename}"
                         workflow.mark_saved()
                         
@@ -1468,7 +1487,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     wf_full_path = os.path.join(project_path, workflow.file_path)
                     if os.path.exists(wf_full_path):
                         try:
-                            node_graph.deserialize_session(wf_full_path)
+                            import json
+                            with open(wf_full_path, 'r', encoding='utf-8') as f:
+                                session_data = json.load(f)
+                            node_graph.deserialize_session(session_data)
                             print(f"✅ 加载工作流: {workflow.name}")
                         except Exception as e:
                             print(f"❌ 加载工作流失败: {e}")
