@@ -22,17 +22,26 @@ from nodes import (
 
 class ImagePreviewDialog(QtWidgets.QDialog):
     """
-    图像预览对话框
+    图像预览对话框（非模态）
     用于显示OpenCV图像的完整预览
+    
+    特性:
+    - 非模态窗口，可以同时打开多个
+    - 支持手动刷新预览
+    - 保持与ImageViewNode的关联
     """
     
-    def __init__(self, image, title="图像预览", parent=None):
+    def __init__(self, image, node=None, title="图像预览", parent=None):
         super(ImagePreviewDialog, self).__init__(parent)
         self.setWindowTitle(title)
         self.image = image
+        self.node = node  # 关联的ImageViewNode实例
         
         # 设置窗口属性
         self.setMinimumSize(800, 600)
+        
+        # 设置为非模态窗口
+        self.setModal(False)
         
         # 创建布局
         layout = QtWidgets.QVBoxLayout(self)
@@ -54,14 +63,26 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.info_label.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(self.info_label)
         
+        # 添加提示标签
+        self.hint_label = QtWidgets.QLabel()
+        self.hint_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.hint_label.setStyleSheet("color: #888; font-size: 10px;")
+        self.hint_label.setText("💡 提示: 修改参数后点击'▶ 运行'，然后点击'🔄 刷新预览'更新图像")
+        layout.addWidget(self.hint_label)
+        
         # 添加按钮
         button_layout = QtWidgets.QHBoxLayout()
         
-        save_btn = QtWidgets.QPushButton("保存图像")
+        refresh_btn = QtWidgets.QPushButton("🔄 刷新预览")
+        refresh_btn.clicked.connect(self.refresh_preview)
+        refresh_btn.setToolTip("从关联节点获取最新图像并刷新显示")
+        button_layout.addWidget(refresh_btn)
+        
+        save_btn = QtWidgets.QPushButton("💾 保存图像")
         save_btn.clicked.connect(self.save_image)
         button_layout.addWidget(save_btn)
         
-        close_btn = QtWidgets.QPushButton("关闭")
+        close_btn = QtWidgets.QPushButton("❌ 关闭")
         close_btn.clicked.connect(self.close)
         button_layout.addWidget(close_btn)
         
@@ -69,6 +90,30 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         # 显示图像
         self.display_image()
+    
+    def refresh_preview(self):
+        """
+        刷新预览：从关联节点获取最新图像
+        """
+        if self.node is not None:
+            # 从节点获取最新的缓存图像
+            new_image = self.node.get_cached_image()
+            if new_image is not None:
+                self.image = new_image.copy()  # 复制图像数据
+                self.display_image()
+                print(f"✅ 预览已刷新: {self.windowTitle()}")
+            else:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "警告",
+                    "节点中没有可显示的图像\n请先运行节点图"
+                )
+        else:
+            QtWidgets.QMessageBox.information(
+                self,
+                "提示",
+                "此预览窗口未关联节点\n无法自动刷新"
+            )
     
     def display_image(self):
         """
@@ -187,6 +232,9 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 创建执行引擎
         self.engine = GraphEngine()
+        
+        # 管理打开的预览窗口（用于刷新）
+        self.preview_windows = {}  # {node_id: ImagePreviewDialog}
         
     def _register_nodes(self):
         """
@@ -369,6 +417,9 @@ class MainWindow(QtWidgets.QMainWindow):
             if results:
                 print(f"处理了 {len(results)} 个节点的输出")
                 
+            # 自动刷新所有打开的预览窗口
+            self._refresh_all_previews()
+                
         except Exception as e:
             print(f"执行错误: {e}")
             import traceback
@@ -380,7 +431,24 @@ class MainWindow(QtWidgets.QMainWindow):
                 "执行错误",
                 f"执行节点图时发生错误:\n{str(e)}"
             )
-            
+    
+    def _refresh_all_previews(self):
+        """
+        刷新所有打开的预览窗口
+        """
+        if not self.preview_windows:
+            return
+        
+        refreshed_count = 0
+        for node_id, dialog in list(self.preview_windows.items()):
+            # 检查窗口是否仍然有效
+            if dialog.isVisible():
+                dialog.refresh_preview()
+                refreshed_count += 1
+        
+        if refreshed_count > 0:
+            print(f"✅ 已自动刷新 {refreshed_count} 个预览窗口")
+    
     def clear_graph(self):
         """
         清空节点图
@@ -508,7 +576,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         节点双击时的回调函数
         - IO节点: 弹出文件选择对话框
-        - ImageViewNode: 显示图像预览对话框
+        - ImageViewNode: 显示图像预览对话框（非模态）
         """
         from nodes.io_nodes import ImageLoadNode, ImageSaveNode
         
@@ -524,20 +592,48 @@ class MainWindow(QtWidgets.QMainWindow):
         elif isinstance(node, ImageViewNode):
             image = node.get_cached_image()
             if image is not None:
-                # 创建并显示预览对话框
-                dialog = ImagePreviewDialog(
-                    image, 
-                    title=f"图像预览 - {node.name()}",
-                    parent=self
-                )
-                dialog.exec_()
+                # 检查是否已经打开了该节点的预览窗口
+                node_id = node.id  # id是属性，不是方法
+                if node_id in self.preview_windows:
+                    # 如果窗口已存在，将其提到前面并刷新
+                    existing_dialog = self.preview_windows[node_id]
+                    existing_dialog.raise_()
+                    existing_dialog.activateWindow()
+                    existing_dialog.refresh_preview()
+                else:
+                    # 创建新的预览对话框（非模态）
+                    dialog = ImagePreviewDialog(
+                        image, 
+                        node=node,  # 传递节点引用用于刷新
+                        title=f"图像预览 - {node.name()}",
+                        parent=self
+                    )
+                    
+                    # 保存窗口引用
+                    self.preview_windows[node_id] = dialog
+                    
+                    # 监听窗口关闭事件，清理引用
+                    dialog.finished.connect(lambda nid=node_id: self._on_preview_window_closed(nid))
+                    
+                    # 显示非模态窗口
+                    dialog.show()
+                    
+                print(f"📷 打开预览窗口: {node.name()}")
             else:
                 QtWidgets.QMessageBox.information(
                     self,
                     "提示",
                     "该节点尚未处理图像数据\n请先运行节点图"
                 )
-        
+    
+    def _on_preview_window_closed(self, node_id):
+        """
+        预览窗口关闭时的回调，清理引用
+        """
+        if node_id in self.preview_windows:
+            del self.preview_windows[node_id]
+            print(f"🗑️ 预览窗口已关闭，清理引用")
+    
     def show_about(self):
         """
         显示关于对话框
