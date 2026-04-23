@@ -20,8 +20,8 @@ class ImageLoadNode(BaseNode):
     def __init__(self):
         super(ImageLoadNode, self).__init__()
         self.add_output('图像输出')
-        self.add_text_input('file_path', '文件路径')
-        self.add_button('browse_btn', '浏览')
+        # 添加文件路径输入框，用户可以直接输入路径或双击编辑
+        self.add_text_input('file_path', '文件路径（可直接输入或双击编辑）')
         self._image = None
         
     def process(self, inputs=None):
@@ -56,8 +56,8 @@ class ImageSaveNode(BaseNode):
     def __init__(self):
         super(ImageSaveNode, self).__init__()
         self.add_input('图像输入', color=(255, 100, 100))
-        self.add_text_input('save_path', '保存路径')
-        self.add_button('save_btn', '保存')
+        # 添加保存路径输入框
+        self.add_text_input('save_path', '保存路径（可直接输入或双击编辑）')
         self.add_text_input('status', '状态', tab='properties')
         
     def process(self, inputs=None):

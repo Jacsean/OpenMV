@@ -3,8 +3,10 @@
 """
 
 import sys
-from PySide2 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore, QtGui
 from NodeGraphQt import NodeGraph, PropertiesBinWidget, NodesPaletteWidget
+import cv2
+import numpy as np
 
 from core.graph_engine import GraphEngine
 from nodes import (
@@ -16,6 +18,150 @@ from nodes import (
     ThresholdNode,
     ImageViewNode
 )
+
+
+class ImagePreviewDialog(QtWidgets.QDialog):
+    """
+    图像预览对话框
+    用于显示OpenCV图像的完整预览
+    """
+    
+    def __init__(self, image, title="图像预览", parent=None):
+        super(ImagePreviewDialog, self).__init__(parent)
+        self.setWindowTitle(title)
+        self.image = image
+        
+        # 设置窗口属性
+        self.setMinimumSize(800, 600)
+        
+        # 创建布局
+        layout = QtWidgets.QVBoxLayout(self)
+        
+        # 创建图像标签
+        self.image_label = QtWidgets.QLabel()
+        self.image_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.image_label.setStyleSheet("background-color: #2b2b2b;")
+        
+        # 添加滚动区域
+        scroll_area = QtWidgets.QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(self.image_label)
+        
+        layout.addWidget(scroll_area)
+        
+        # 添加信息标签
+        self.info_label = QtWidgets.QLabel()
+        self.info_label.setAlignment(QtCore.Qt.AlignCenter)
+        layout.addWidget(self.info_label)
+        
+        # 添加按钮
+        button_layout = QtWidgets.QHBoxLayout()
+        
+        save_btn = QtWidgets.QPushButton("保存图像")
+        save_btn.clicked.connect(self.save_image)
+        button_layout.addWidget(save_btn)
+        
+        close_btn = QtWidgets.QPushButton("关闭")
+        close_btn.clicked.connect(self.close)
+        button_layout.addWidget(close_btn)
+        
+        layout.addLayout(button_layout)
+        
+        # 显示图像
+        self.display_image()
+    
+    def display_image(self):
+        """
+        显示图像
+        """
+        if self.image is None:
+            self.image_label.setText("无图像数据")
+            return
+        
+        # 获取图像信息
+        height, width = self.image.shape[:2]
+        channels = self.image.shape[2] if len(self.image.shape) == 3 else 1
+        
+        # 更新信息标签
+        info_text = f"尺寸: {width}x{height} | 通道: {channels} | 类型: {self.image.dtype}"
+        self.info_label.setText(info_text)
+        
+        # 转换OpenCV图像(BGR)到Qt图像(RGB)
+        if channels == 3:
+            rgb_image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+            qt_image = QtGui.QImage(
+                rgb_image.data,
+                width,
+                height,
+                width * 3,
+                QtGui.QImage.Format_RGB888
+            )
+        elif channels == 1:
+            qt_image = QtGui.QImage(
+                self.image.data,
+                width,
+                height,
+                width,
+                QtGui.QImage.Format_Grayscale8
+            )
+        else:
+            # 其他情况，转换为BGR再转RGB
+            bgr = cv2.cvtColor(self.image, cv2.COLOR_GRAY2BGR)
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+            qt_image = QtGui.QImage(
+                rgb.data,
+                width,
+                height,
+                width * 3,
+                QtGui.QImage.Format_RGB888
+            )
+        
+        # 缩放图像以适应标签大小，同时保持宽高比
+        pixmap = QtGui.QPixmap.fromImage(qt_image)
+        scaled_pixmap = pixmap.scaled(
+            self.image_label.size(),
+            QtCore.Qt.KeepAspectRatio,
+            QtCore.Qt.SmoothTransformation
+        )
+        
+        self.image_label.setPixmap(scaled_pixmap)
+    
+    def save_image(self):
+        """
+        保存图像
+        """
+        if self.image is None:
+            QtWidgets.QMessageBox.warning(self, "警告", "没有可保存的图像")
+            return
+        
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "保存图像",
+            "",
+            "PNG Files (*.png);;JPG Files (*.jpg);;BMP Files (*.bmp);;All Files (*)"
+        )
+        
+        if file_path:
+            try:
+                cv2.imwrite(file_path, self.image)
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "成功",
+                    f"图像已保存到:\n{file_path}"
+                )
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "错误",
+                    f"保存失败:\n{str(e)}"
+                )
+    
+    def resizeEvent(self, event):
+        """
+        窗口大小改变时重新显示图像
+        """
+        super(ImagePreviewDialog, self).resizeEvent(event)
+        self.display_image()
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -94,6 +240,12 @@ class MainWindow(QtWidgets.QMainWindow):
         dock_properties = QtWidgets.QDockWidget("属性面板", self)
         dock_properties.setWidget(properties_bin)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_properties)
+        
+        # 连接节点创建信号，用于添加按钮事件处理
+        self.node_graph.node_created.connect(self._on_node_created)
+        
+        # 连接节点双击事件，用于图像预览
+        self.node_graph.node_double_clicked.connect(self._on_node_double_clicked)
         
         # 创建工具栏
         self._create_toolbar()
@@ -287,6 +439,35 @@ class MainWindow(QtWidgets.QMainWindow):
                     f"加载节点图时发生错误:\n{str(e)}"
                 )
                 
+    def _on_node_created(self, node):
+        """
+        节点创建时的回调函数
+        预留用于未来扩展
+        """
+        pass
+    
+    def _on_node_double_clicked(self, node):
+        """
+        节点双击时的回调函数
+        用于显示图像预览对话框
+        """
+        if isinstance(node, ImageViewNode):
+            image = node.get_cached_image()
+            if image is not None:
+                # 创建并显示预览对话框
+                dialog = ImagePreviewDialog(
+                    image, 
+                    title=f"图像预览 - {node.name()}",
+                    parent=self
+                )
+                dialog.exec_()
+            else:
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "提示",
+                    "该节点尚未处理图像数据\n请先运行节点图"
+                )
+        
     def show_about(self):
         """
         显示关于对话框

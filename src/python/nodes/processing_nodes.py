@@ -51,8 +51,11 @@ class GaussianBlurNode(BaseNode):
         super(GaussianBlurNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_slider('kernel_size', '核大小', 3, 15, 5, tab='properties')
-        self.add_slider('sigma_x', 'Sigma X', 0, 10, 0, tab='properties')
+        # 使用text_input替代slider（NodeGraphQt不支持add_slider）
+        self.add_text_input('kernel_size', '核大小(3-15,奇数)', tab='properties')
+        self.set_property('kernel_size', '5')
+        self.add_text_input('sigma_x', 'Sigma X(0-10)', tab='properties')
+        self.set_property('sigma_x', '0')
         
     def process(self, inputs=None):
         """
@@ -64,7 +67,11 @@ class GaussianBlurNode(BaseNode):
                 kernel_size = int(self.get_property('kernel_size'))
                 sigma_x = float(self.get_property('sigma_x'))
                 
-                # 确保核大小为奇数
+                # 确保核大小为奇数且在有效范围内
+                if kernel_size < 3:
+                    kernel_size = 3
+                elif kernel_size > 15:
+                    kernel_size = 15
                 if kernel_size % 2 == 0:
                     kernel_size += 1
                 
@@ -89,8 +96,11 @@ class CannyEdgeNode(BaseNode):
         super(CannyEdgeNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_slider('threshold1', '低阈值', 0, 255, 50, tab='properties')
-        self.add_slider('threshold2', '高阈值', 0, 255, 150, tab='properties')
+        # 使用text_input替代slider
+        self.add_text_input('threshold1', '低阈值(0-255)', tab='properties')
+        self.set_property('threshold1', '50')
+        self.add_text_input('threshold2', '高阈值(0-255)', tab='properties')
+        self.set_property('threshold2', '150')
         
     def process(self, inputs=None):
         """
@@ -131,7 +141,9 @@ class ThresholdNode(BaseNode):
         super(ThresholdNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_slider('threshold', '阈值', 0, 255, 127, tab='properties')
+        # 使用text_input替代slider
+        self.add_text_input('threshold', '阈值(0-255)', tab='properties')
+        self.set_property('threshold', '127')
         self.add_combo_menu('type', '类型', items=['BINARY', 'BINARY_INV', 'TRUNC', 'TOZERO', 'TOZERO_INV'], tab='properties')
         
     def process(self, inputs=None):
