@@ -11,6 +11,11 @@ class ImageLoadNode(BaseNode):
     """
     图像加载节点
     用于从文件加载图像
+    
+    使用方法:
+    - **双击节点**: 弹出文件选择对话框，选择图像文件
+    - **手动输入**: 在"文件路径"文本框中直接输入或粘贴完整路径
+    - **快捷操作**: Shift+右键文件 → "复制为路径" → 双击文本框粘贴
     """
     
     # 定义节点标识符和名称
@@ -20,8 +25,8 @@ class ImageLoadNode(BaseNode):
     def __init__(self):
         super(ImageLoadNode, self).__init__()
         self.add_output('图像输出')
-        # 添加文件路径输入框，用户可以直接输入路径或双击编辑
-        self.add_text_input('file_path', '文件路径（可直接输入或双击编辑）')
+        # 添加文件路径输入框
+        self.add_text_input('file_path', '文件路径')
         self._image = None
         
     def process(self, inputs=None):
@@ -47,6 +52,11 @@ class ImageSaveNode(BaseNode):
     """
     图像保存节点
     用于将图像保存到文件
+    
+    使用方法:
+    - **双击节点**: 弹出文件保存对话框，选择保存位置和文件名
+    - **手动输入**: 在"保存路径"文本框中输入完整路径（需包含扩展名）
+    - **支持格式**: .png, .jpg, .bmp, .tiff, .webp
     """
     
     # 定义节点标识符和名称
@@ -57,7 +67,7 @@ class ImageSaveNode(BaseNode):
         super(ImageSaveNode, self).__init__()
         self.add_input('图像输入', color=(255, 100, 100))
         # 添加保存路径输入框
-        self.add_text_input('save_path', '保存路径（可直接输入或双击编辑）')
+        self.add_text_input('save_path', '保存路径')
         self.add_text_input('status', '状态', tab='properties')
         
     def process(self, inputs=None):

@@ -20,7 +20,7 @@
 ## 📁 项目结构
 
 ```
-python_graph/
+python/                      # 图形化视觉编程系统（原 python_graph）
 ├── main.py                    # 程序入口
 ├── requirements.txt           # Python依赖
 ├── README.md                  # 本文档（项目总览）
@@ -473,6 +473,18 @@ OpenCV支持的格式均可：
 ---
 
 ## 📝 更新历史
+
+### v1.1 - 功能增强 (2026-04-23)
+
+**新增功能：**
+- ✨ **双击节点文件选择**: IO节点支持双击弹出文件选择对话框
+  - ImageLoadNode: 双击打开文件打开对话框
+  - ImageSaveNode: 双击打开文件保存对话框
+- 🎯 **用户体验优化**: 无需手动输入路径，点击即可选择文件
+
+**改进内容：**
+- 📖 完善节点文档，说明多种使用方式
+- 🔧 优化 [_on_node_double_clicked()](file://d:\example\projects\StduyOpenCV\src\python\ui\main_window.py#L508-L537) 方法，支持多类型节点
 
 ### v1.0 - 初始版本 (2026-04-22)
 

@@ -62,12 +62,33 @@ nodes/
 - **输入**: 无
 - **输出**: 图像数据 (numpy.ndarray)
 - **属性**:
-  - `file_path`: 图像文件路径（可直接输入或粘贴）
+  - `file_path`: 图像文件路径
+- **使用方法**:
+  1. **双击节点（推荐）✨**: 
+     - 双击"图像加载"节点
+     - 弹出文件选择对话框
+     - 选择图像文件后自动填充路径
+  2. **直接输入**: 在"文件路径"文本框中直接输入完整路径
+  3. **复制粘贴**: 
+     - 在文件资源管理器中右键文件 → "复制为路径"
+     - 双击节点的"文件路径"文本框，Ctrl+V 粘贴
 - **使用示例**:
   ```python
-  # 在节点属性中输入路径
-  file_path = "D:/images/test.jpg"
+  # 方式1: 双击节点选择文件（推荐）
+  # 双击节点 → 选择 D:/images/test.jpg → 自动填充
+  
+  # 方式2: 直接输入路径
+  file_path = "D:/images/test.jpg"        # 推荐：使用正斜杠
+  file_path = "D:\\images\\test.jpg"      # 或使用双反斜杠
+  
+  # Linux/Mac路径示例
+  file_path = "/home/user/images/test.jpg"
   ```
+
+**💡 快速输入路径的技巧**:
+1. **Windows**: 在文件资源管理器中按住 Shift + 右键文件 → 选择"复制为路径"
+2. **粘贴到节点**: 双击"文件路径"文本框，按 Ctrl+V 粘贴
+3. **双击节点**: 直接双击节点打开文件选择对话框（最方便）
 
 **ImageSaveNode** - 图像保存节点
 - **标识符**: `io`
@@ -75,8 +96,33 @@ nodes/
 - **输入**: 图像数据
 - **输出**: 状态文本
 - **属性**:
-  - `save_path`: 保存文件路径
+  - `save_path`: 保存文件路径（需包含文件名和扩展名）
   - `status`: 保存状态信息
+- **使用方法**:
+  1. **双击节点（推荐）✨**: 
+     - 双击"图像保存"节点
+     - 弹出文件保存对话框
+     - 选择保存位置和文件名后自动填充路径
+  2. **直接输入**: 在"保存路径"文本框中输入完整路径
+  3. **支持的格式**: .png, .jpg, .bmp, .tiff, .webp
+- **使用示例**:
+  ```python
+  # 方式1: 双击节点选择保存路径（推荐）
+  # 双击节点 → 选择 D:/output/result.png → 自动填充
+  
+  # 方式2: 直接输入路径
+  save_path = "D:/output/result.png"      # 保存为PNG
+  save_path = "D:/output/result.jpg"      # 保存为JPG
+  ```
+
+**⚠️ API限制说明**:
+根据 NodeGraphQt 框架的设计，**不支持在节点上添加自定义右键菜单项或按钮控件**。这是框架的API限制，而非实现缺陷。
+
+**替代方案**:
+- ✅ 使用文本输入框直接输入路径（当前方案）
+- ✅ 利用操作系统的"复制为路径"功能快速输入
+- ❌ 不使用 `add_button()` + `clicked.connect()` （NodeButton不支持标准Qt信号）
+- ❌ 不使用 `build_menu()` （BaseNode不支持此方法）
 
 #### 2. 处理节点 (`processing_nodes.py`)
 封装OpenCV图像处理算法。
@@ -132,7 +178,7 @@ nodes/
 ### 节点开发规范
 
 #### 创建新节点
-```python
+``python
 from NodeGraphQt import BaseNode
 import cv2
 
@@ -186,7 +232,7 @@ class YourCustomNode(BaseNode):
 
 #### 注册节点
 在 [ui/main_window.py](file://d:\example\projects\StduyOpenCV\src\python_graph\ui\main_window.py) 的 `_register_nodes()` 方法中：
-```python
+```
 from nodes.your_module import YourCustomNode
 
 def _register_nodes(self):

@@ -241,11 +241,14 @@ class MainWindow(QtWidgets.QMainWindow):
         dock_properties.setWidget(properties_bin)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_properties)
         
-        # 连接节点创建信号，用于添加按钮事件处理
+        # 连接节点创建信号，用于添加自定义右键菜单
         self.node_graph.node_created.connect(self._on_node_created)
         
         # 连接节点双击事件，用于图像预览
         self.node_graph.node_double_clicked.connect(self._on_node_double_clicked)
+        
+        # 设置节点上下文菜单（右键菜单）
+        self._setup_context_menu()
         
         # 创建工具栏
         self._create_toolbar()
@@ -253,6 +256,17 @@ class MainWindow(QtWidgets.QMainWindow):
         # 创建菜单栏
         self._create_menu_bar()
         
+    def _setup_context_menu(self):
+        """
+        设置节点右键菜单
+        
+        注意: NodeGraphQt的BaseNode不支持自定义右键菜单项
+        文件选择功能通过以下方式实现:
+        1. 直接在文本框中输入或粘贴路径
+        2. 使用操作系统的"复制为路径"功能
+        """
+        pass
+    
     def _create_toolbar(self):
         """
         创建工具栏
@@ -446,12 +460,68 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         pass
     
+    def _on_browse_image_file(self, node):
+        """
+        浏览并选择图像文件
+        """
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "选择图像文件",
+            "",
+            "Image Files (*.jpg *.jpeg *.png *.bmp *.tiff *.webp);;All Files (*)"
+        )
+        
+        if file_path:
+            # 设置文件路径到节点的text_input
+            node.set_property('file_path', file_path)
+            print(f"已选择图像: {file_path}")
+            # 可选：显示提示信息
+            QtWidgets.QMessageBox.information(
+                self,
+                "文件已选择",
+                f"已选择:\n{file_path}"
+            )
+    
+    def _on_select_save_path(self, node):
+        """
+        选择图像保存路径
+        """
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "保存图像",
+            "",
+            "PNG Files (*.png);;JPG Files (*.jpg);;BMP Files (*.bmp);;All Files (*)"
+        )
+        
+        if file_path:
+            # 设置保存路径到节点的text_input
+            node.set_property('save_path', file_path)
+            print(f"保存路径: {file_path}")
+            # 可选：显示提示信息
+            QtWidgets.QMessageBox.information(
+                self,
+                "路径已选择",
+                f"保存路径:\n{file_path}"
+            )
+    
     def _on_node_double_clicked(self, node):
         """
         节点双击时的回调函数
-        用于显示图像预览对话框
+        - IO节点: 弹出文件选择对话框
+        - ImageViewNode: 显示图像预览对话框
         """
-        if isinstance(node, ImageViewNode):
+        from nodes.io_nodes import ImageLoadNode, ImageSaveNode
+        
+        # 处理图像加载节点
+        if isinstance(node, ImageLoadNode):
+            self._on_browse_image_file(node)
+            
+        # 处理图像保存节点
+        elif isinstance(node, ImageSaveNode):
+            self._on_select_save_path(node)
+            
+        # 处理图像显示节点（原有功能）
+        elif isinstance(node, ImageViewNode):
             image = node.get_cached_image()
             if image is not None:
                 # 创建并显示预览对话框
