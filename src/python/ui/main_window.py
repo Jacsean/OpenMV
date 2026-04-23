@@ -664,18 +664,18 @@ class MainWindow(QtWidgets.QMainWindow):
         toolbar = self.addToolBar("主工具栏")
         
         # === 工程管理 ===
-        new_project_action = QtWidgets.QAction("📄 新建工程", self)
+        new_project_action = QtWidgets.QAction("📄 新建", self)
         new_project_action.setStatusTip("创建新工程")
         new_project_action.triggered.connect(self.new_project)
         toolbar.addAction(new_project_action)
         
-        open_project_action = QtWidgets.QAction("📂 打开工程", self)
-        open_project_action.setStatusTip("打开已有工程")
+        open_project_action = QtWidgets.QAction("📂 打开", self)
+        open_project_action.setStatusTip("打开工程(.proj)")
         open_project_action.triggered.connect(self.open_project)
         toolbar.addAction(open_project_action)
         
-        save_project_action = QtWidgets.QAction("💾 保存工程", self)
-        save_project_action.setStatusTip("保存当前工程")
+        save_project_action = QtWidgets.QAction("💾 保存", self)
+        save_project_action.setStatusTip("保存工程为单文件")
         save_project_action.triggered.connect(self.save_project)
         toolbar.addAction(save_project_action)
         
@@ -739,7 +739,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # 保存工程
         save_project_action = QtWidgets.QAction("💾 保存工程", self)
         save_project_action.setShortcut("Ctrl+Shift+S")
-        save_project_action.setStatusTip("保存当前工程")
+        save_project_action.setStatusTip("保存当前工程为单文件(.proj)")
         save_project_action.triggered.connect(self.save_project)
         file_menu.addAction(save_project_action)
         
@@ -910,11 +910,8 @@ class MainWindow(QtWidgets.QMainWindow):
         
         if file_path:
             try:
-                # 使用session_to_dict()获取数据，然后写入文件
-                session_data = self.current_node_graph.session_to_dict()
-                import json
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(session_data, f, indent=2, ensure_ascii=False)
+                # 使用save_session()直接保存
+                self.current_node_graph.save_session(file_path)
                 
                 print(f"节点图已保存到: {file_path}")
                 
@@ -1158,7 +1155,7 @@ class MainWindow(QtWidgets.QMainWindow):
         
     def open_project(self):
         """
-        打开已有工程
+        打开工程（支持单文件.proj格式）
         """
         # 检查当前工程是否有未保存修改
         if self.project_manager.has_unsaved_changes():
@@ -1174,14 +1171,15 @@ class MainWindow(QtWidgets.QMainWindow):
             elif reply == QtWidgets.QMessageBox.Cancel:
                 return
         
-        # 选择工程目录
-        project_dir = QtWidgets.QFileDialog.getExistingDirectory(
+        # 选择工程文件（.proj单文件）
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
-            "选择工程目录",
-            ""
+            "打开工程",
+            "",
+            "Project Files (*.proj);;All Files (*)"
         )
         
-        if not project_dir:
+        if not file_path:
             return
         
         # 关闭当前工程
@@ -1190,10 +1188,15 @@ class MainWindow(QtWidgets.QMainWindow):
         # 清空标签页
         self.tab_widget.clear()
         
-        # 打开工程
-        project = self.project_manager.open_project(project_dir)
+        print(f"📂 开始打开工程: {file_path}")
+        
+        # 使用ProjectManager的import_project方法从单文件加载
+        project = self.project_manager.import_project(file_path)
         
         if project:
+            print(f"✅ 工程已打开: {project.name}")
+            print(f"   工作流数量: {len(project.workflows)}")
+            
             # 为每个工作流创建标签页
             for workflow in project.workflows:
                 # 创建工作流的NodeGraph
@@ -1203,18 +1206,28 @@ class MainWindow(QtWidgets.QMainWindow):
                 
                 # 加载节点图数据
                 if workflow.file_path:
-                    wf_full_path = os.path.join(project_dir, workflow.file_path)
-                    if os.path.exists(wf_full_path):
-                        try:
-                            import json
-                            with open(wf_full_path, 'r', encoding='utf-8') as f:
-                                session_data = json.load(f)
-                            node_graph.deserialize_session(session_data)
-                            print(f"✅ 加载工作流: {workflow.name}")
-                        except Exception as e:
-                            print(f"❌ 加载工作流失败: {e}")
-                            import traceback
-                            traceback.print_exc()
+                    # 注意：导入时工程被解压到临时目录
+                    import tempfile
+                    import glob
+                    temp_base = tempfile.gettempdir()
+                    temp_dirs = glob.glob(os.path.join(temp_base, 'proj_import_*'))
+                    if temp_dirs:
+                        latest_temp = max(temp_dirs, key=os.path.getmtime)
+                        wf_full_path = os.path.join(latest_temp, workflow.file_path)
+                        
+                        if os.path.exists(wf_full_path):
+                            try:
+                                import json
+                                with open(wf_full_path, 'r', encoding='utf-8') as f:
+                                    session_data = json.load(f)
+                                node_graph.deserialize_session(session_data)
+                                print(f"✅ 加载工作流: {workflow.name}")
+                            except Exception as e:
+                                print(f"❌ 加载工作流失败: {e}")
+                                import traceback
+                                traceback.print_exc()
+                        else:
+                            print(f"⚠️ 工作流文件不存在: {wf_full_path}")
                 
                 # 连接信号
                 node_graph.node_created.connect(lambda n, wf=workflow: self._on_node_created(n, wf))
@@ -1227,16 +1240,19 @@ class MainWindow(QtWidgets.QMainWindow):
             if project.workflows:
                 self.tab_widget.setCurrentIndex(0)
                 self._on_tab_changed(0)
+            
+            # 添加到最近工程列表
+            self._add_to_recent_projects(os.path.dirname(os.path.abspath(file_path)))
         else:
             QtWidgets.QMessageBox.critical(
                 self,
                 "错误",
-                "无法打开工程"
+                "无法打开工程文件，请确认文件格式正确"
             )
-            
+    
     def save_project(self):
         """
-        保存当前工程（v3.0 - 完善版本）
+        保存当前工程为单文件（.proj ZIP格式）
         """
         project = self.project_manager.current_project
         if not project:
@@ -1244,95 +1260,89 @@ class MainWindow(QtWidgets.QMainWindow):
             return False
         
         # 如果工程还没有路径，询问保存位置
-        if not project.file_path:
-            project_dir = QtWidgets.QFileDialog.getExistingDirectory(
+        if not project.file_path or not project.file_path.endswith('.proj'):
+            default_name = f"{project.name}.proj"
+            file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self,
-                "选择工程保存位置",
-                ""
+                "保存工程",
+                default_name,
+                "Project Files (*.proj);;All Files (*)"
             )
             
-            if not project_dir:
+            if not file_path:
                 return False
             
-            project.file_path = project_dir
+            # 确保文件扩展名为.proj
+            if not file_path.endswith('.proj'):
+                file_path += '.proj'
+            
+            project.file_path = file_path
         
-        # === 关键步骤：遍历所有标签页，保存每个工作流的NodeGraph ===
         print(f"💾 开始保存工程: {project.name}")
-        print(f"   工作流数量: {len(project.workflows)}")
+        print(f"   目标文件: {project.file_path}")
         
-        for i in range(self.tab_widget.count()):
-            if i < len(project.workflows):
-                workflow = project.workflows[i]
-                
-                # 从标签页获取widget
-                graph_widget = self.tab_widget.widget(i)
-                
-                # 通过widget反向查找NodeGraph
-                # NodeGraph的widget是QGraphicsView，我们需要找到对应的NodeGraph实例
-                # 由于workflow.node_graph已经关联，直接使用
-                if workflow.node_graph:
-                    try:
-                        # 创建工作流文件路径
-                        wf_filename = f"workflow_{i+1}.json"
-                        workflows_dir = os.path.join(project.file_path, "workflows")
-                        os.makedirs(workflows_dir, exist_ok=True)
-                        
-                        wf_full_path = os.path.join(workflows_dir, wf_filename)
-                        
-                        # 保存NodeGraph数据 - 使用session_to_dict()然后写入文件
-                        session_data = workflow.node_graph.session_to_dict()
-                        import json
-                        with open(wf_full_path, 'w', encoding='utf-8') as f:
-                            json.dump(session_data, f, indent=2, ensure_ascii=False)
-                        
-                        workflow.file_path = f"workflows/{wf_filename}"
-                        workflow.mark_saved()
-                        
-                        print(f"   ✅ 保存工作流 {i+1}: {workflow.name} -> {wf_filename}")
-                    except Exception as e:
-                        print(f"   ❌ 保存工作流 {i+1} 失败: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        return False
+        # 使用ProjectManager的export_project方法保存为单文件
+        success = self.project_manager.export_project(project.file_path)
         
-        # === 保存工程配置文件 ===
-        try:
-            success = self.project_manager.save_project(project.file_path)
+        if success:
+            # 更新标签页标题（移除*号）
+            for i in range(self.tab_widget.count()):
+                tab_text = self.tab_widget.tabText(i)
+                if tab_text.endswith(" *"):
+                    self.tab_widget.setTabText(i, tab_text[:-2])
             
-            if success:
-                # 更新标签页标题（移除*号）
-                for i in range(self.tab_widget.count()):
-                    tab_text = self.tab_widget.tabText(i)
-                    if tab_text.endswith(" *"):
-                        self.tab_widget.setTabText(i, tab_text[:-2])
-                
-                # 添加到最近工程列表
-                self._add_to_recent_projects(project.file_path)
-                
-                print(f"✅ 工程已保存到: {project.file_path}")
-                
-                QtWidgets.QMessageBox.information(
-                    self,
-                    "成功",
-                    f"工程已保存到:\n{project.file_path}"
-                )
-                return True
-            else:
-                QtWidgets.QMessageBox.critical(
-                    self,
-                    "错误",
-                    "保存工程失败"
-                )
-                return False
-                
-        except Exception as e:
-            print(f"❌ 保存工程配置失败: {e}")
+            # 添加到最近工程列表
+            self._add_to_recent_projects(os.path.dirname(os.path.abspath(project.file_path)))
+            
+            # 获取文件大小
+            try:
+                size_bytes = os.path.getsize(project.file_path)
+                if size_bytes < 1024:
+                    size_str = f"{size_bytes} B"
+                elif size_bytes < 1024 * 1024:
+                    size_str = f"{size_bytes / 1024:.1f} KB"
+                else:
+                    size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
+                print(f"✅ 工程已保存: {project.file_path} ({size_str})")
+            except:
+                print(f"✅ 工程已保存: {project.file_path}")
+            
+            QtWidgets.QMessageBox.information(
+                self,
+                "成功",
+                f"工程已保存为单文件:\n{project.file_path}"
+            )
+            return True
+        else:
             QtWidgets.QMessageBox.critical(
                 self,
                 "错误",
-                f"保存工程失败:\n{str(e)}"
+                "保存工程失败，请查看控制台输出"
             )
             return False
+    
+    def _get_file_size_str(self, file_path: str) -> str:
+        """
+        获取文件大小的可读字符串
+        
+        Args:
+            file_path: 文件路径
+            
+        Returns:
+            str: 文件大小字符串（如 "2.5 MB"）
+        """
+        try:
+            size_bytes = os.path.getsize(file_path)
+            if size_bytes < 1024:
+                return f"{size_bytes} B"
+            elif size_bytes < 1024 * 1024:
+                return f"{size_bytes / 1024:.1f} KB"
+            elif size_bytes < 1024 * 1024 * 1024:
+                return f"{size_bytes / (1024 * 1024):.1f} MB"
+            else:
+                return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+        except:
+            return "未知大小"
     
     def _add_to_recent_projects(self, project_path):
         """
