@@ -2,6 +2,14 @@
 
 ## 📋 更新历史
 
+### v3.0 - 工程管理体系 (2026-04-23)
+- ✅ 实现工作流类 (`Workflow`)
+- ✅ 实现工程类 (`Project`)
+- ✅ 实现工程管理器单例 (`ProjectManager`)
+- ✅ 支持工程的创建/打开/保存/关闭
+- ✅ 支持多工作流管理
+- ✅ 实现工程持久化（目录结构+JSON）
+
 ### v1.0 - 初始版本 (2026-04-22)
 - ✅ 实现图执行引擎 (`GraphEngine`)
 - ✅ 实现拓扑排序算法
@@ -13,13 +21,30 @@
 
 ## 🎯 概况
 
-**核心引擎模块**是图形化视觉编程系统的"大脑"，负责解析节点图的连接关系，构建执行顺序，并依次调用各节点的 `process()` 方法完成图像处理流程。
+**核心引擎模块**是图形化视觉编程系统的"大脑"，包含两个核心子系统：
 
-### 设计理念
+### 1. 图执行引擎 (Graph Engine)
+负责解析节点图的连接关系，构建执行顺序，并依次调用各节点的 `process()` 方法完成图像处理流程。
+
+**设计理念**:
 - **自动化依赖管理**: 自动分析节点连接关系，确定执行顺序
 - **拓扑排序**: 使用Kahn算法确保无环依赖的正确执行
 - **数据流驱动**: 基于端口连接的隐式数据传递
 - **高效执行**: 缓存中间结果，避免重复计算
+
+### 2. 工程管理体系 (Project Management) ✨ NEW
+负责管理工程和工流的生命周期，支持多任务流同时编辑和运行。
+
+**核心概念**:
+- **工作流 (Workflow)**: 独立的节点图和执行流程，包含一个NodeGraph实例
+- **工程 (Project)**: 包含多个工作流的容器，可保存为目录结构
+- **工程管理器 (ProjectManager)**: 单例模式，提供全局工程管理接口
+
+**设计理念**:
+- **模块化**: 每个工作流独立，互不干扰
+- **灵活性**: 支持动态添加/删除/切换工作流
+- **持久化**: 工程保存为目录结构，便于版本控制
+- **易用性**: 单例模式，全局访问点
 
 ---
 
@@ -29,11 +54,13 @@
 - **Python**: 3.7+
 - **NumPy**: >=1.19.0, <2.0.0
 - **OpenCV**: >=4.5.0
-- **标准库**: `collections` (defaultdict, deque)
+- **标准库**: 
+  - `collections` (defaultdict, deque) - 图执行引擎
+  - `json`, `os`, `uuid`, `datetime` - 工程管理
 
 ### 安装依赖
-```bash
-cd src/python_graph
+```
+cd src/python
 pip install -r requirements.txt
 ```
 
@@ -46,7 +73,8 @@ pip install -r requirements.txt
 core/
 ├── __init__.py              # 模块导出配置
 ├── graph_engine.py         # 图执行引擎（核心）
-└── node_registry.py        # 节点注册表（已废弃，改用直接注册）
+├── node_registry.py        # 节点注册表（已废弃，改用直接注册）
+└── project_manager.py      # ✨ 工程和工作流管理（v3.0新增）
 ```
 
 ### 核心类说明
@@ -300,6 +328,295 @@ result_B = node_B.process(inputs_B)
 ### Q: 如何调试节点执行过程？
 **A**: 在节点的 `process()` 方法中添加 `print()` 语句，或在引擎中添加日志：
 ```python
+def _execute_node(self, node):
+    print(f"正在执行: {node.name()}")
+    # ... 执行逻辑
+    print(f"执行完成: {node.name()}")
+```
+
+### Q: 检测到循环依赖怎么办？
+**A**: 拓扑排序会检测循环依赖并抛出异常。检查节点连接，确保没有形成环路（如 A→B→C→A）。
+
+---
+
+## 📚 相关文档
+
+- 📘 [项目总览](../../README.md) - 整体项目介绍
+- 📗 [节点模块](../nodes/README.md) - 节点定义与开发
+- 📕 [用户界面模块](../ui/README.md) - UI组件文档
+- 🔗 [拓扑排序算法详解](https://en.wikipedia.org/wiki/Topological_sorting)
+
+---
+
+## 🤝 贡献指南
+
+如需优化执行引擎，请遵循以下原则：
+1. 保持向后兼容性
+2. 添加单元测试
+3. 更新本文档
+4. 性能优化需提供基准测试数据
+
+---
+
+## 🏗️ 工程管理体系 (v3.0新增)
+
+### 核心类说明
+
+#### 1. Workflow (工作流类)
+
+表示一个独立的节点图和执行流程。
+
+**主要属性**:
+- `id` (str): 唯一标识符（8位短UUID）
+- `name` (str): 工作流名称
+- `node_graph`: NodeGraph实例（由外部管理）
+- `file_path` (str): JSON文件路径
+- `is_modified` (bool): 是否有未保存的修改
+
+**常用方法**:
+```python
+# 创建工作流
+wf = Workflow(name="边缘检测流程")
+
+# 标记状态
+wf.mark_modified()  # 标记为已修改
+wf.mark_saved()     # 标记为已保存
+
+# 序列化
+data = wf.to_dict()           # 转为字典
+wf2 = Workflow.from_dict(data) # 从字典恢复
+```
+
+---
+
+#### 2. Project (工程类)
+
+表示一个完整的工程项目，包含多个工作流。
+
+**主要属性**:
+- `name` (str): 工程名称
+- `file_path` (str): 工程目录路径
+- `version` (str): 工程格式版本（当前为"3.0"）
+- `workflows` (List[Workflow]): 工作流列表
+- `active_workflow_index` (int): 当前激活的工作流索引
+
+**常用方法**:
+```python
+# 创建工程
+proj = Project(name="视觉检测工程")
+
+# 管理工作流
+idx = proj.add_workflow(wf)        # 添加工作流
+proj.remove_workflow(0)            # 移除工作流
+wf = proj.get_workflow(1)          # 获取指定工作流
+active_wf = proj.get_active_workflow()  # 获取激活的工作流
+proj.set_active_workflow(2)        # 设置激活的工作流
+
+# 序列化
+data = proj.to_dict()             # 转为字典
+proj2 = Project.from_dict(data)   # 从字典恢复
+```
+
+---
+
+#### 3. ProjectManager (工程管理器 - 单例)
+
+负责管理当前工程的创建、打开、保存和关闭。
+
+**全局访问**:
+```python
+from core.project_manager import project_manager
+
+pm = project_manager  # 获取单例实例
+```
+
+**常用方法**:
+```python
+# 工程管理
+project = pm.create_project("新工程")       # 创建新工程
+project = pm.open_project("/path/to/project")  # 打开已有工程
+pm.save_project("/path/to/save")            # 保存工程
+pm.close_project()                          # 关闭工程
+
+# 工作流管理
+wf = pm.add_new_workflow("新工作流")        # 添加工作流
+pm.remove_workflow(0)                       # 移除工作流
+
+# 状态检查
+has_changes = pm.has_unsaved_changes()      # 检查是否有未保存修改
+```
+
+---
+
+### 工程文件结构
+
+工程保存为目录结构，便于版本控制和协作：
+
+```
+my_project.proj/
+├── project.json              # 工程配置文件
+├── workflows/                # 工作流目录
+│   ├── workflow_1.json      # 工作流1的节点图数据
+│   ├── workflow_2.json      # 工作流2的节点图数据
+│   └── ...
+└── assets/                   # 资源文件（可选）
+    ├── images/
+    └── configs/
+```
+
+**project.json 示例**:
+```json
+{
+  "version": "3.0",
+  "name": "我的工程",
+  "created": "2026-04-23T15:00:00",
+  "modified": "2026-04-23T16:00:00",
+  "active_workflow_index": 0,
+  "workflows": [
+    {
+      "id": "a3e07e80",
+      "name": "边缘检测流程",
+      "file": "workflows/workflow_1.json",
+      "created": "2026-04-23T15:00:00",
+      "modified": "2026-04-23T16:00:00",
+      "is_modified": false
+    }
+  ]
+}
+```
+
+---
+
+### 使用示例
+
+#### 示例1: 创建和管理工程
+
+```python
+from core.project_manager import project_manager
+
+# 创建新工程
+pm = project_manager
+project = pm.create_project("视觉检测项目")
+
+# 添加多个工作流
+wf1 = pm.add_new_workflow("边缘检测")
+wf2 = pm.add_new_workflow("二值化处理")
+wf3 = pm.add_new_workflow("形态学操作")
+
+print(f"工程包含 {len(project.workflows)} 个工作流")
+
+# 切换工作流
+project.set_active_workflow(1)
+active_wf = project.get_active_workflow()
+print(f"当前激活: {active_wf.name}")
+
+# 保存工程
+pm.save_project("D:/Projects/vision_project")
+
+# 关闭工程
+pm.close_project()
+```
+
+#### 示例2: 打开和加载工程
+
+```python
+from core.project_manager import project_manager
+
+# 打开已有工程
+pm = project_manager
+project = pm.open_project("D:/Projects/vision_project")
+
+if project:
+    print(f"工程: {project.name}")
+    print(f"工作流数量: {len(project.workflows)}")
+    
+    # 遍历所有工作流
+    for i, wf in enumerate(project.workflows):
+        print(f"  [{i}] {wf.name} (ID: {wf.id})")
+    
+    # 检查工作流是否有未保存修改
+    if pm.has_unsaved_changes():
+        print("⚠️ 有未保存的修改")
+```
+
+#### 示例3: 与NodeGraph集成
+
+```python
+from NodeGraphQt import NodeGraph
+from core.project_manager import project_manager
+
+# 创建工程和工作流
+pm = project_manager
+project = pm.create_project("测试工程")
+workflow = project.get_active_workflow()
+
+# 为工作流创建NodeGraph实例
+graph = NodeGraph()
+workflow.node_graph = graph  # 关联到工作流
+
+# 注册节点、构建节点图等...
+# ...
+
+# 保存工程时会自动保存所有工作流的节点图
+pm.save_project("D:/Projects/test_project")
+```
+
+---
+
+### 测试验证
+
+运行测试脚本验证功能：
+
+```bash
+cd src/python
+python test_project_manager.py
+```
+
+**测试覆盖**:
+- ✅ Workflow类的创建、序列化/反序列化
+- ✅ Project类的工作流管理
+- ✅ ProjectManager单例模式
+- ✅ 工程的持久化（保存/加载）
+- ✅ 文件结构的正确性
+
+---
+
+## 🚀 优化及改进计划
+
+### 已完成 (v3.0 - 阶段1)
+- ✅ 核心数据模型（Workflow、Project、ProjectManager）
+- ✅ 工程持久化（目录结构+JSON）
+- ✅ 单元测试验证
+
+### 短期目标 (v3.0 - 阶段2-4)
+- [ ] 多标签页UI实现（QTabWidget）
+- [ ] 工作流级别的保存/加载
+- [ ] 批量执行所有工作流
+- [ ] 关闭确认（未保存提示）
+- [ ] 最近工程列表
+
+### 中期目标 (v3.x)
+- [ ] 工作流间数据共享机制
+- [ ] 工程模板系统
+- [ ] 工作流导入/导出
+- [ ] 撤销/重做支持
+
+### 长期目标 (v4.x)
+- [ ] 云端同步（团队协作）
+- [ ] 工程版本控制集成（Git）
+- [ ] 工作流依赖分析
+- [ ] 性能分析和优化建议
+
+---
+
+## 🐛 常见问题
+
+### Q: 为什么节点执行顺序不正确？
+**A**: 检查是否有未连接的输入端口。引擎会根据连接关系自动排序，如果某个节点缺少输入，可能导致排序错误。
+
+### Q: 如何调试节点执行过程？
+**A**: 在节点的 `process()` 方法中添加 `print()` 语句，或在引擎中添加日志：
+``python
 def _execute_node(self, node):
     print(f"正在执行: {node.name()}")
     # ... 执行逻辑

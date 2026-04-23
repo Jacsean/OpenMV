@@ -1,23 +1,30 @@
 """
-主窗口 - 图形化视觉编程系统的主界面
+图形化视觉编程系统 - 主窗口
+
+v3.0更新:
+- 支持多工作流管理（QTabWidget）
+- 集成ProjectManager工程管理
+- 每个标签页独立的NodeGraph实例
 """
 
 import sys
-from PySide2 import QtWidgets, QtCore, QtGui
-from NodeGraphQt import NodeGraph, PropertiesBinWidget, NodesPaletteWidget
-import cv2
-import numpy as np
+import os
 
+# 添加项目根目录到路径
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from PySide2 import QtWidgets, QtCore, QtGui
+from NodeGraphQt import NodeGraph, NodesPaletteWidget, PropertiesBinWidget
+import cv2
+
+# 导入节点类型
+from nodes.io_nodes import ImageLoadNode, ImageSaveNode
+from nodes.processing_nodes import GrayscaleNode, GaussianBlurNode, CannyEdgeNode, ThresholdNode
+from nodes.display_nodes import ImageViewNode
+
+# 导入核心引擎和工程管理
 from core.graph_engine import GraphEngine
-from nodes import (
-    ImageLoadNode, 
-    ImageSaveNode,
-    GrayscaleNode, 
-    GaussianBlurNode, 
-    CannyEdgeNode,
-    ThresholdNode,
-    ImageViewNode
-)
+from core.project_manager import project_manager
 
 
 class ImagePreviewDialog(QtWidgets.QDialog):
@@ -400,24 +407,24 @@ class ImagePreviewDialog(QtWidgets.QDialog):
 
 class MainWindow(QtWidgets.QMainWindow):
     """
-    主窗口类
+    主窗口类（v3.0 - 支持多工作流）
+    
+    特性:
+    - 使用QTabWidget管理多个工作流
+    - 每个标签页独立的NodeGraph实例
+    - 共享节点库和属性面板
+    - 集成ProjectManager工程管理
     """
     
     def __init__(self):
         super(MainWindow, self).__init__()
         
         # 设置窗口属性
-        self.setWindowTitle("图形化视觉编程系统")
+        self.setWindowTitle("图形化视觉编程系统 v3.0")
         self.setGeometry(100, 100, 1600, 900)
         
-        # 创建节点图
-        self.node_graph = NodeGraph()
-        
-        # 注册节点类型
-        self._register_nodes()
-        
-        # 创建UI组件
-        self._setup_ui()
+        # 初始化工程管理器
+        self.project_manager = project_manager
         
         # 创建执行引擎
         self.engine = GraphEngine()
@@ -425,73 +432,219 @@ class MainWindow(QtWidgets.QMainWindow):
         # 管理打开的预览窗口（用于刷新）
         self.preview_windows = {}  # {node_id: ImagePreviewDialog}
         
-    def _register_nodes(self):
+        # UI组件引用（将在_setup_ui中创建）
+        self.tab_widget = None
+        self.nodes_palette = None
+        self.properties_bin = None
+        
+        # 当前激活的NodeGraph（动态更新）
+        self.current_node_graph = None
+        
+        # 创建UI组件
+        self._setup_ui()
+        
+        # 创建默认工程和工作流
+        self._initialize_default_project()
+        
+    def _initialize_default_project(self):
         """
-        注册所有节点类型
+        初始化默认工程和工作流
         """
-        self.node_graph.register_node(ImageLoadNode)
-        self.node_graph.register_node(ImageSaveNode)
-        self.node_graph.register_node(GrayscaleNode)
-        self.node_graph.register_node(GaussianBlurNode)
-        self.node_graph.register_node(CannyEdgeNode)
-        self.node_graph.register_node(ThresholdNode)
-        self.node_graph.register_node(ImageViewNode)
+        # 创建新工程
+        project = self.project_manager.create_project("默认工程")
+        
+        # 为第一个工作流创建NodeGraph并添加到标签页
+        if project.workflows:
+            workflow = project.workflows[0]
+            self._add_workflow_tab(workflow)
+        
+    def _register_nodes(self, node_graph):
+        """
+        为指定的NodeGraph注册节点类型
+        
+        Args:
+            node_graph: NodeGraph实例
+        """
+        node_graph.register_node(ImageLoadNode)
+        node_graph.register_node(ImageSaveNode)
+        node_graph.register_node(GrayscaleNode)
+        node_graph.register_node(GaussianBlurNode)
+        node_graph.register_node(CannyEdgeNode)
+        node_graph.register_node(ThresholdNode)
+        node_graph.register_node(ImageViewNode)
+        
+    def _add_workflow_tab(self, workflow):
+        """
+        添加工作流标签页
+        
+        Args:
+            workflow: Workflow对象
+        """
+        # 创建新的NodeGraph实例
+        node_graph = NodeGraph()
+        
+        # 注册节点
+        self._register_nodes(node_graph)
+        
+        # 关联到工作流
+        workflow.node_graph = node_graph
+        
+        # 连接信号
+        # 使用默认参数捕获当前的 workflow 对象，防止闭包问题
+        node_graph.node_created.connect(lambda n, wf=workflow: self._on_node_created(n, wf))
+        node_graph.node_double_clicked.connect(lambda n, wf=workflow: self._on_node_double_clicked(n, wf))
+        
+        # 获取NodeGraph的widget
+        graph_widget = node_graph.widget
+        
+        # 添加到标签页
+        tab_title = workflow.name
+        if workflow.is_modified:
+            tab_title += " *"
+        tab_index = self.tab_widget.addTab(graph_widget, tab_title)
+        
+        # 如果是第一个标签页，设置为当前激活
+        if self.tab_widget.count() == 1:
+            self._on_tab_changed(0)
+        
+        print(f"✅ 添加工作流标签页: {workflow.name}")
+        
+    def _remove_workflow_tab(self, index):
+        """
+        移除工作流标签页
+        
+        Args:
+            index: 标签页索引
+        """
+        if index < 0 or index >= self.tab_widget.count():
+            return
+            
+        # 获取工作流
+        project = self.project_manager.current_project
+        if project and index < len(project.workflows):
+            workflow = project.workflows[index]
+            
+            # 从工程中移除
+            self.project_manager.remove_workflow(index)
+            
+            # 移除标签页
+            self.tab_widget.removeTab(index)
+            
+            print(f"🗑️ 移除工作流标签页: {workflow.name}")
+            
+    def _on_tab_changed(self, index):
+        """
+        标签页切换时的回调
+        
+        Args:
+            index: 新的标签页索引
+        """
+        if index < 0:
+            return
+            
+        # 更新当前激活的NodeGraph
+        project = self.project_manager.current_project
+        if project and index < len(project.workflows):
+            workflow = project.workflows[index]
+            self.current_node_graph = workflow.node_graph
+            
+            # 注意：NodesPaletteWidget和PropertiesBinWidget不支持动态切换NodeGraph
+            # 所以这里只更新引用，不尝试重新绑定
+            
+            # 更新工程激活索引
+            project.set_active_workflow(index)
+            
+            print(f"🔄 切换到工作流: {workflow.name}")
         
     def _setup_ui(self):
         """
-        设置用户界面
+        设置用户界面（v3.0 - 多标签页版本）
         """
         # 创建中央部件
         central_widget = QtWidgets.QWidget()
         self.setCentralWidget(central_widget)
         
         # 创建主布局
-        main_layout = QtWidgets.QHBoxLayout(central_widget)
+        main_layout = QtWidgets.QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
         
-        # 左侧：节点库面板
-        nodes_palette = NodesPaletteWidget(node_graph=self.node_graph)
-        nodes_palette.setWindowTitle("节点库")
+        # === 标签页容器 ===
+        self.tab_widget = QtWidgets.QTabWidget()
+        self.tab_widget.setTabsClosable(True)  # 允许关闭标签页
+        self.tab_widget.setMovable(True)       # 允许拖动排序
+        self.tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
+        self.tab_widget.currentChanged.connect(self._on_tab_changed)
+        main_layout.addWidget(self.tab_widget)
+        
+        # 创建临时NodeGraph用于初始化共享组件
+        temp_graph = NodeGraph()
+        self._register_nodes(temp_graph)
+        
+        # === 左侧：节点库面板（共享）===
+        self.nodes_palette = NodesPaletteWidget(node_graph=temp_graph)
+        self.nodes_palette.setWindowTitle("节点库")
         
         # 设置标签位置为右侧显示
         try:
-            # 尝试作为方法调用
-            tab_widget = nodes_palette.tab_widget()
+            tab_widget = self.nodes_palette.tab_widget()
             if hasattr(tab_widget, 'setTabPosition'):
                 tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
         except (AttributeError, TypeError):
-            # 如果tab_widget是属性而非方法，直接访问
-            if hasattr(nodes_palette, 'tab_widget'):
-                nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
+            if hasattr(self.nodes_palette, 'tab_widget'):
+                self.nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
         
         dock_nodes = QtWidgets.QDockWidget("节点库", self)
-        dock_nodes.setWidget(nodes_palette)
+        dock_nodes.setWidget(self.nodes_palette)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_nodes)
         
-        # 中间：节点图画布（主要区域）
-        graph_widget = self.node_graph.widget
-        main_layout.addWidget(graph_widget, stretch=5)
-        
-        # 右侧：属性面板
-        properties_bin = PropertiesBinWidget(node_graph=self.node_graph)
-        properties_bin.setWindowTitle("属性面板")
+        # === 右侧：属性面板（共享）===
+        self.properties_bin = PropertiesBinWidget(node_graph=temp_graph)
+        self.properties_bin.setWindowTitle("属性面板")
         dock_properties = QtWidgets.QDockWidget("属性面板", self)
-        dock_properties.setWidget(properties_bin)
+        dock_properties.setWidget(self.properties_bin)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_properties)
         
-        # 连接节点创建信号，用于添加自定义右键菜单
-        self.node_graph.node_created.connect(self._on_node_created)
-        
-        # 连接节点双击事件，用于图像预览
-        self.node_graph.node_double_clicked.connect(self._on_node_double_clicked)
-        
-        # 设置节点上下文菜单（右键菜单）
-        self._setup_context_menu()
+        # 设置当前NodeGraph
+        self.current_node_graph = temp_graph
         
         # 创建工具栏
         self._create_toolbar()
         
         # 创建菜单栏
         self._create_menu_bar()
+        
+    def _on_tab_close_requested(self, index):
+        """
+        标签页关闭请求
+        
+        Args:
+            index: 要关闭的标签页索引
+        """
+        project = self.project_manager.current_project
+        if not project:
+            return
+            
+        workflow = project.get_workflow(index)
+        if not workflow:
+            return
+            
+        # 检查是否有未保存的修改
+        if workflow.is_modified:
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "确认关闭",
+                f"工作流 '{workflow.name}' 有未保存的修改\n是否保存？",
+                QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Cancel
+            )
+            
+            if reply == QtWidgets.QMessageBox.Save:
+                # TODO: 实现单个工作流的保存
+                pass
+            elif reply == QtWidgets.QMessageBox.Cancel:
+                return
+        
+        # 移除标签页
+        self._remove_workflow_tab(index)
         
     def _setup_context_menu(self):
         """
@@ -506,97 +659,181 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _create_toolbar(self):
         """
-        创建工具栏
+        创建工具栏（v3.0 - 工程管理版本）
         """
         toolbar = self.addToolBar("主工具栏")
         
-        # 运行按钮
-        run_action = QtWidgets.QAction("▶ 运行", self)
-        run_action.setStatusTip("执行节点图")
-        run_action.triggered.connect(self.run_graph)
-        toolbar.addAction(run_action)
+        # === 工程管理 ===
+        new_project_action = QtWidgets.QAction("📄 新建工程", self)
+        new_project_action.setStatusTip("创建新工程")
+        new_project_action.triggered.connect(self.new_project)
+        toolbar.addAction(new_project_action)
         
-        # 清空按钮
-        clear_action = QtWidgets.QAction("🗑 清空", self)
-        clear_action.setStatusTip("清空节点图")
-        clear_action.triggered.connect(self.clear_graph)
-        toolbar.addAction(clear_action)
+        open_project_action = QtWidgets.QAction("📂 打开工程", self)
+        open_project_action.setStatusTip("打开已有工程")
+        open_project_action.triggered.connect(self.open_project)
+        toolbar.addAction(open_project_action)
         
-        # 保存按钮
-        save_action = QtWidgets.QAction("💾 保存", self)
-        save_action.setStatusTip("保存节点图")
-        save_action.triggered.connect(self.save_graph)
-        toolbar.addAction(save_action)
-        
-        # 加载按钮
-        load_action = QtWidgets.QAction("📂 加载", self)
-        load_action.setStatusTip("加载节点图")
-        load_action.triggered.connect(self.load_graph)
-        toolbar.addAction(load_action)
+        save_project_action = QtWidgets.QAction("💾 保存工程", self)
+        save_project_action.setStatusTip("保存当前工程")
+        save_project_action.triggered.connect(self.save_project)
+        toolbar.addAction(save_project_action)
         
         toolbar.addSeparator()
         
-        # 缩放适应
+        # === 工作流管理 ===
+        add_workflow_action = QtWidgets.QAction("➕ 添加工作流", self)
+        add_workflow_action.setStatusTip("添加新的工作流")
+        add_workflow_action.triggered.connect(self.add_new_workflow)
+        toolbar.addAction(add_workflow_action)
+        
+        toolbar.addSeparator()
+        
+        # === 执行控制 ===
+        run_action = QtWidgets.QAction("▶ 运行", self)
+        run_action.setStatusTip("执行当前工作流")
+        run_action.triggered.connect(self.run_graph)
+        toolbar.addAction(run_action)
+        
+        run_all_action = QtWidgets.QAction("⏩ 运行全部", self)
+        run_all_action.setStatusTip("执行所有工作流")
+        run_all_action.triggered.connect(self.run_all_workflows)
+        toolbar.addAction(run_all_action)
+        
+        clear_action = QtWidgets.QAction("🗑 清空", self)
+        clear_action.setStatusTip("清空当前工作流")
+        clear_action.triggered.connect(self.clear_graph)
+        toolbar.addAction(clear_action)
+        
+        toolbar.addSeparator()
+        
+        # === 视图控制 ===
         fit_all_action = QtWidgets.QAction("⊞ 适应", self)
         fit_all_action.setStatusTip("适应所有节点")
-        fit_all_action.triggered.connect(lambda: self.node_graph.fit_to_selection())
+        fit_all_action.triggered.connect(self.fit_to_selection)
         toolbar.addAction(fit_all_action)
         
     def _create_menu_bar(self):
         """
-        创建菜单栏
+        创建菜单栏（v3.0 - 工程管理版本）
         """
         menubar = self.menuBar()
         
-        # 文件菜单
-        file_menu = menubar.addMenu("文件")
+        # === 文件菜单 ===
+        file_menu = menubar.addMenu("文件(&F)")
         
-        save_action = QtWidgets.QAction("保存", self)
-        save_action.triggered.connect(self.save_graph)
-        file_menu.addAction(save_action)
+        # 新建工程
+        new_project_action = QtWidgets.QAction("📄 新建工程", self)
+        new_project_action.setShortcut("Ctrl+Shift+N")
+        new_project_action.setStatusTip("创建新工程")
+        new_project_action.triggered.connect(self.new_project)
+        file_menu.addAction(new_project_action)
         
-        load_action = QtWidgets.QAction("加载", self)
-        load_action.triggered.connect(self.load_graph)
-        file_menu.addAction(load_action)
+        # 打开工程
+        open_project_action = QtWidgets.QAction("📂 打开工程", self)
+        open_project_action.setShortcut("Ctrl+Shift+O")
+        open_project_action.setStatusTip("打开已有工程")
+        open_project_action.triggered.connect(self.open_project)
+        file_menu.addAction(open_project_action)
+        
+        # 保存工程
+        save_project_action = QtWidgets.QAction("💾 保存工程", self)
+        save_project_action.setShortcut("Ctrl+Shift+S")
+        save_project_action.setStatusTip("保存当前工程")
+        save_project_action.triggered.connect(self.save_project)
+        file_menu.addAction(save_project_action)
         
         file_menu.addSeparator()
         
-        exit_action = QtWidgets.QAction("退出", self)
+        # === 最近工程子菜单 ===
+        recent_menu = file_menu.addMenu("📋 最近工程")
+        self.recent_projects_menu = recent_menu  # 保存引用以便后续更新
+        
+        # 连接菜单显示信号以动态更新
+        recent_menu.aboutToShow.connect(lambda: self._update_recent_projects_menu())
+        
+        file_menu.addSeparator()
+        
+        # 退出
+        exit_action = QtWidgets.QAction("❌ 退出", self)
+        exit_action.setShortcut("Alt+F4")
+        exit_action.setStatusTip("退出应用程序")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
-        # 编辑菜单
-        edit_menu = menubar.addMenu("编辑")
+        # === 工作流菜单 ===
+        workflow_menu = menubar.addMenu("工作流(&W)")
         
-        clear_action = QtWidgets.QAction("清空", self)
-        clear_action.triggered.connect(self.clear_graph)
-        edit_menu.addAction(clear_action)
+        # 添加工作流
+        add_workflow_action = QtWidgets.QAction("➕ 添加工作流", self)
+        add_workflow_action.setShortcut("Ctrl+N")
+        add_workflow_action.setStatusTip("添加新的工作流")
+        add_workflow_action.triggered.connect(self.add_new_workflow)
+        workflow_menu.addAction(add_workflow_action)
         
-        # 运行菜单
-        run_menu = menubar.addMenu("运行")
+        # 关闭当前工作流
+        close_workflow_action = QtWidgets.QAction("❌ 关闭当前工作流", self)
+        close_workflow_action.setShortcut("Ctrl+W")
+        close_workflow_action.setStatusTip("关闭当前工作流标签页")
+        close_workflow_action.triggered.connect(self.close_current_workflow)
+        workflow_menu.addAction(close_workflow_action)
         
-        run_action = QtWidgets.QAction("执行", self)
+        workflow_menu.addSeparator()
+        
+        # 重命名当前工作流
+        rename_workflow_action = QtWidgets.QAction("✏️ 重命名", self)
+        rename_workflow_action.setStatusTip("重命名当前工作流")
+        rename_workflow_action.triggered.connect(self.rename_current_workflow)
+        workflow_menu.addAction(rename_workflow_action)
+        
+        # === 执行菜单 ===
+        run_menu = menubar.addMenu("执行(&R)")
+        
+        # 运行当前工作流
+        run_action = QtWidgets.QAction("▶ 运行当前工作流", self)
+        run_action.setShortcut("F5")
+        run_action.setStatusTip("执行当前工作流")
         run_action.triggered.connect(self.run_graph)
         run_menu.addAction(run_action)
         
-        # 帮助菜单
-        help_menu = menubar.addMenu("帮助")
+        # 运行所有工作流
+        run_all_action = QtWidgets.QAction("⏩ 运行所有工作流", self)
+        run_all_action.setShortcut("Shift+F5")
+        run_all_action.setStatusTip("执行所有工作流")
+        run_all_action.triggered.connect(self.run_all_workflows)
+        run_menu.addAction(run_all_action)
         
-        about_action = QtWidgets.QAction("关于", self)
+        run_menu.addSeparator()
+        
+        # 清空当前工作流
+        clear_action = QtWidgets.QAction("🗑 清空当前工作流", self)
+        clear_action.setStatusTip("清空当前工作流的所有节点")
+        clear_action.triggered.connect(self.clear_graph)
+        run_menu.addAction(clear_action)
+        
+        # === 帮助菜单 ===
+        help_menu = menubar.addMenu("帮助(&H)")
+        
+        about_action = QtWidgets.QAction("ℹ️ 关于", self)
+        about_action.setStatusTip("关于本软件")
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
         
     def run_graph(self):
         """
-        执行节点图
+        执行当前激活的节点图
         """
+        if not self.current_node_graph:
+            QtWidgets.QMessageBox.warning(self, "警告", "没有激活的工作流")
+            return
+
         print("=" * 50)
         print("开始执行节点图...")
         print("=" * 50)
         
         try:
             # 执行节点图
-            results = self.engine.execute_graph(self.node_graph)
+            results = self.engine.execute_graph(self.current_node_graph)
             
             print("=" * 50)
             print("节点图执行完成!")
@@ -640,8 +877,11 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def clear_graph(self):
         """
-        清空节点图
+        清空当前激活的节点图
         """
+        if not self.current_node_graph:
+            return
+
         reply = QtWidgets.QMessageBox.question(
             self,
             "确认清空",
@@ -651,13 +891,16 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         
         if reply == QtWidgets.QMessageBox.Yes:
-            self.node_graph.clear_session()
+            self.current_node_graph.clear_session()
             print("节点图已清空")
             
     def save_graph(self):
         """
-        保存节点图
+        保存当前节点图
         """
+        if not self.current_node_graph:
+            return
+
         file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "保存节点图",
@@ -667,7 +910,7 @@ class MainWindow(QtWidgets.QMainWindow):
         
         if file_path:
             try:
-                self.node_graph.serialize_session(file_path)
+                self.current_node_graph.serialize_session(file_path)
                 print(f"节点图已保存到: {file_path}")
                 
                 QtWidgets.QMessageBox.information(
@@ -684,8 +927,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 
     def load_graph(self):
         """
-        加载节点图
+        加载节点图到当前标签页
         """
+        if not self.current_node_graph:
+            return
+
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
             "加载节点图",
@@ -695,7 +941,7 @@ class MainWindow(QtWidgets.QMainWindow):
         
         if file_path:
             try:
-                self.node_graph.deserialize_session(file_path)
+                self.current_node_graph.deserialize_session(file_path)
                 print(f"节点图已从 {file_path} 加载")
                 
                 QtWidgets.QMessageBox.information(
@@ -710,7 +956,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     f"加载节点图时发生错误:\n{str(e)}"
                 )
                 
-    def _on_node_created(self, node):
+    def _on_node_created(self, node, workflow=None):
         """
         节点创建时的回调函数
         预留用于未来扩展
@@ -761,7 +1007,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 f"保存路径:\n{file_path}"
             )
     
-    def _on_node_double_clicked(self, node):
+    def _on_node_double_clicked(self, node, workflow=None):
         """
         节点双击时的回调函数
         - IO节点: 弹出文件选择对话框
@@ -830,29 +1076,554 @@ class MainWindow(QtWidgets.QMainWindow):
         QtWidgets.QMessageBox.about(
             self,
             "关于",
-            "图形化视觉编程系统\n\n"
+            "图形化视觉编程系统 v3.0\n\n"
             "基于NodeGraphQt和OpenCV构建\n"
             "类似海康、基恩士、康耐视的视觉编程框架\n\n"
             "功能特性:\n"
             "- 可视化节点编程\n"
             "- 实时图像处理\n"
             "- 拖拽式工作流设计\n"
+            "- 多工作流管理\n"
             "- 支持多种图像处理算法"
         )
+        
+    def run_all_workflows(self):
+        """
+        执行所有工作流
+        """
+        project = self.project_manager.current_project
+        if not project or not project.workflows:
+            QtWidgets.QMessageBox.warning(self, "警告", "没有可执行的工作流")
+            return
+            
+        print("=" * 50)
+        print("开始执行所有工作流...")
+        print("=" * 50)
+        
+        success_count = 0
+        for i, workflow in enumerate(project.workflows):
+            print(f"\n--- 执行工作流 [{i+1}/{len(project.workflows)}]: {workflow.name} ---")
+            try:
+                if workflow.node_graph:
+                    self.engine.execute_graph(workflow.node_graph)
+                    success_count += 1
+            except Exception as e:
+                print(f"❌ 工作流 '{workflow.name}' 执行失败: {e}")
+                
+        print("\n" + "=" * 50)
+        print(f"所有工作流执行完毕. 成功: {success_count}/{len(project.workflows)}")
+        print("=" * 50)
+        
+        # 刷新所有预览
+        self._refresh_all_previews()
+        
+    # === 工程管理方法 ===
+    
+    def new_project(self):
+        """
+        创建新工程
+        """
+        # 检查当前工程是否有未保存修改
+        if self.project_manager.has_unsaved_changes():
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "确认",
+                "当前工程有未保存的修改\n是否先保存？",
+                QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Cancel
+            )
+            
+            if reply == QtWidgets.QMessageBox.Save:
+                self.save_project()
+            elif reply == QtWidgets.QMessageBox.Cancel:
+                return
+        
+        # 关闭当前工程
+        self.project_manager.close_project()
+        
+        # 清空标签页
+        self.tab_widget.clear()
+        
+        # 创建新工程
+        self._initialize_default_project()
+        
+    def open_project(self):
+        """
+        打开已有工程
+        """
+        # 检查当前工程是否有未保存修改
+        if self.project_manager.has_unsaved_changes():
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "确认",
+                "当前工程有未保存的修改\n是否先保存？",
+                QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Cancel
+            )
+            
+            if reply == QtWidgets.QMessageBox.Save:
+                self.save_project()
+            elif reply == QtWidgets.QMessageBox.Cancel:
+                return
+        
+        # 选择工程目录
+        project_dir = QtWidgets.QFileDialog.getExistingDirectory(
+            self,
+            "选择工程目录",
+            ""
+        )
+        
+        if not project_dir:
+            return
+        
+        # 关闭当前工程
+        self.project_manager.close_project()
+        
+        # 清空标签页
+        self.tab_widget.clear()
+        
+        # 打开工程
+        project = self.project_manager.open_project(project_dir)
+        
+        if project:
+            # 为每个工作流创建标签页
+            for workflow in project.workflows:
+                # 创建工作流的NodeGraph
+                node_graph = NodeGraph()
+                self._register_nodes(node_graph)
+                workflow.node_graph = node_graph
+                
+                # 加载节点图数据
+                if workflow.file_path:
+                    wf_full_path = os.path.join(project_dir, workflow.file_path)
+                    if os.path.exists(wf_full_path):
+                        try:
+                            node_graph.deserialize_session(wf_full_path)
+                            print(f"✅ 加载工作流: {workflow.name}")
+                        except Exception as e:
+                            print(f"❌ 加载工作流失败: {e}")
+                
+                # 连接信号
+                node_graph.node_created.connect(lambda n, wf=workflow: self._on_node_created(n, wf))
+                node_graph.node_double_clicked.connect(lambda n, wf=workflow: self._on_node_double_clicked(n, wf))
+                
+                # 添加到标签页
+                self._add_workflow_tab_to_ui(workflow)
+            
+            # 激活第一个工作流
+            if project.workflows:
+                self.tab_widget.setCurrentIndex(0)
+                self._on_tab_changed(0)
+        else:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "错误",
+                "无法打开工程"
+            )
+            
+    def save_project(self):
+        """
+        保存当前工程（v3.0 - 完善版本）
+        """
+        project = self.project_manager.current_project
+        if not project:
+            QtWidgets.QMessageBox.warning(self, "警告", "没有打开的工程")
+            return False
+        
+        # 如果工程还没有路径，询问保存位置
+        if not project.file_path:
+            project_dir = QtWidgets.QFileDialog.getExistingDirectory(
+                self,
+                "选择工程保存位置",
+                ""
+            )
+            
+            if not project_dir:
+                return False
+            
+            project.file_path = project_dir
+        
+        # === 关键步骤：遍历所有标签页，保存每个工作流的NodeGraph ===
+        print(f"💾 开始保存工程: {project.name}")
+        print(f"   工作流数量: {len(project.workflows)}")
+        
+        for i in range(self.tab_widget.count()):
+            if i < len(project.workflows):
+                workflow = project.workflows[i]
+                
+                # 从标签页获取widget
+                graph_widget = self.tab_widget.widget(i)
+                
+                # 通过widget反向查找NodeGraph
+                # NodeGraph的widget是QGraphicsView，我们需要找到对应的NodeGraph实例
+                # 由于workflow.node_graph已经关联，直接使用
+                if workflow.node_graph:
+                    try:
+                        # 创建工作流文件路径
+                        wf_filename = f"workflow_{i+1}.json"
+                        workflows_dir = os.path.join(project.file_path, "workflows")
+                        os.makedirs(workflows_dir, exist_ok=True)
+                        
+                        wf_full_path = os.path.join(workflows_dir, wf_filename)
+                        
+                        # 保存NodeGraph数据
+                        workflow.node_graph.serialize_session(wf_full_path)
+                        workflow.file_path = f"workflows/{wf_filename}"
+                        workflow.mark_saved()
+                        
+                        print(f"   ✅ 保存工作流 {i+1}: {workflow.name} -> {wf_filename}")
+                    except Exception as e:
+                        print(f"   ❌ 保存工作流 {i+1} 失败: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        return False
+        
+        # === 保存工程配置文件 ===
+        try:
+            success = self.project_manager.save_project(project.file_path)
+            
+            if success:
+                # 更新标签页标题（移除*号）
+                for i in range(self.tab_widget.count()):
+                    tab_text = self.tab_widget.tabText(i)
+                    if tab_text.endswith(" *"):
+                        self.tab_widget.setTabText(i, tab_text[:-2])
+                
+                # 添加到最近工程列表
+                self._add_to_recent_projects(project.file_path)
+                
+                print(f"✅ 工程已保存到: {project.file_path}")
+                
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "成功",
+                    f"工程已保存到:\n{project.file_path}"
+                )
+                return True
+            else:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "错误",
+                    "保存工程失败"
+                )
+                return False
+                
+        except Exception as e:
+            print(f"❌ 保存工程配置失败: {e}")
+            QtWidgets.QMessageBox.critical(
+                self,
+                "错误",
+                f"保存工程失败:\n{str(e)}"
+            )
+            return False
+    
+    def _add_to_recent_projects(self, project_path):
+        """
+        添加工程到最近打开列表
+        
+        Args:
+            project_path: 工程目录路径
+        """
+        from PySide2 import QtCore
+        
+        settings = QtCore.QSettings("VisionSystem", "StduyOpenCV")
+        
+        # 获取现有的最近工程列表
+        recent_projects = settings.value("recent_projects", [])
+        if isinstance(recent_projects, str):
+            recent_projects = [recent_projects]
+        
+        # 移除重复项
+        if project_path in recent_projects:
+            recent_projects.remove(project_path)
+        
+        # 添加到列表开头
+        recent_projects.insert(0, project_path)
+        
+        # 限制最多保存10个
+        recent_projects = recent_projects[:10]
+        
+        # 保存
+        settings.setValue("recent_projects", recent_projects)
+        print(f"📋 已添加到最近工程列表: {project_path}")
+    
+    def _get_recent_projects(self):
+        """
+        获取最近打开的工程列表
+        
+        Returns:
+            list: 工程路径列表
+        """
+        from PySide2 import QtCore
+        
+        settings = QtCore.QSettings("VisionSystem", "StduyOpenCV")
+        recent_projects = settings.value("recent_projects", [])
+        
+        if isinstance(recent_projects, str):
+            return [recent_projects]
+        
+        return recent_projects if recent_projects else []
+    
+    def _clear_recent_projects(self):
+        """
+        清空最近工程列表
+        """
+        from PySide2 import QtCore
+        
+        settings = QtCore.QSettings("VisionSystem", "StduyOpenCV")
+        settings.remove("recent_projects")
+        print("🗑️ 已清空最近工程列表")
+    
+    def _update_recent_projects_menu(self):
+        """
+        更新最近工程菜单（动态刷新）
+        """
+        if hasattr(self, 'recent_projects_menu'):
+            self.recent_projects_menu.clear()
+            self._populate_recent_projects_menu(self.recent_projects_menu)
+    
+    def _populate_recent_projects_menu(self, recent_menu):
+        """
+        填充最近工程菜单
+        
+        Args:
+            recent_menu: QMenu对象
+        """
+        recent_projects = self._get_recent_projects()
+        
+        if not recent_projects:
+            no_recent_action = QtWidgets.QAction("(空)", self)
+            no_recent_action.setEnabled(False)
+            recent_menu.addAction(no_recent_action)
+            return
+        
+        # 添加工程列表
+        for i, project_path in enumerate(recent_projects):
+            # 提取工程名称（目录名）
+            project_name = os.path.basename(project_path)
+            
+            action = QtWidgets.QAction(f"{i+1}. {project_name}", self)
+            action.setStatusTip(project_path)
+            action.triggered.connect(lambda checked, path=project_path: self._open_recent_project(path))
+            recent_menu.addAction(action)
+        
+        recent_menu.addSeparator()
+        
+        # 清空列表
+        clear_action = QtWidgets.QAction("🗑 清空列表", self)
+        clear_action.setStatusTip("清空最近工程列表")
+        clear_action.triggered.connect(self._clear_recent_projects)
+        recent_menu.addAction(clear_action)
+    
+    def _open_recent_project(self, project_path):
+        """
+        打开最近的工程
+        
+        Args:
+            project_path: 工程目录路径
+        """
+        if not os.path.exists(project_path):
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "工程不存在",
+                f"工程路径不存在:\n{project_path}\n\n是否从最近列表中移除？",
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            )
+            
+            if reply == QtWidgets.QMessageBox.Yes:
+                self._remove_from_recent_projects(project_path)
+            return
+        
+        # 检查当前工程是否有未保存修改
+        if self.project_manager.has_unsaved_changes():
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "确认",
+                "当前工程有未保存的修改\n是否先保存？",
+                QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Cancel
+            )
+            
+            if reply == QtWidgets.QMessageBox.Save:
+                self.save_project()
+            elif reply == QtWidgets.QMessageBox.Cancel:
+                return
+        
+        # 关闭当前工程
+        self.project_manager.close_project()
+        
+        # 清空标签页
+        self.tab_widget.clear()
+        
+        # 打开工程
+        project = self.project_manager.open_project(project_path)
+        
+        if project:
+            # 为每个工作流创建标签页
+            for workflow in project.workflows:
+                # 创建工作流的NodeGraph
+                node_graph = NodeGraph()
+                self._register_nodes(node_graph)
+                workflow.node_graph = node_graph
+                
+                # 加载节点图数据
+                if workflow.file_path:
+                    wf_full_path = os.path.join(project_path, workflow.file_path)
+                    if os.path.exists(wf_full_path):
+                        try:
+                            node_graph.deserialize_session(wf_full_path)
+                            print(f"✅ 加载工作流: {workflow.name}")
+                        except Exception as e:
+                            print(f"❌ 加载工作流失败: {e}")
+                
+                # 连接信号
+                node_graph.node_created.connect(lambda n, wf=workflow: self._on_node_created(n, wf))
+                node_graph.node_double_clicked.connect(lambda n, wf=workflow: self._on_node_double_clicked(n, wf))
+                
+                # 添加到标签页
+                self._add_workflow_tab_to_ui(workflow)
+            
+            # 激活第一个工作流
+            if project.workflows:
+                self.tab_widget.setCurrentIndex(0)
+                self._on_tab_changed(0)
+        else:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "错误",
+                "无法打开工程"
+            )
+    
+    def _remove_from_recent_projects(self, project_path):
+        """
+        从最近工程列表中移除指定工程
+        
+        Args:
+            project_path: 工程目录路径
+        """
+        from PySide2 import QtCore
+        
+        settings = QtCore.QSettings("VisionSystem", "StduyOpenCV")
+        recent_projects = settings.value("recent_projects", [])
+        
+        if isinstance(recent_projects, str):
+            recent_projects = [recent_projects]
+        
+        if project_path in recent_projects:
+            recent_projects.remove(project_path)
+            settings.setValue("recent_projects", recent_projects)
+            print(f"🗑️ 已从最近列表中移除: {project_path}")
+    
+    def add_new_workflow(self):
+        """
+        添加新的工作流
+        """
+        project = self.project_manager.current_project
+        if not project:
+            QtWidgets.QMessageBox.warning(self, "警告", "没有打开的工程")
+            return
+        
+        # 创建工作流
+        workflow_name = f"工作流 {len(project.workflows) + 1}"
+        workflow = self.project_manager.add_new_workflow(workflow_name)
+        
+        if workflow:
+            # 创建NodeGraph
+            node_graph = NodeGraph()
+            self._register_nodes(node_graph)
+            workflow.node_graph = node_graph
+            
+            # 连接信号
+            node_graph.node_created.connect(lambda n, wf=workflow: self._on_node_created(n, wf))
+            node_graph.node_double_clicked.connect(lambda n, wf=workflow: self._on_node_double_clicked(n, wf))
+            
+            # 添加到UI
+            self._add_workflow_tab_to_ui(workflow)
+            
+            # 切换到新标签页
+            self.tab_widget.setCurrentIndex(self.tab_widget.count() - 1)
+            self._on_tab_changed(self.tab_widget.count() - 1)
+            
+    def close_current_workflow(self):
+        """
+        关闭当前工作流
+        """
+        current_index = self.tab_widget.currentIndex()
+        if current_index >= 0:
+            self._on_tab_close_requested(current_index)
+            
+    def rename_current_workflow(self):
+        """
+        重命名当前工作流
+        """
+        project = self.project_manager.current_project
+        if not project:
+            return
+        
+        current_index = self.tab_widget.currentIndex()
+        workflow = project.get_workflow(current_index)
+        
+        if not workflow:
+            return
+        
+        # 弹出输入对话框
+        new_name, ok = QtWidgets.QInputDialog.getText(
+            self,
+            "重命名工作流",
+            "请输入新的工作流名称:",
+            QtWidgets.QLineEdit.Normal,
+            workflow.name
+        )
+        
+        if ok and new_name:
+            old_name = workflow.name
+            workflow.name = new_name
+            workflow.mark_modified()
+            
+            # 更新标签页标题
+            tab_title = new_name
+            if workflow.is_modified:
+                tab_title += " *"
+            self.tab_widget.setTabText(current_index, tab_title)
+            
+            print(f"✅ 工作流已重命名: {old_name} -> {new_name}")
+            
+    def _add_workflow_tab_to_ui(self, workflow):
+        """
+        将工作流添加到UI标签页
+        
+        Args:
+            workflow: Workflow对象
+        """
+        graph_widget = workflow.node_graph.widget
+        
+        tab_title = workflow.name
+        if workflow.is_modified:
+            tab_title += " *"
+            
+        self.tab_widget.addTab(graph_widget, tab_title)
+        
+    def fit_to_selection(self):
+        """
+        适应当前工作流的所有节点
+        """
+        if self.current_node_graph:
+            self.current_node_graph.fit_to_selection()
         
     def closeEvent(self, event):
         """
         窗口关闭事件
         """
-        reply = QtWidgets.QMessageBox.question(
-            self,
-            "确认退出",
-            "确定要退出程序吗？",
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-            QtWidgets.QMessageBox.No
-        )
+        # 检查是否有未保存修改
+        if self.project_manager.has_unsaved_changes():
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "确认退出",
+                "当前工程有未保存的修改\n是否先保存？",
+                QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Cancel
+            )
+            
+            if reply == QtWidgets.QMessageBox.Save:
+                self.save_project()
+            elif reply == QtWidgets.QMessageBox.Cancel:
+                event.ignore()
+                return
         
-        if reply == QtWidgets.QMessageBox.Yes:
-            event.accept()
-        else:
-            event.ignore()
+        event.accept()

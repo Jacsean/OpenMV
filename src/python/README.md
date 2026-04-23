@@ -432,38 +432,127 @@ def _register_nodes(self):
 - **工作流(Workflow)**: 独立的节点图和执行流程
 - **多文档界面(MDI)**: 同时编辑多个工作流
 
+**✅ 已完成 - 阶段1: 核心数据模型 (2026-04-23)**
+
+**已实现功能**:
+- ✅ Workflow类（工作流数据模型）
+- ✅ Project类（工程数据模型）
+- ✅ ProjectManager单例（工程管理器）
+- ✅ 工程持久化（目录结构+JSON格式）
+- ✅ 完整的单元测试验证
+
+**文件**: 
+- `core/project_manager.py` - 核心数据模型
+- `test_project_manager.py` - 测试脚本
+- `core/README.md` - 更新文档
+
+**测试结果**: 🎉 所有测试通过
+
+---
+
+**✅ 已完成 - 阶段2: 多标签页UI (2026-04-23)**
+
+**已实现功能**:
+- ✅ 使用QTabWidget实现多标签页界面
+- ✅ 每个标签页独立的NodeGraph实例
+- ✅ 共享节点库和属性面板
+- ✅ 标签页关闭确认（检测未保存修改）
+- ✅ 标签页拖动排序
+- ✅ 集成ProjectManager工程管理
+- ✅ 工具栏和菜单栏更新（新建/打开/保存工程）
+- ✅ 工作流管理（添加/关闭/重命名）
+- ✅ 批量执行所有工作流
+
+**文件**:
+- `ui/main_window.py` - 重构为多标签页版本
+
+**技术要点**:
+- 使用临时NodeGraph初始化共享组件
+- 标签页切换时动态更新current_node_graph引用
+- 工作流与NodeGraph实例的关联管理
+
+---
+
+**✅ 已完成 - 阶段3: 工程持久化集成 (2026-04-23)**
+
+**已实现功能**:
+- ✅ 完善save_project()方法，正确遍历标签页并保存所有工作流
+- ✅ 完善open_project()方法，恢复所有工作流的NodeGraph状态
+- ✅ 工作流文件自动命名（workflow_1.json, workflow_2.json...）
+- ✅ 保存后自动移除标签页标题的"*"号
+- ✅ 最近工程列表功能（最多保存10个）
+- ✅ 动态刷新最近工程菜单
+- ✅ 从最近列表快速打开工程
+- ✅ 清理不存在的工程路径
+
+**文件**:
+- `ui/main_window.py` - 添加完整的保存/加载逻辑
+- `test_project_persistence.py` - 持久化功能测试脚本
+
+**技术要点**:
+```python
+# 保存流程
+for i in range(tab_widget.count()):
+    workflow = project.workflows[i]
+    # 保存NodeGraph到JSON
+    wf_path = os.path.join(project_dir, f"workflows/workflow_{i+1}.json")
+    workflow.node_graph.serialize_session(wf_path)
+
+# 加载流程
+for workflow in project.workflows:
+    node_graph = NodeGraph()
+    register_nodes(node_graph)
+    workflow.node_graph = node_graph
+    # 从JSON恢复
+    node_graph.deserialize_session(wf_full_path)
+```
+
+**最近工程列表实现**:
+- 使用QSettings存储（跨平台兼容）
+- 自动去重和限制数量（最多10个）
+- 菜单动态刷新（aboutToShow信号）
+- 支持移除无效路径
+
+---
+
+**🔄 进行中 - 阶段4: 增强功能**
+
 **计划功能**:
-- [ ] 采用多文档结构或其他类似技术手段，实现同时编辑或运行多个任务流的功能
-- [ ] 任务流则包含多个节点和一个运行流程
-- [ ] 多个或一个任务流构成一个工程。工程可以保存/读取在磁盘上
+- [ ] 单个工作流的独立保存/加载
+- [ ] 工作流导出为模板
+- [ ] 工程级别的撤销/重做
+- [ ] 工作流间数据共享机制
+- [ ] 批量处理优化（并行执行）
 
 **技术方案分析**:
-1. **数据结构设计**:
+1. **数据结构设计**: ✅ 已完成
    ```
-   工程文件 (.proj)
-   ├── workflows/
-   │   ├── workflow_1.json  (节点图数据)
-   │   ├── workflow_2.json
+   工程文件结构 (.proj 实际是目录):
+   my_project.proj/
+   ├── project.json              # 工程配置文件
+   ├── workflows/                # 工作流目录
+   │   ├── workflow_1.json      # 工作流1的节点图数据
+   │   ├── workflow_2.json      # 工作流2的节点图数据
    │   └── ...
-   └── project_config.json  (工程配置、工作流列表)
+   └── assets/                   # 资源文件（可选）
    ```
 
-2. **UI架构选择**:
-   - **方案A**: 使用 `QMdiArea` 实现真正的MDI（多文档界面）
-   - **方案B**: 使用 `QTabWidget` 实现标签页切换
-   - **推荐**: 方案B更简洁，符合现代软件习惯
+2. **UI架构选择**: ✅ 已完成
+   - 使用 `QTabWidget` 实现标签页切换
+   - 简洁直观，符合现代软件习惯
 
 3. **关键挑战**:
-   - 每个工作流需要独立的 `NodeGraph` 实例
-   - 工作流间的数据共享机制
-   - 批量执行所有工作流
-   - 工程级别的撤销/重做
+   - ✅ 每个工作流需要独立的 `NodeGraph` 实例
+   - ⏭️ 工作流间的数据共享机制
+   - ✅ 批量执行所有工作流
+   - ⏭️ 工程级别的撤销/重做
 
 **下一步行动**:
-1. 设计工程和工流的数据结构
-2. 实现多工作流管理器
-3. 创建工程保存/加载逻辑
-4. 实现工作流切换UI
+1. ✅ 设计工程和工流的数据结构
+2. ✅ 实现多工作流管理器
+3. ✅ 创建工程保存/加载逻辑
+4. ✅ 实现工作流切换UI
+5. ✅ 添加最近工程列表
 
 ---
 
