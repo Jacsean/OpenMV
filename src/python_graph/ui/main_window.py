@@ -68,6 +68,18 @@ class MainWindow(QtWidgets.QMainWindow):
         # 左侧：节点库面板
         nodes_palette = NodesPaletteWidget(node_graph=self.node_graph)
         nodes_palette.setWindowTitle("节点库")
+        
+        # 设置标签位置为右侧显示
+        try:
+            # 尝试作为方法调用
+            tab_widget = nodes_palette.tab_widget()
+            if hasattr(tab_widget, 'setTabPosition'):
+                tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
+        except (AttributeError, TypeError):
+            # 如果tab_widget是属性而非方法，直接访问
+            if hasattr(nodes_palette, 'tab_widget'):
+                nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
+        
         dock_nodes = QtWidgets.QDockWidget("节点库", self)
         dock_nodes.setWidget(nodes_palette)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_nodes)
