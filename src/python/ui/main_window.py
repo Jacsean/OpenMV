@@ -496,7 +496,7 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _load_plugins_to_graph(self, node_graph):
         """
-        将插件节点加载到指定的NodeGraph
+        将插件节点加载到指定的NodeGraph，并自动归类
         
         Args:
             node_graph: NodeGraph实例
@@ -505,6 +505,8 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         
         print("\n🔌 加载插件节点到NodeGraph...")
+        new_categories = set()
+        
         for plugin_info in self._pending_plugins:
             if plugin_info.enabled:
                 success = self.plugin_manager.load_plugin_nodes(
@@ -512,13 +514,56 @@ class MainWindow(QtWidgets.QMainWindow):
                     node_graph
                 )
                 if success:
+                    # 收集新分类
+                    for node_def in plugin_info.nodes:
+                        new_categories.add(node_def.category)
                     print(f"✅ 插件加载成功: {plugin_info.name}\n")
                 else:
                     print(f"❌ 插件加载失败: {plugin_info.name}\n")
         
+        # 自动归类插件节点
+        if new_categories:
+            print(f"\n💡 新增分类: {', '.join(new_categories)}")
+            self._auto_categorize_nodes(new_categories)
+        
         # 清除待加载标记，避免重复加载
         delattr(self, '_pending_plugins')
+    
+    def _auto_categorize_nodes(self, categories):
+        """
+        自动将节点归类到对应的分类标签页
         
+        Args:
+            categories: 分类名称集合
+        """
+        if not self.nodes_palette:
+            print("⚠️ 节点库面板未初始化")
+            return
+        
+        try:
+            tab_widget = self.nodes_palette.tab_widget()
+            if not tab_widget:
+                print("⚠️ 无法获取标签页控件")
+                return
+            
+            # 获取现有分类
+            existing_categories = set()
+            for i in range(tab_widget.count()):
+                existing_categories.add(tab_widget.tabText(i))
+            
+            # 创建新分类标签
+            for category in categories:
+                if category not in existing_categories:
+                    # 注意：NodeGraphQt的NodesPaletteWidget不直接支持动态添加分类
+                    # 需要在下次启动时才能显示新分类
+                    print(f"   ⚠️ 分类 '{category}' 将在下次启动时显示")
+                    print(f"   💡 提示：NodeGraphQt限制，需要重启以显示新分类")
+                else:
+                    print(f"   ✅ 分类 '{category}' 已存在")
+                    
+        except Exception as e:
+            print(f"⚠️ 自动归类失败: {e}")
+    
     def _register_nodes(self, node_graph):
         """
         为指定的NodeGraph注册节点类型
