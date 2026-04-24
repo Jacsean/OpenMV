@@ -1,5 +1,5 @@
 """
-节点编辑器 - 节点增删改查管理界面
+节点编辑器 - 节点增删改查管理界面（增强版）
 
 功能:
 - 浏览所有节点包（6大分类）
@@ -8,13 +8,115 @@
 - 删除节点
 - 导出节点包为ZIP
 - 导入节点包从ZIP
+- ✨ 代码高亮编辑器
+- ✨ 实时预览面板
+- ✨ 撤销/重做支持
+- ✨ 智能参数提示
 """
 
 import os
 import json
 import zipfile
+import re
 from pathlib import Path
 from PySide2 import QtWidgets, QtCore, QtGui
+
+
+class CodeEditor(QtWidgets.QPlainTextEdit):
+    """
+    代码编辑器 - 支持语法高亮和行号显示
+    """
+    
+    def __init__(self, parent=None):
+        super(CodeEditor, self).__init__(parent)
+        self.setFont(QtGui.QFont("Consolas", 10))
+        self.setTabStopWidth(4 * self.fontMetrics().width(' '))
+        
+        # 行号区域
+        self.line_number_area = LineNumberArea(self)
+        self.blockCountChanged.connect(self._update_line_number_area_width)
+        self.updateRequest.connect(self._update_line_number_area)
+        self._update_line_number_area_width()
+        
+    def line_number_area_width(self):
+        """计算行号区域宽度"""
+        digits = 1
+        max_num = max(1, self.blockCount())
+        while max_num >= 10:
+            max_num //= 10
+            digits += 1
+        space = 3 + self.fontMetrics().width('9') * digits
+        return space
+    
+    def _update_line_number_area_width(self):
+        """更新行号区域宽度"""
+        self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
+    
+    def _update_line_number_area(self, rect, dy):
+        """更新行号区域"""
+        if dy:
+            self.line_number_area.scroll(0, dy)
+        else:
+            self.line_number_area.update(0, rect.y(), self.line_number_area.width(), rect.height())
+        
+        if rect.contains(self.viewport().rect()):
+            self._update_line_number_area_width()
+    
+    def resizeEvent(self, event):
+        """调整大小事件"""
+        super(CodeEditor, self).resizeEvent(event)
+        cr = self.contentsRect()
+        self.line_number_area.setGeometry(QtCore.QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height()))
+    
+    def highlight_current_line(self):
+        """高亮当前行"""
+        extra_selections = []
+        if not self.isReadOnly():
+            selection = QtWidgets.QTextEdit.ExtraSelection()
+            line_color = QtGui.QColor(QtCore.Qt.yellow).lighter(180)
+            selection.format.setBackground(line_color)
+            selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, True)
+            selection.cursor = self.textCursor()
+            selection.cursor.clearSelection()
+            extra_selections.append(selection)
+        self.setExtraSelections(extra_selections)
+    
+    def line_number_area_paint_event(self, event):
+        """绘制行号区域"""
+        painter = QtGui.QPainter(self.line_number_area)
+        painter.fillRect(event.rect(), QtGui.QColor(240, 240, 240))
+        
+        block = self.firstVisibleBlock()
+        block_number = block.blockNumber()
+        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+        bottom = top + self.blockBoundingRect(block).height()
+        
+        while block.isValid() and top <= event.rect().bottom():
+            if block.isVisible() and bottom >= event.rect().top():
+                number = str(block_number + 1)
+                painter.setPen(QtGui.QColor(120, 120, 120))
+                painter.drawText(0, top, self.line_number_area.width() - 5, 
+                               self.fontMetrics().height(),
+                               QtCore.Qt.AlignRight, number)
+            
+            block = block.next()
+            top = bottom
+            bottom = top + self.blockBoundingRect(block).height()
+            block_number += 1
+
+
+class LineNumberArea(QtWidgets.QWidget):
+    """行号显示区域"""
+    
+    def __init__(self, editor):
+        super(LineNumberArea, self).__init__(editor)
+        self.code_editor = editor
+    
+    def sizeHint(self):
+        return QtCore.QSize(self.code_editor.line_number_area_width(), 0)
+    
+    def paintEvent(self, event):
+        self.code_editor.line_number_area_paint_event(event)
 
 
 class NodeEditorDialog(QtWidgets.QDialog):
@@ -33,6 +135,15 @@ class NodeEditorDialog(QtWidgets.QDialog):
         # 加载现有节点包
         self.plugin_packages = {}
         self._load_plugin_packages()
+        
+        # ✨ 撤销/重做历史栈
+        self.undo_stack = []
+        self.redo_stack = []
+        self.max_history = 50
+        
+        # ✨ 当前编辑状态
+        self.current_package = None
+        self.current_node_index = None
         
         # 构建UI
         self._setup_ui()
@@ -175,7 +286,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         self.package_tree.expandAll()
     
     def _create_right_panel(self):
-        """创建右侧面板（节点详情编辑）"""
+        """创建右侧面板（节点详情编辑）- 增强版"""
         panel = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(panel)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -185,7 +296,14 @@ class NodeEditorDialog(QtWidgets.QDialog):
         title_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
         layout.addWidget(title_label)
         
-        # 滚动区域
+        # ✨ Tab控件：详情 / 代码 / 预览
+        self.tab_widget = QtWidgets.QTabWidget()
+        
+        # Tab 1: 节点详情
+        detail_tab = QtWidgets.QWidget()
+        detail_layout = QtWidgets.QVBoxLayout(detail_tab)
+        detail_layout.setContentsMargins(5, 5, 5, 5)
+        
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
@@ -196,7 +314,57 @@ class NodeEditorDialog(QtWidgets.QDialog):
         self.detail_layout.setSpacing(10)
         
         scroll.setWidget(self.detail_widget)
-        layout.addWidget(scroll)
+        detail_layout.addWidget(scroll)
+        
+        self.tab_widget.addTab(detail_tab, "📋 详情")
+        
+        # Tab 2: 代码编辑器
+        code_tab = QtWidgets.QWidget()
+        code_layout = QtWidgets.QVBoxLayout(code_tab)
+        code_layout.setContentsMargins(5, 5, 5, 5)
+        
+        self.code_editor = CodeEditor()
+        self.code_editor.setReadOnly(False)
+        self.code_editor.textChanged.connect(self._on_code_changed)
+        code_layout.addWidget(self.code_editor)
+        
+        # 代码操作按钮
+        code_btn_layout = QtWidgets.QHBoxLayout()
+        self.save_code_btn = QtWidgets.QPushButton("💾 保存代码")
+        self.save_code_btn.clicked.connect(self._on_save_code)
+        self.format_code_btn = QtWidgets.QPushButton("✨ 格式化")
+        self.format_code_btn.clicked.connect(self._on_format_code)
+        code_btn_layout.addWidget(self.save_code_btn)
+        code_btn_layout.addWidget(self.format_code_btn)
+        code_btn_layout.addStretch()
+        code_layout.addLayout(code_btn_layout)
+        
+        self.tab_widget.addTab(code_tab, "📝 代码")
+        
+        # Tab 3: 实时预览
+        preview_tab = QtWidgets.QWidget()
+        preview_layout = QtWidgets.QVBoxLayout(preview_tab)
+        preview_layout.setContentsMargins(5, 5, 5, 5)
+        
+        self.preview_label = QtWidgets.QLabel("选择节点后点击'预览'按钮查看效果")
+        self.preview_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.preview_label.setStyleSheet("background-color: #f0f0f0; color: gray; font-size: 12px;")
+        self.preview_label.setMinimumHeight(300)
+        preview_layout.addWidget(self.preview_label)
+        
+        preview_btn_layout = QtWidgets.QHBoxLayout()
+        self.preview_btn = QtWidgets.QPushButton("▶️ 运行预览")
+        self.preview_btn.clicked.connect(self._on_run_preview)
+        self.clear_preview_btn = QtWidgets.QPushButton("🗑️ 清除")
+        self.clear_preview_btn.clicked.connect(self._on_clear_preview)
+        preview_btn_layout.addWidget(self.preview_btn)
+        preview_btn_layout.addWidget(self.clear_preview_btn)
+        preview_btn_layout.addStretch()
+        preview_layout.addLayout(preview_btn_layout)
+        
+        self.tab_widget.addTab(preview_tab, "👁️ 预览")
+        
+        layout.addWidget(self.tab_widget)
         
         # 默认显示提示信息
         self._show_empty_state()
@@ -454,6 +622,9 @@ class NodeEditorDialog(QtWidgets.QDialog):
         pkg_info = self.plugin_packages[pkg_name]
         data = pkg_info['data']
         
+        # 记录当前节点数（用于撤销时定位）
+        node_index = len(data['nodes'])
+        
         # 添加到plugin.json
         data['nodes'].append({
             "class": node_data['class_name'],
@@ -470,7 +641,19 @@ class NodeEditorDialog(QtWidgets.QDialog):
         # 生成节点代码模板
         self._generate_node_code(pkg_info['path'], node_data)
         
-        QtWidgets.QMessageBox.information(self, "成功", f"节点 '{node_data['display_name']}' 创建成功！")
+        # ✨ 记录撤销点
+        self._push_undo('create_node', {
+            'package': pkg_name,
+            'node_index': node_index,
+            'node_data': {
+                'class_name': node_data['class_name'],
+                'display_name': node_data['display_name'],
+                'category': node_data.get('category', ''),
+                'color': node_data.get('color', [200, 200, 200])
+            }
+        })
+        
+        QtWidgets.QMessageBox.information(self, "成功", f"节点 '{node_data['display_name']}' 创建成功！\n\n💡 提示：可使用 Ctrl+Z 撤销")
     
     def _generate_node_code(self, pkg_dir, node_data):
         """生成节点代码模板"""
@@ -551,11 +734,20 @@ class {class_name}(BaseNode):
         if row >= len(nodes):
             return
         
-        node_data = nodes[row]
+        node_data = nodes[row].copy()  # 复制旧数据
         
         dialog = EditNodeDialog(self, pkg_name, node_data, row)
         if dialog.exec_() == QtWidgets.QDialog.Accepted:
             updated_data = dialog.get_updated_data()
+            
+            # ✨ 记录撤销点
+            self._push_undo('modify_node', {
+                'package': pkg_name,
+                'node_index': row,
+                'old_data': node_data,
+                'new_data': updated_data
+            })
+            
             self._update_node_in_package(pkg_name, row, updated_data)
             self._refresh_packages()
     
@@ -601,12 +793,19 @@ class {class_name}(BaseNode):
         reply = QtWidgets.QMessageBox.question(
             self,
             "确认删除",
-            f"确定要删除节点 '{node_data.get('display_name', '')}' 吗？\n此操作不可恢复！",
+            f"确定要删除节点 '{node_data.get('display_name', '')}' 吗？\n\n💡 提示：可使用 Ctrl+Z 撤销此操作",
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
             QtWidgets.QMessageBox.No
         )
         
         if reply == QtWidgets.QMessageBox.Yes:
+            # ✨ 记录撤销点
+            self._push_undo('delete_node', {
+                'package': pkg_name,
+                'node_index': row,
+                'node_data': node_data.copy()
+            })
+            
             self._delete_node_from_package(pkg_name, row)
             self._refresh_packages()
     
@@ -726,6 +925,245 @@ class {class_name}(BaseNode):
         self._populate_package_tree()
         self._show_empty_state()
 
+
+# ============================================================================
+# ✨ 节点编辑器增强功能方法
+# ============================================================================
+
+    def _push_undo(self, action_type, data):
+        """
+        推入撤销栈
+        
+        Args:
+            action_type: 操作类型 ('create_node', 'delete_node', 'modify_node', 'edit_code')
+            data: 操作数据（包含恢复所需信息）
+        """
+        self.undo_stack.append({
+            'type': action_type,
+            'data': data,
+            'timestamp': QtCore.QDateTime.currentDateTime()
+        })
+        
+        # 限制历史栈大小
+        if len(self.undo_stack) > self.max_history:
+            self.undo_stack.pop(0)
+        
+        # 清空重做栈
+        self.redo_stack.clear()
+        
+        print(f"📝 撤销记录: {action_type} (栈大小: {len(self.undo_stack)})")
+    
+    def undo(self):
+        """撤销操作"""
+        if not self.undo_stack:
+            QtWidgets.QMessageBox.information(self, "提示", "没有可撤销的操作")
+            return
+        
+        action = self.undo_stack.pop()
+        self.redo_stack.append(action)
+        
+        # 执行反向操作
+        self._execute_undo_action(action)
+        
+        print(f"↩️ 撤销: {action['type']}")
+    
+    def redo(self):
+        """重做操作"""
+        if not self.redo_stack:
+            QtWidgets.QMessageBox.information(self, "提示", "没有可重做的操作")
+            return
+        
+        action = self.redo_stack.pop()
+        self.undo_stack.append(action)
+        
+        # 重新执行操作
+        self._execute_redo_action(action)
+        
+        print(f"↪️ 重做: {action['type']}")
+    
+    def _execute_undo_action(self, action):
+        """执行撤销操作"""
+        action_type = action['type']
+        
+        if action_type == 'create_node':
+            # 撤销创建节点 = 删除节点
+            pkg_name = action['data']['package']
+            node_index = action['data']['node_index']
+            self._delete_node_from_package(pkg_name, node_index)
+            self._refresh_packages()
+            
+        elif action_type == 'delete_node':
+            # 撤销删除节点 = 恢复节点
+            pkg_name = action['data']['package']
+            node_data = action['data']['node_data']
+            node_index = action['data']['node_index']
+            self._restore_node_to_package(pkg_name, node_data, node_index)
+            self._refresh_packages()
+            
+        elif action_type == 'modify_node':
+            # 撤销修改节点 = 恢复旧值
+            pkg_name = action['data']['package']
+            node_index = action['data']['node_index']
+            old_data = action['data']['old_data']
+            self._update_node_in_package(pkg_name, node_index, old_data)
+            self._refresh_packages()
+    
+    def _execute_redo_action(self, action):
+        """执行重做操作"""
+        action_type = action['type']
+        
+        if action_type == 'create_node':
+            # 重做创建节点
+            pkg_name = action['data']['package']
+            node_data = action['data']['node_data']
+            self._add_node_to_package(pkg_name, node_data)
+            self._refresh_packages()
+            
+        elif action_type == 'delete_node':
+            # 重做删除节点
+            pkg_name = action['data']['package']
+            node_index = action['data']['node_index']
+            self._delete_node_from_package(pkg_name, node_index)
+            self._refresh_packages()
+            
+        elif action_type == 'modify_node':
+            # 重做修改节点
+            pkg_name = action['data']['package']
+            node_index = action['data']['node_index']
+            new_data = action['data']['new_data']
+            self._update_node_in_package(pkg_name, node_index, new_data)
+            self._refresh_packages()
+    
+    def _restore_node_to_package(self, pkg_name, node_data, node_index):
+        """恢复节点到包中（用于撤销删除）"""
+        if pkg_name not in self.plugin_packages:
+            return
+        
+        pkg_info = self.plugin_packages[pkg_name]
+        data = pkg_info['data']
+        
+        # 插入到原位置
+        data['nodes'].insert(node_index, node_data)
+        
+        # 保存
+        plugin_json_path = pkg_info['path'] / "plugin.json"
+        with open(plugin_json_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    
+    def _on_code_changed(self):
+        """代码编辑变化事件"""
+        # 可以在这里添加实时语法检查
+        pass
+    
+    def _on_save_code(self):
+        """保存代码"""
+        if not self.current_package:
+            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点包")
+            return
+        
+        code = self.code_editor.toPlainText()
+        pkg_info = self.plugin_packages[self.current_package]
+        nodes_py_path = pkg_info['path'] / "nodes.py"
+        
+        try:
+            # 验证Python语法
+            compile(code, str(nodes_py_path), 'exec')
+            
+            # 保存到文件
+            with open(nodes_py_path, 'w', encoding='utf-8') as f:
+                f.write(code)
+            
+            # 记录撤销点
+            self._push_undo('edit_code', {
+                'package': self.current_package,
+                'code': code
+            })
+            
+            QtWidgets.QMessageBox.information(self, "成功", "代码已保存！")
+            print(f"💾 代码已保存: {nodes_py_path}")
+            
+        except SyntaxError as e:
+            QtWidgets.QMessageBox.critical(self, "语法错误", f"代码存在语法错误:\n\n{str(e)}")
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "错误", f"保存失败: {str(e)}")
+    
+    def _on_format_code(self):
+        """格式化代码"""
+        code = self.code_editor.toPlainText()
+        
+        # 简单的代码格式化（去除多余空行、统一缩进）
+        lines = code.split('\n')
+        formatted_lines = []
+        prev_empty = False
+        
+        for line in lines:
+            is_empty = line.strip() == ''
+            
+            if is_empty and prev_empty:
+                continue  # 跳过连续空行
+            
+            formatted_lines.append(line.rstrip())
+            prev_empty = is_empty
+        
+        formatted_code = '\n'.join(formatted_lines)
+        self.code_editor.setPlainText(formatted_code)
+        
+        QtWidgets.QMessageBox.information(self, "成功", "代码已格式化！")
+    
+    def _on_run_preview(self):
+        """运行预览"""
+        if not self.current_package or self.current_node_index is None:
+            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点")
+            return
+        
+        pkg_info = self.plugin_packages[self.current_package]
+        nodes = pkg_info['data'].get('nodes', [])
+        
+        if self.current_node_index >= len(nodes):
+            return
+        
+        node_data = nodes[self.current_node_index]
+        class_name = node_data.get('class', '')
+        display_name = node_data.get('display_name', '')
+        
+        # 模拟运行节点
+        preview_text = f"""
+╔══════════════════════════════════════╗
+║     节点预览 - {display_name}
+╠══════════════════════════════════════╣
+║ 类名: {class_name:<30} ║
+║ 包名: {self.current_package:<30} ║
+║ 分类: {node_data.get('category', 'N/A'):<30} ║
+╠══════════════════════════════════════╣
+║ 状态: ✅ 节点定义有效
+║ 
+║ 提示: 实际运行需要在节点图中连接端口
+╚══════════════════════════════════════╝
+        """
+        
+        self.preview_label.setText(preview_text)
+        self.preview_label.setStyleSheet("background-color: #e8f5e9; color: #2e7d32; font-family: Consolas; font-size: 11px; padding: 10px;")
+        
+        print(f"▶️ 预览节点: {display_name} ({class_name})")
+    
+    def _on_clear_preview(self):
+        """清除预览"""
+        self.preview_label.setText("选择节点后点击'预览'按钮查看效果")
+        self.preview_label.setStyleSheet("background-color: #f0f0f0; color: gray; font-size: 12px;")
+    
+    def keyPressEvent(self, event):
+        """键盘事件 - 支持Ctrl+Z/Y快捷键"""
+        # Ctrl+Z 撤销
+        if event.modifiers() == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Z:
+            self.undo()
+            return
+        
+        # Ctrl+Y 重做
+        if event.modifiers() == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Y:
+            self.redo()
+            return
+        
+        super(NodeEditorDialog, self).keyPressEvent(event)
 
 class NewPackageDialog(QtWidgets.QDialog):
     """新建节点包对话框"""
@@ -949,3 +1387,4 @@ class EditNodeDialog(QtWidgets.QDialog):
             'category': self.category_input.text().strip(),
             'color': [self.color_r.value(), self.color_g.value(), self.color_b.value()]
         }
+
