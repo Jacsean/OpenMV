@@ -11,8 +11,13 @@
 - ✅ 添加菜单栏（文件、编辑、帮助）
 - ✅ 修复 `tab_widget` 访问问题（属性 vs 方法）
 - ✅ 调整节点库标签位置为右侧显示（East）
-- ✅ 实现图像预览对话框 ([ImagePreviewDialog](file://d:\example\projects\StduyOpenCV\src\python_graph\ui\main_window.py#L20-L165))
+- ✅ 实现图像预览对话框 ([ImagePreviewDialog](file://d:\example\projects\StduyOpenCV\src\python\ui\image_preview.py))
 - ✅ 添加节点双击事件处理（打开图像预览）
+
+### v1.1 - 代码重构 (2026-04-24)
+- ✅ 将 ImagePreviewDialog 从 main_window.py 提取到独立的 image_preview.py
+- ✅ 优化模块结构，提高代码可维护性
+- ✅ 更新 ui/__init__.py 导出配置
 
 ---
 
@@ -56,7 +61,8 @@ python main.py
 ```
 ui/
 ├── __init__.py              # 模块导出配置
-└── main_window.py          # 主窗口实现（包含所有UI组件）
+├── main_window.py          # 主窗口实现
+└── image_preview.py        # 图像预览对话框（独立模块）
 ```
 
 ### 核心类说明
@@ -121,27 +127,33 @@ ui/
 - **帮助菜单**:
   - 关于
 
-#### 2. ImagePreviewDialog ([main_window.py](file://d:\example\projects\StduyOpenCV\src\python_graph\ui\main_window.py#L20-L165))
+#### 2. ImagePreviewDialog ([image_preview.py](file://d:\example\projects\StduyOpenCV\src\python\ui\image_preview.py))
 
 图像预览对话框，用于显示完整的图像内容。
 
 **功能特性**:
+- ✅ 非模态窗口，可同时打开多个预览
 - ✅ 显示原始尺寸的图像
 - ✅ 自动缩放以适应窗口大小
 - ✅ 保持宽高比
 - ✅ 支持滚动查看大图
+- ✅ 鼠标拖拽平移（空格键切换）
+- ✅ 滚轮缩放（Ctrl+滚轮或 +/- 快捷键）
 - ✅ 显示图像详细信息（尺寸、通道、类型）
 - ✅ 保存图像到文件
 - ✅ BGR/RGB正确转换
+- ✅ 与节点关联，支持手动刷新预览
 
 **触发方式**:
 - 双击 [ImageViewNode](file://d:\example\projects\StduyOpenCV\src\python_graph\nodes\display_nodes.py) 节点
 
 **使用示例**:
-```python
-# 在主窗口中调用
-dialog = ImagePreviewDialog(image, title="图像预览", parent=self)
-dialog.exec_()
+```
+from ui.image_preview import ImagePreviewDialog
+
+# 在主窗口中调用（非模态）
+dialog = ImagePreviewDialog(image, node=node_instance, title="图像预览", parent=self)
+dialog.show()  # 使用 show() 而非 exec_()，保持非模态
 ```
 
 ---
@@ -182,7 +194,7 @@ dialog.exec_()
 ### 节点库标签位置
 
 当前配置为**右侧显示**（垂直排列），通过以下代码实现：
-```python
+```
 nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
 ```
 
@@ -277,19 +289,27 @@ def _on_node_double_clicked(self, node):
 
 ### 4. 图像预览对话框实现
 
+**文件位置**: [image_preview.py](file://d:\example\projects\StduyOpenCV\src\python\ui\image_preview.py)
+
 ```python
 class ImagePreviewDialog(QtWidgets.QDialog):
-    def __init__(self, image, title="图像预览", parent=None):
+    def __init__(self, image, node=None, title="图像预览", parent=None):
         super().__init__(parent)
         self.image = image
+        self.node = node  # 关联的节点实例
         
-        # 创建UI组件
-        self.image_label = QtWidgets.QLabel()
-        scroll_area = QtWidgets.QScrollArea()
-        scroll_area.setWidget(self.image_label)
+        # 缩放参数
+        self.zoom_factor = 1.0
+        self.min_zoom = 0.1
+        self.max_zoom = 5.0
         
-        # 显示图像
-        self.display_image()
+        # 使用 QGraphicsView 显示图像
+        self.graphics_view = QtWidgets.QGraphicsView()
+        self.scene = QtWidgets.QGraphicsScene(self)
+        self.graphics_view.setScene(self.scene)
+        
+        # 启用拖拽平移
+        self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
     
     def display_image(self):
         """将OpenCV图像转换为Qt格式并显示"""
@@ -303,16 +323,34 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             QtGui.QImage.Format_RGB888
         )
         
-        # 转换为QPixmap并缩放
+        # 创建QPixmap并添加到场景
         pixmap = QtGui.QPixmap.fromImage(qt_image)
-        scaled_pixmap = pixmap.scaled(
-            self.image_label.size(),
-            QtCore.Qt.KeepAspectRatio,
-            QtCore.Qt.SmoothTransformation
-        )
+        self.pixmap_item = self.scene.addPixmap(pixmap)
         
-        self.image_label.setPixmap(scaled_pixmap)
+        # 适应窗口显示
+        self.fit_to_window()
+    
+    def zoom_in(self):
+        """放大图像"""
+        if self.zoom_factor < self.max_zoom:
+            self.zoom_factor *= 1.2
+            self.apply_zoom()
+    
+    def zoom_out(self):
+        """缩小图像"""
+        if self.zoom_factor > self.min_zoom:
+            self.zoom_factor /= 1.2
+            self.apply_zoom()
+    
+    def refresh_preview(self):
+        """从关联节点刷新图像"""
+        if self.node is not None:
+            new_image = self.node.get_cached_image()
+            if new_image is not None:
+                self.image = new_image.copy()
+                self.display_image()
 ```
+
 
 ---
 
@@ -393,7 +431,7 @@ param = int(self.get_property('param'))
 
 ### Q: 节点库标签显示在顶部，如何改为右侧？
 **A**: 在 `_setup_ui()` 中修改：
-```python
+``python
 nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
 ```
 

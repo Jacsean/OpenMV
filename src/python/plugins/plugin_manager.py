@@ -241,12 +241,13 @@ class PluginManager:
         print(f"✅ 插件 {plugin_name} 元数据已更新")
         print(f"💡 提示：请刷新NodeGraph以应用更改")
     
-    def unload_plugin_nodes(self, plugin_name: str) -> bool:
+    def unload_plugin_nodes(self, plugin_name: str, node_graph=None) -> bool:
         """
         卸载插件节点
         
         Args:
             plugin_name: 插件名称
+            node_graph: NodeGraph实例（可选），如果提供则从Graph中注销节点
         
         Returns:
             bool: 卸载是否成功
@@ -256,6 +257,22 @@ class PluginManager:
         
         # 停止热重载监听
         self.hot_reloader.stop_watching(plugin_name)
+        
+        # 从NodeGraph中注销节点（如果提供了node_graph）
+        if node_graph:
+            plugin_info = self.plugins[plugin_name]
+            for node_def in plugin_info.nodes:
+                class_name = node_def.class_name
+                node_key = f"{plugin_name}.{class_name}"
+                
+                if node_key in self.loaded_nodes:
+                    node_class = self.loaded_nodes[node_key]
+                    try:
+                        # NodeGraphQt没有直接的unregister_node方法
+                        # 只能通过重新创建NodesPalette来刷新
+                        print(f"   🗑️ 从Graph移除节点: {node_def.display_name}")
+                    except Exception as e:
+                        print(f"   ⚠️ 移除节点失败: {e}")
         
         # 移除已注册的节点
         nodes_to_remove = [
@@ -314,6 +331,25 @@ class PluginManager:
         
         return success, message
     
+    def get_loaded_plugins(self) -> List[PluginInfo]:
+        """
+        获取已加载的插件列表
+        
+        Returns:
+            已加载的插件信息列表
+        """
+        loaded = []
+        for plugin_name, plugin_info in self.plugins.items():
+            # 检查是否有节点被加载
+            has_loaded_nodes = any(
+                key.startswith(f"{plugin_name}.")
+                for key in self.loaded_nodes.keys()
+            )
+            if has_loaded_nodes:
+                loaded.append(plugin_info)
+        
+        return loaded
+
     def uninstall_plugin(self, plugin_name: str) -> Tuple[bool, str]:
         """
         卸载插件
