@@ -1,0 +1,10 @@
+{
+  "name": "recognition",
+  "version": "1.0.0",
+  "author": "OpenCV Team",
+  "description": "识别分类节点包（二维码、OCR、模板匹配）",
+  "category_group": "识别分类",
+  "nodes": [],
+  "dependencies": ["opencv-python>=4.5", "numpy"],
+  "min_app_version": "4.0.0"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "measurement",
+  "version": "1.0.0",
+  "author": "OpenCV Team",
+  "description": "测量分析节点包（尺寸、位置角度、轮廓分析）",
+  "category_group": "测量分析",
+  "nodes": [],
+  "dependencies": ["opencv-python>=4.5", "numpy"],
+  "min_app_version": "4.0.0"
+}

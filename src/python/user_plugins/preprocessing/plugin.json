@@ -1,0 +1,23 @@
+{
+  "name": "preprocessing",
+  "version": "1.0.0",
+  "author": "OpenCV Team",
+  "description": "图像预处理节点包（滤波、色彩转换、变换、校准）",
+  "category_group": "预处理",
+  "nodes": [
+    {
+      "class": "GrayscaleNode",
+      "display_name": "灰度化",
+      "category": "色彩空间转换",
+      "color": [100, 200, 255]
+    },
+    {
+      "class": "GaussianBlurNode",
+      "display_name": "高斯模糊",
+      "category": "滤波增强",
+      "color": [100, 200, 255]
+    }
+  ],
+  "dependencies": ["opencv-python>=4.5", "numpy"],
+  "min_app_version": "4.0.0"
+}

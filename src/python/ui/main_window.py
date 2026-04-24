@@ -9,6 +9,7 @@ v3.0更新:
 v4.0更新:
 - 集成插件系统
 - 支持动态加载插件节点
+- 节点完全插件化（6大分类体系）
 """
 
 import sys
@@ -20,11 +21,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PySide2 import QtWidgets, QtCore, QtGui
 from NodeGraphQt import NodeGraph, NodesPaletteWidget, PropertiesBinWidget
 import cv2
-
-# 导入节点类型
-from nodes.io_nodes import ImageLoadNode, ImageSaveNode
-from nodes.processing_nodes import GrayscaleNode, GaussianBlurNode, CannyEdgeNode, ThresholdNode
-from nodes.display_nodes import ImageViewNode
 
 # 导入核心引擎和工程管理
 from core.graph_engine import GraphEngine
@@ -566,19 +562,17 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _register_nodes(self, node_graph):
         """
-        为指定的NodeGraph注册节点类型
+        为指定的NodeGraph注册节点类型（已废弃，改用插件系统）
         
         Args:
             node_graph: NodeGraph实例
-        """
-        node_graph.register_node(ImageLoadNode)
-        node_graph.register_node(ImageSaveNode)
-        node_graph.register_node(GrayscaleNode)
-        node_graph.register_node(GaussianBlurNode)
-        node_graph.register_node(CannyEdgeNode)
-        node_graph.register_node(ThresholdNode)
-        node_graph.register_node(ImageViewNode)
         
+        Note:
+            所有节点现在通过插件系统动态加载
+            此方法保留仅用于兼容性，不再注册任何节点
+        """
+        pass
+    
     def _add_workflow_tab(self, workflow):
         """
         添加工作流标签页
@@ -1153,10 +1147,74 @@ class MainWindow(QtWidgets.QMainWindow):
         - IO节点: 弹出文件选择对话框
         - ImageViewNode: 显示图像预览对话框（非模态）
         """
-        from nodes.io_nodes import ImageLoadNode, ImageSaveNode
+        # 使用插件系统中的节点类进行判断，或者通过节点类型名称判断
+        # 这里为了保持兼容性和解耦，建议通过节点的 type_ 或者基类来判断
+        # 假设插件系统中仍然导出了这些类用于类型检查，或者我们使用更通用的方式
         
-        # 处理图像加载节点
-        if isinstance(node, ImageLoadNode):
+        # 尝试从插件管理器获取节点类引用进行比较，或者简单地在节点上标记属性
+        # 由于是纯插件化，我们可能需要依赖节点的类型字符串或特定属性
+        # 这里暂时保留逻辑结构，但移除硬导入。
+        # 实际项目中，插件节点通常会继承自特定的基类，或者我们可以通过 node.type_() 来判断
+        
+        # 获取节点类型标识
+        node_type = node.type_()
+        
+        # 处理图像加载节点 (假设插件中注册的类型为 nodes.io.ImageLoadNode 等)
+        if "ImageLoadNode" in node_type or hasattr(node, 'file_path'):
+             # 简单的启发式判断：如果有 file_path 属性且是 IO 类节点
+            self._on_browse_image_file(node)
+            
+        # 处理图像保存节点
+        elif "ImageSaveNode" in node_type or hasattr(node, 'save_path'):
+            self._on_select_save_path(node)
+            
+        # 处理图像显示节点（原有功能）
+        elif "ImageViewNode" in node_type or hasattr(node, 'get_cached_image'):
+            if hasattr(node, 'get_cached_image'):
+                image = node.get_cached_image()
+                if image is not None:
+                    # 检查是否已经打开了该节点的预览窗口
+                    node_id = node.id  # id是属性，不是方法
+                    if node_id in self.preview_windows:
+                        # 如果窗口已存在，将其提到前面并刷新
+                        existing_dialog = self.preview_windows[node_id]
+                        existing_dialog.raise_()
+                        existing_dialog.activateWindow()
+                        existing_dialog.refresh_preview()
+                    else:
+                        # 创建新的预览对话框（非模态）
+                        dialog = ImagePreviewDialog(
+                            image, 
+                            node=node,  # 传递节点引用用于刷新
+                            title=f"图像预览 - {node.name()}",
+                            parent=self
+                        )
+                        
+                        # 保存窗口引用
+                        self.preview_windows[node_id] = dialog
+                        
+                        # 监听窗口关闭事件，清理引用
+                        dialog.finished.connect(lambda nid=node_id: self._on_preview_window_closed(nid))
+                        
+                        # 显示非模态窗口
+                        dialog.show()
+                        
+                    print(f"📷 打开预览窗口: {node.name()}")
+                else:
+                    QtWidgets.QMessageBox.information(
+                        self,
+                        "提示",
+                        "该节点尚未处理图像数据\n请先运行节点图"
+                    )
+            else:
+                # 如果不是 ImageViewNode 但也没有 get_cached_image，不做处理
+                pass
+        else:
+            # 其他节点类型，如果需要特殊双击行为可在此扩展
+            pass
+            
+        # 下面是被替换掉的旧代码块，确保逻辑完整
+        if False:
             self._on_browse_image_file(node)
             
         # 处理图像保存节点

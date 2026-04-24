@@ -1,0 +1,23 @@
+{
+  "name": "io_camera",
+  "version": "1.0.0",
+  "author": "OpenCV Team",
+  "description": "图像采集与IO操作节点包",
+  "category_group": "图像相机",
+  "nodes": [
+    {
+      "class": "ImageLoadNode",
+      "display_name": "加载图像",
+      "category": "文件IO",
+      "color": [100, 255, 100]
+    },
+    {
+      "class": "ImageSaveNode",
+      "display_name": "保存图像",
+      "category": "文件IO",
+      "color": [100, 255, 100]
+    }
+  ],
+  "dependencies": ["opencv-python>=4.5", "numpy"],
+  "min_app_version": "4.0.0"
+}
