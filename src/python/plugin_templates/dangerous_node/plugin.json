@@ -1,0 +1,15 @@
+{
+  "name": "test_dangerous",
+  "version": "1.0.0",
+  "author": "Test Author",
+  "description": "测试用危险插件（应被拦截）",
+  "nodes": [
+    {
+      "class": "DangerousNode",
+      "display_name": "危险节点",
+      "category": "测试"
+    }
+  ],
+  "dependencies": [],
+  "min_app_version": "3.1.0"
+}

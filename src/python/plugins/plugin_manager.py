@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Type
 
 from .models import PluginInfo, NodeDefinition
+from .sandbox import PluginSandbox, SandboxSecurityError
+from .permission_checker import PermissionChecker
 
 
 class PluginManager:
@@ -31,6 +33,9 @@ class PluginManager:
         self.loaded_nodes: Dict[str, Type] = {}  # 已加载的节点类
         self.plugins_dir = Path(__file__).parent.parent / "user_plugins"
         self.plugins_dir.mkdir(exist_ok=True)
+        
+        # 初始化沙箱环境
+        self.sandbox = PluginSandbox()
     
     def scan_plugins(self) -> List[PluginInfo]:
         """
@@ -117,7 +122,7 @@ class PluginManager:
     
     def load_plugin_nodes(self, plugin_name: str, node_graph) -> bool:
         """
-        加载插件的节点类并注册到NodeGraph
+        安全地加载插件的节点类并注册到NodeGraph
         
         Args:
             plugin_name: 插件名称
@@ -134,13 +139,26 @@ class PluginManager:
         plugin_path = Path(plugin_info.path)
         
         try:
-            # 1. 加载 nodes.py 模块
+            # 1. 读取源代码进行安全检查
             nodes_file = plugin_path / "nodes.py"
             if not nodes_file.exists():
                 print(f"❌ 插件缺少 nodes.py: {plugin_name}")
                 return False
             
-            # 动态导入模块
+            with open(nodes_file, 'r', encoding='utf-8') as f:
+                source_code = f.read()
+            
+            # 2. 权限检查
+            violations = PermissionChecker.check_source_code(source_code)
+            if violations:
+                print(f"🚫 插件 {plugin_name} 安全检查失败:")
+                for v in violations:
+                    print(f"   - {v}")
+                return False
+            
+            print(f"✅ 安全检查通过: {plugin_name}")
+            
+            # 3. 动态导入模块
             module_name = f"plugin_{plugin_name}_nodes"
             spec = importlib.util.spec_from_file_location(module_name, nodes_file)
             module = importlib.util.module_from_spec(spec)
@@ -149,7 +167,7 @@ class PluginManager:
             
             print(f"✅ 模块加载成功: {plugin_name}")
             
-            # 2. 提取节点类并注册
+            # 4. 提取节点类并注册
             registered_count = 0
             for node_def in plugin_info.nodes:
                 class_name = node_def.class_name
@@ -173,6 +191,9 @@ class PluginManager:
             print(f"✅ 插件 {plugin_name} 加载完成，注册 {registered_count} 个节点")
             return True
             
+        except SandboxSecurityError as e:
+            print(f"🚫 安全违规: {e}")
+            return False
         except Exception as e:
             print(f"❌ 加载插件节点失败 {plugin_name}: {e}")
             import traceback
