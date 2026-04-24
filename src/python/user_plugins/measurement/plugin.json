@@ -4,7 +4,20 @@
   "author": "OpenCV Team",
   "description": "测量分析节点包（尺寸、位置角度、轮廓分析）",
   "category_group": "测量分析",
-  "nodes": [],
+  "nodes": [
+    {
+      "class": "ContourAnalysisNode",
+      "display_name": "轮廓分析",
+      "category": "轮廓分析",
+      "color": [255, 150, 100]
+    },
+    {
+      "class": "BoundingBoxNode",
+      "display_name": "边界框检测",
+      "category": "尺寸测量",
+      "color": [255, 150, 100]
+    }
+  ],
   "dependencies": ["opencv-python>=4.5", "numpy"],
   "min_app_version": "4.0.0"
 }

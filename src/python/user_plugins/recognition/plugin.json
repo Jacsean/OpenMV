@@ -4,7 +4,14 @@
   "author": "OpenCV Team",
   "description": "识别分类节点包（二维码、OCR、模板匹配）",
   "category_group": "识别分类",
-  "nodes": [],
+  "nodes": [
+    {
+      "class": "TemplateMatchNode",
+      "display_name": "模板匹配",
+      "category": "模板匹配",
+      "color": [200, 100, 255]
+    }
+  ],
   "dependencies": ["opencv-python>=4.5", "numpy"],
   "min_app_version": "4.0.0"
 }
