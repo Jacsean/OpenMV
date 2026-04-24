@@ -5,6 +5,10 @@ v3.0更新:
 - 支持多工作流管理（QTabWidget）
 - 集成ProjectManager工程管理
 - 每个标签页独立的NodeGraph实例
+
+v4.0更新:
+- 集成插件系统
+- 支持动态加载插件节点
 """
 
 import sys
@@ -25,6 +29,9 @@ from nodes.display_nodes import ImageViewNode
 # 导入核心引擎和工程管理
 from core.graph_engine import GraphEngine
 from core.project_manager import project_manager
+
+# 导入插件管理器
+from plugins.plugin_manager import PluginManager
 
 
 class ImagePreviewDialog(QtWidgets.QDialog):
@@ -420,11 +427,14 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
         
         # 设置窗口属性
-        self.setWindowTitle("图形化视觉编程系统 v3.0")
+        self.setWindowTitle("图形化视觉编程系统 v4.0")
         self.setGeometry(100, 100, 1600, 900)
         
         # 初始化工程管理器
         self.project_manager = project_manager
+        
+        # 初始化插件管理器
+        self.plugin_manager = PluginManager()
         
         # 创建执行引擎
         self.engine = GraphEngine()
@@ -443,6 +453,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # 创建UI组件
         self._setup_ui()
         
+        # 加载插件
+        self._load_plugins()
+        
         # 创建默认工程和工作流
         self._initialize_default_project()
         
@@ -457,6 +470,54 @@ class MainWindow(QtWidgets.QMainWindow):
         if project.workflows:
             workflow = project.workflows[0]
             self._add_workflow_tab(workflow)
+    
+    def _load_plugins(self):
+        """
+        加载所有已安装的插件
+        """
+        print("\n" + "=" * 60)
+        print("正在加载插件...")
+        print("=" * 60)
+        
+        # 扫描插件
+        plugins = self.plugin_manager.scan_plugins()
+        print(f"发现 {len(plugins)} 个插件\n")
+        
+        if not plugins:
+            print("💡 提示: 将插件文件夹放入 user_plugins/ 目录即可自动加载\n")
+            print("=" * 60 + "\n")
+            return
+        
+        # 由于此时还没有NodeGraph实例，延迟到第一个工作流创建时加载
+        # 这里只记录需要加载的插件
+        self._pending_plugins = plugins
+        print(f"📦 待加载插件: {', '.join([p.name for p in plugins])}")
+        print("=" * 60 + "\n")
+    
+    def _load_plugins_to_graph(self, node_graph):
+        """
+        将插件节点加载到指定的NodeGraph
+        
+        Args:
+            node_graph: NodeGraph实例
+        """
+        if not hasattr(self, '_pending_plugins'):
+            return
+        
+        print("\n🔌 加载插件节点到NodeGraph...")
+        for plugin_info in self._pending_plugins:
+            if plugin_info.enabled:
+                success = self.plugin_manager.load_plugin_nodes(
+                    plugin_info.name,
+                    node_graph
+                )
+                if success:
+                    print(f"✅ 插件加载成功: {plugin_info.name}\n")
+                else:
+                    print(f"❌ 插件加载失败: {plugin_info.name}\n")
+        
+        # 清除待加载标记，避免重复加载
+        delattr(self, '_pending_plugins')
         
     def _register_nodes(self, node_graph):
         """
@@ -483,8 +544,12 @@ class MainWindow(QtWidgets.QMainWindow):
         # 创建新的NodeGraph实例
         node_graph = NodeGraph()
         
-        # 注册节点
+        # 注册基础节点
         self._register_nodes(node_graph)
+        
+        # 加载插件节点（仅在第一个工作流时加载一次）
+        if hasattr(self, '_pending_plugins') and self.tab_widget.count() == 0:
+            self._load_plugins_to_graph(node_graph)
         
         # 关联到工作流
         workflow.node_graph = node_graph
