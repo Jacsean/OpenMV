@@ -16,6 +16,12 @@
       "display_name": "保存图像",
       "category": "文件IO",
       "color": [100, 255, 100]
+    },
+    {
+      "class": "ImageViewNode",
+      "display_name": "图像显示",
+      "category": "显示",
+      "color": [100, 100, 255]
     }
   ],
   "dependencies": ["opencv-python>=4.5", "numpy"],

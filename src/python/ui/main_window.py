@@ -513,22 +513,33 @@ class MainWindow(QtWidgets.QMainWindow):
         - IO节点: 弹出文件选择对话框
         - ImageViewNode: 显示图像预览对话框（非模态）
         """
-        # 获取节点类型标识
-        node_type = node.type_()
+        # 获取节点类型标识（type_是属性，不是方法）
+        node_type = node.type_ if hasattr(node, 'type_') else str(type(node))
         
-        # 处理图像加载节点
-        if "ImageLoadNode" in node_type or hasattr(node, 'file_path'):
+        print(f"🔍 节点双击调试信息:")
+        print(f"   节点类型: {node_type}")
+        print(f"   节点名称: {node.name()}")
+        print(f"   是否有file_path属性: {hasattr(node, 'file_path')}")
+        print(f"   是否有save_path属性: {hasattr(node, 'save_path')}")
+        print(f"   是否有get_cached_image方法: {hasattr(node, 'get_cached_image')}")
+        
+        # 处理图像加载节点 (ImageLoadNode)
+        if "ImageLoadNode" in str(node_type) or hasattr(node, 'file_path'):
+            print(f"   ✅ 识别为 ImageLoadNode，打开文件选择对话框")
             self._on_browse_image_file(node)
             
-        # 处理图像保存节点
-        elif "ImageSaveNode" in node_type or hasattr(node, 'save_path'):
+        # 处理图像保存节点 (ImageSaveNode)
+        elif "ImageSaveNode" in str(node_type) or hasattr(node, 'save_path'):
+            print(f"   ✅ 识别为 ImageSaveNode，打开保存路径选择对话框")
             self._on_select_save_path(node)
             
-        # 处理图像显示节点
-        elif "ImageViewNode" in node_type or hasattr(node, 'get_cached_image'):
+        # 处理图像显示节点 (ImageViewNode)
+        elif "ImageViewNode" in str(node_type) or hasattr(node, 'get_cached_image'):
+            print(f"   ✅ 识别为 ImageViewNode，尝试打开预览窗口")
             if hasattr(node, 'get_cached_image'):
                 image = node.get_cached_image()
                 if image is not None:
+                    print(f"   ✅ 获取到缓存图像，形状: {image.shape}")
                     # 检查是否已经打开了该节点的预览窗口
                     node_id = node.id  # id是属性，不是方法
                     if node_id in self.preview_windows:
@@ -537,6 +548,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         existing_dialog.raise_()
                         existing_dialog.activateWindow()
                         existing_dialog.refresh_preview()
+                        print(f"   🔄 刷新已存在的预览窗口")
                     else:
                         # 创建新的预览对话框（非模态）
                         dialog = ImagePreviewDialog(
@@ -554,15 +566,21 @@ class MainWindow(QtWidgets.QMainWindow):
                         
                         # 显示非模态窗口
                         dialog.show()
+                        print(f"   📷 打开新的预览窗口")
                         
-                    print(f"📷 打开预览窗口: {node.name()}")
+                    print(f"✅ 成功打开预览窗口: {node.name()}")
                 else:
+                    print(f"   ⚠️ 节点中没有缓存图像")
                     QtWidgets.QMessageBox.information(
                         self,
                         "提示",
                         "该节点尚未处理图像数据\n请先运行节点图"
                     )
-            
+            else:
+                print(f"   ❌ 节点没有get_cached_image方法")
+        else:
+            print(f"   ℹ️ 未识别的节点类型，不执行任何操作")
+
     def _on_preview_window_closed(self, node_id):
         """
         预览窗口关闭时的回调，清理引用

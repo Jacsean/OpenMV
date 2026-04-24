@@ -114,6 +114,7 @@ class PluginManager:
                 version=data.get('version', '1.0.0'),
                 author=data.get('author', 'Unknown'),
                 description=data.get('description', ''),
+                category_group=data.get('category_group', data['name']),  # 使用category_group，如果没有则使用name
                 nodes=nodes,
                 dependencies=data.get('dependencies', []),
                 min_app_version=data.get('min_app_version', '3.1.0'),

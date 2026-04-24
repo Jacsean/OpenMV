@@ -24,6 +24,7 @@ class PluginInfo:
     version: str              # 版本号
     author: str               # 作者
     description: str          # 描述
+    category_group: str = ""  # 分类组名称（用于节点库标签页显示）
     nodes: List[NodeDefinition] = field(default_factory=list)
     dependencies: List[str] = field(default_factory=list)
     min_app_version: str = "3.1.0"

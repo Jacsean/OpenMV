@@ -54,11 +54,17 @@ class PluginUIManager:
         print(f"   待加载插件数量: {len(self.main_window._pending_plugins)}")
         new_categories = set()
         
+        # 构建标识符到显示名称的映射
+        identifier_to_display_name = {}
+        
         # 收集所有需要加载的插件
         plugins_to_load = []
         for plugin_info in self.main_window._pending_plugins:
             if plugin_info.enabled:
                 plugins_to_load.append(plugin_info)
+                # 记录标识符映射（使用plugin.json的name作为identifier，category_group作为显示名）
+                if hasattr(plugin_info, 'category_group') and plugin_info.category_group:
+                    identifier_to_display_name[plugin_info.name] = plugin_info.category_group
         
         if not plugins_to_load:
             print("⚠️ 没有启用的插件需要加载")
@@ -92,6 +98,14 @@ class PluginUIManager:
                         new_categories.add(node_def.category)
                         
                 print(f"\n✅ 已注册 {len(new_categories)} 个分类到节点库")
+                
+                # 应用自定义标签页名称映射
+                if identifier_to_display_name:
+                    print(f"\n🔍 准备应用标签页名称映射...")
+                    print(f"   映射表内容: {identifier_to_display_name}")
+                    self._apply_custom_tab_names(identifier_to_display_name)
+                else:
+                    print(f"\n⚠️ 跳过标签页重命名：映射表为空")
             except Exception as e:
                 print(f"⚠️ 加载到节点库失败: {e}")
                 import traceback
@@ -125,6 +139,78 @@ class PluginUIManager:
             self.refresh_nodes_palette()
         
         return new_categories
+    
+    def _apply_custom_tab_names(self, identifier_to_display_name):
+        """
+        应用自定义标签页名称映射
+        
+        Args:
+            identifier_to_display_name: dict, 标识符到显示名称的映射
+        """
+        print(f"\n{'='*80}")
+        print(f"🏷️  [_apply_custom_tab_names] 开始执行")
+        print(f"{'='*80}")
+        print(f"   输入映射表: {identifier_to_display_name}")
+        
+        if not self.main_window.nodes_palette:
+            print("⚠️ 跳过标签页重命名：nodes_palette 不存在")
+            print(f"   nodes_palette 值: {self.main_window.nodes_palette}")
+            return
+        
+        print(f"✅ nodes_palette 存在")
+        print(f"   类型: {type(self.main_window.nodes_palette)}")
+        print(f"   是否有 tab_widget 方法: {hasattr(self.main_window.nodes_palette, 'tab_widget')}")
+        
+        try:
+            # tab_widget是方法而非属性，需要调用
+            tab_widget = self.main_window.nodes_palette.tab_widget()
+            
+            print(f"✅ tab_widget() 调用成功")
+            print(f"   返回对象类型: {type(tab_widget)}")
+            print(f"   是否为 QTabWidget: {tab_widget.__class__.__name__ == 'QTabWidget'}")
+            
+            if not tab_widget:
+                print("⚠️ 跳过标签页重命名：tab_widget() 返回 None")
+                return
+            
+            print(f"\n📊 当前标签页状态:")
+            print(f"   标签页数量: {tab_widget.count()}")
+            
+            if tab_widget.count() == 0:
+                print("⚠️ 警告：当前没有任何标签页！")
+                print("   可能原因：节点尚未注册到Graph，或NodeGraphQt未自动创建标签页")
+                return
+            
+            # 遍历所有标签页，根据映射修改名称
+            renamed_count = 0
+            for i in range(tab_widget.count()):
+                current_name = tab_widget.tabText(i)
+                print(f"   [{i}] 当前标签名: '{current_name}'")
+                
+                # 查找是否有匹配的映射
+                for identifier, display_name in identifier_to_display_name.items():
+                    # NodeGraphQt使用__identifier__作为标签页名称
+                    if current_name == identifier:
+                        print(f"      ✅ 找到匹配，准备重命名...")
+                        tab_widget.setTabText(i, display_name)
+                        new_name = tab_widget.tabText(i)
+                        print(f"      ✅ 重命名完成: '{identifier}' → '{display_name}' (验证: '{new_name}')")
+                        renamed_count += 1
+                        break
+                else:
+                    print(f"      ℹ️  无匹配映射，保持原名")
+            
+            print(f"\n✅ 共重命名 {renamed_count} 个标签页")
+            print(f"{'='*80}\n")
+                    
+        except AttributeError as e:
+            print(f"❌ AttributeError: {e}")
+            print(f"   nodes_palette类型: {type(self.main_window.nodes_palette)}")
+            print(f"   nodes_palette可用属性: {[attr for attr in dir(self.main_window.nodes_palette) if not attr.startswith('_')][:30]}")
+        except Exception as e:
+            print(f"❌ 应用自定义标签名失败: {e}")
+            import traceback
+            traceback.print_exc()
     
     def refresh_nodes_palette(self):
         """
