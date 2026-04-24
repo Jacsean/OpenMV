@@ -1,0 +1,20 @@
+{
+  "name": "test_morphology",
+  "version": "1.0.0",
+  "author": "Test Author",
+  "description": "测试用形态学操作插件",
+  "nodes": [
+    {
+      "class": "DilateNode",
+      "display_name": "膨胀",
+      "category": "形态学"
+    },
+    {
+      "class": "ErodeNode",
+      "display_name": "腐蚀",
+      "category": "形态学"
+    }
+  ],
+  "dependencies": [],
+  "min_app_version": "3.1.0"
+}

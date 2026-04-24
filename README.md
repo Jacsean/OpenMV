@@ -1,28 +1,28 @@
                         # OpenCV视觉系统
 
-一个基于OpenCV的多语言图像处理系统,提供 **C++** 和 **Python** 两种实现版本。
+一个基于OpenCV的图像处理与视觉分析系统，提供 **Python** 实现版本。
 
 ## 📋 文档导航
 
 - 📘 **本文档**: 项目总览、快速开始、功能说明
 - 📗 [安装指南](#-安装指南): 详细的安装步骤
-- 📙 [Python版本详解](src/python/README.md): Python模块化架构和使用说明
-- 📕 [C++版本详解](src/CPP/README.md): C++版本编译和使用说明
+- 📙 [Python传统版详解](src/python/README.md): Python模块化架构和使用说明
+- 📕 [Python图形化版详解](src/python_graph/README.md): 节点式编程和使用说明
 - 📝 [贡献指南](CONTRIBUTING.md): 如何参与项目开发
 
 ---
 
 ## 🎯 项目简介
 
-本项目是一个功能完整的图像处理与视觉分析系统,支持多种常见的图像处理算法,提供友好的用户界面和鼠标交互功能。**完全离线运行**,无需网络依赖,保护数据隐私。
+本项目是一个功能完整的图像处理与视觉分析系统，支持多种常见的图像处理算法，提供友好的用户界面和鼠标交互功能。**完全离线运行**，无需网络依赖，保护数据隐私。
 
 ### 核心特点
 
-- ✅ **双语言实现**: Python（易上手）+ C++（高性能）
+- ✅ **Python实现**: 易上手，适合学习和原型设计
 - ✅ **12种算法**: 覆盖基础处理、边缘检测、形态学等
 - ✅ **交互式ROI**: 鼠标选择、裁剪感兴趣区域
-- ✅ **完全离线**: 无需网络,本地化处理
-- ✅ **模块化设计**: Python版本采用MVC架构,易于扩展
+- ✅ **完全离线**: 无需网络，本地化处理
+- ✅ **模块化设计**: 采用MVC架构/节点图引擎，易于扩展
 
 ---
 
@@ -51,15 +51,15 @@
 
 ### 💻 多版本对比
 
-| 特性 | Python传统版 | Python图形化版 | C++版本 |
-|------|-------------|---------------|---------|
-| **UI框架** | tkinter | NodeGraphQt+PySide2 | OpenCV HighGUI |
-| **编程方式** | 按钮点击 | 拖拽节点连线 | 键盘快捷键 |
-| **架构模式** | MVC模块化 | 节点图引擎 | 单体式 |
-| **易用性** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| **性能** | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **适用场景** | 学习/原型 | 工作流设计 | 生产环境 |
-| **类似产品** | - | 海康VM/基恩士CV-X | - |
+| 特性 | Python传统版 | Python图形化版 |
+|------|-------------|---------------|
+| **UI框架** | tkinter | NodeGraphQt+PySide2 |
+| **编程方式** | 按钮点击 | 拖拽节点连线 |
+| **架构模式** | MVC模块化 | 节点图引擎 |
+| **易用性** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| **性能** | ⭐⭐⭐ | ⭐⭐⭐ |
+| **适用场景** | 学习/原型 | 工作流设计 |
+| **类似产品** | - | 海康VM/基恩士CV-X |
 
 ---
 
@@ -109,31 +109,7 @@ python vision_system.py
 python test_modules.py  # 验证模块化架构
 ```
 
-**详细说明**: [Python版本文档](src/python/README.md)
-
----
-
-### 方式三：C++版本（高性能）
-
-#### 1. 安装OpenCV
-- **Windows**: 使用vcpkg或官方安装包
-- **Linux**: `sudo apt-get install libopencv-dev`
-- **macOS**: `brew install opencv`
-
-#### 2. 编译项目
-```bash
-cd src/CPP
-mkdir build && cd build
-cmake ..
-make  # Windows: cmake --build .
-```
-
-#### 3. 运行程序
-```bash
-./bin/vision_system <图片路径>
-```
-
-**详细说明**: [C++版本文档](src/CPP/README.md)
+**详细说明**: [Python传统版本文档](src/python/README.md)
 
 ---
 
@@ -143,13 +119,11 @@ make  # Windows: cmake --build .
 StduyOpenCV/
 ├── README.md                    # 本文档 - 项目总览
 ├── CONTRIBUTING.md              # 贡献指南
-├── DOCUMENTATION_REORGANIZATION.md  # 文档整理说明
 ├── .gitignore                   # Git忽略配置
 ├── run_python.bat/sh            # Python启动脚本
-├── build_cpp.bat/sh             # C++编译脚本
 │
 ├── src/
-│   ├── python_graph/            # 🌟 Python图形化版本（NEW!）
+│   ├── python_graph/            # 🌟 Python图形化版本
 │   │   ├── main.py              # 程序入口
 │   │   ├── requirements.txt     # 依赖清单
 │   │   ├── README.md            # 📘 图形化版本详细说明
@@ -163,26 +137,19 @@ StduyOpenCV/
 │   │   └── ui/                  # 用户界面
 │   │       └── main_window.py   # 主窗口
 │   │
-│   ├── python/                  # Python传统版本（模块化MVC架构）
-│   │   ├── vision_system.py     # 主程序入口
-│   │   ├── controller.py        # 应用控制器
-│   │   ├── requirements.txt     # 依赖清单
-│   │   ├── test_modules.py      # 模块测试
-│   │   ├── create_test_image.py # 测试图片生成
-│   │   ├── README.md            # 📗 Python传统版详细说明
-│   │   ├── core/                # 核心算法模块
-│   │   │   ├── __init__.py
-│   │   │   └── image_processor.py
-│   │   └── UI/                  # 用户界面模块
-│   │       ├── __init__.py
-│   │       └── main_window.py
-│   │
-│   └── CPP/                     # C++版本
-│       ├── main.cpp             # 程序入口
-│       ├── vision_system.h      # 头文件
-│       ├── vision_system.cpp    # 实现文件
-│       ├── CMakeLists.txt       # CMake配置
-│       └── README.md            # 📕 C++版详细说明
+│   └── python/                  # Python传统版本（模块化MVC架构）
+│       ├── vision_system.py     # 主程序入口
+│       ├── controller.py        # 应用控制器
+│       ├── requirements.txt     # 依赖清单
+│       ├── test_modules.py      # 模块测试
+│       ├── create_test_image.py # 测试图片生成
+│       ├── README.md            # 📗 Python传统版详细说明
+│       ├── core/                # 核心算法模块
+│       │   ├── __init__.py
+│       │   └── image_processor.py
+│       └── UI/                  # 用户界面模块
+│           ├── __init__.py
+│           └── main_window.py
 ```
 
 ---
@@ -196,7 +163,7 @@ StduyOpenCV/
 # 方式1: 使用启动脚本（自动安装依赖）
 run_python.bat
 
-# 方式2: 手动安装
+# 方式2: 手动安装 (以传统版本为例)
 cd src\python
 pip install -r requirements.txt
 python vision_system.py
@@ -208,51 +175,10 @@ python vision_system.py
 chmod +x run_python.sh
 ./run_python.sh
 
-# 方式2: 手动安装
+# 方式2: 手动安装 (以传统版本为例)
 cd src/python
 pip3 install -r requirements.txt
 python3 vision_system.py
-```
-
-### C++版本安装
-
-#### Windows (使用vcpkg)
-```powershell
-# 安装vcpkg
-git clone https://github.com/Microsoft/vcpkg.git
-cd vcpkg
-.\bootstrap-vcpkg.bat
-
-# 安装OpenCV
-.\vcpkg install opencv:x64-windows
-.\vcpkg integrate install
-
-# 编译项目
-cd path\to\StduyOpenCV\src\CPP
-build_cpp.bat
-```
-
-#### Linux (Ubuntu/Debian)
-```bash
-# 安装依赖
-sudo apt-get update
-sudo apt-get install -y libopencv-dev cmake build-essential
-
-# 编译项目
-cd src/CPP
-chmod +x build_cpp.sh
-./build_cpp.sh
-```
-
-#### macOS
-```bash
-# 安装Homebrew和依赖
-brew install opencv cmake
-
-# 编译项目
-cd src/CPP
-chmod +x build_cpp.sh
-./build_cpp.sh
 ```
 
 **更多安装问题**: 查看各版本的README文档
@@ -272,35 +198,16 @@ chmod +x build_cpp.sh
    - 点击"裁剪ROI"或"取消选择"
 5. **保存结果**: 点击"保存图片"
 
-### C++版本快捷键
-
-| 按键 | 功能 | 按键 | 功能 |
-|------|------|------|------|
-| 1 | 原图 | 6 | 二值化 |
-| 2 | 灰度化 | 7 | 自适应二值化 |
-| 3 | 高斯模糊 | 8 | Sobel检测 |
-| 4 | 中值滤波 | 9 | Laplacian检测 |
-| 5 | Canny边缘 | 0 | 膨胀 |
-| - | 腐蚀 | = | 直方图均衡化 |
-| r | ROI选择 | c | 裁剪ROI |
-| s | 保存图片 | ESC | 退出 |
-
 ---
 
 ## 🔧 技术栈
 
 ### Python版本
 - **语言**: Python 3.7+
-- **UI框架**: tkinter (内置)
+- **UI框架**: tkinter (内置) / PySide2 + NodeGraphQt
 - **图像处理**: OpenCV 4.5+, Pillow 8.0+
 - **数值计算**: NumPy
-- **架构模式**: MVC (Model-View-Controller)
-
-### C++版本
-- **语言**: C++11
-- **构建系统**: CMake 3.10+
-- **图像处理**: OpenCV 4.x
-- **UI**: OpenCV HighGUI模块
+- **架构模式**: MVC (Model-View-Controller) / 节点图引擎
 
 ---
 
@@ -323,21 +230,6 @@ ALGORITHM_MAP = {
 ("你的算法", lambda: self.controller.apply_filter("your_algo")),
 ```
 
-### C++版本添加新算法
-
-```
-// 1. 在 vision_system.h 中声明
-void applyYourAlgorithm();
-
-// 2. 在 vision_system.cpp 中实现
-void VisionSystem::applyYourAlgorithm() {
-    // 实现逻辑
-}
-
-// 3. 在 run() 的switch中添加快捷键
-case 'x': applyYourAlgorithm(); break;
-```
-
 ---
 
 ## 🐛 常见问题
@@ -353,24 +245,14 @@ pip install --upgrade opencv-python Pillow numpy
 - 检查Python版本 >= 3.7
 - 确保tkinter已安装
 
-### C++版本
-
-**Q: CMake找不到OpenCV?**
-- 设置OpenCV_DIR环境变量
-- 或使用pkg-config (Linux)
-
-**Q: 运行时找不到库?**
-- Linux: `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib`
-- Windows: 将OpenCV bin目录加入PATH
-
 ---
 
 ## 📊 项目统计
 
-- **代码量**: ~1550行 (Python ~630行 + C++ ~450行 + 其他)
+- **代码量**: ~630行 (Python版本)
 - **文件数**: 25+ 个
 - **支持平台**: Windows, Linux, macOS
-- **支持语言**: Python, C++
+- **支持语言**: Python
 - **算法数量**: 12种
 - **许可证**: 学习和研究使用
 
@@ -579,7 +461,7 @@ project = project_manager.open_project('file.proj')  # 打开
 - 📚 完善文档体系
 
 ### v1.0 (初始版本)
-- 🎉 Python和C++双语言实现
+- 🎉 Python实现
 - 🖼️ 12种图像处理算法
 - 🖱️ ROI选择和裁剪功能
 - 📱 图形界面支持

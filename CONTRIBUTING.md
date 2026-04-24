@@ -6,7 +6,6 @@
 
 - 📘 [主项目文档](README.md) - 项目总览、快速开始、功能说明
 - 📗 [Python版本详解](src/python/README.md) - Python模块化架构和扩展指南
-- 📕 [C++版本详解](src/CPP/README.md) - C++版本编译和使用说明
 - 📝 **本文档**: 贡献指南和开发规范
 
 ---
@@ -49,7 +48,6 @@
 
 **代码规范:**
 - Python: 遵循PEP 8规范
-- C++: 遵循Google C++ Style Guide
 - 添加必要的注释
 - 保持代码整洁
 - 测试通过
@@ -95,15 +93,13 @@
 ## 👥 开发者
 
 ### 主要技术栈
-- **Python**: OpenCV, Pillow, tkinter
-- **C++**: OpenCV, CMake
+- **Python**: OpenCV, Pillow, tkinter, PySide2, NodeGraphQt
 - **平台**: Windows, Linux, macOS
 
 ### 开发环境推荐
-- **IDE**: VS Code / PyCharm / CLion
+- **IDE**: VS Code / PyCharm
 - **Python版本**: 3.7+
 - **OpenCV版本**: 4.5+
-- **CMake版本**: 3.10+
 
 ### Python版本架构
 Python版本采用 **MVC (Model-View-Controller)** 架构：
@@ -128,13 +124,14 @@ Python版本采用 **MVC (Model-View-Controller)** 架构：
 感谢以下开源项目:
 - [OpenCV](https://opencv.org/) - 计算机视觉库
 - [Python](https://www.python.org/) - 编程语言
-- [CMake](https://cmake.org/) - 构建系统
+- [NodeGraphQt](https://github.com/jchanvfx/NodeGraphQt) - 节点图框架
+- [PySide2](https://doc.qt.io/qtforpython/) - Qt图形界面
 
 ---
 
 ## 📊 项目统计
 
-![Languages](https://img.shields.io/badge/languages-Python%20%2B%20C++-blue)
+![Languages](https://img.shields.io/badge/languages-Python-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-orange)
 
