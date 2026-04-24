@@ -926,6 +926,14 @@ class MainWindow(QtWidgets.QMainWindow):
         # === 插件管理菜单 ===
         plugin_menu = menubar.addMenu("插件(&P)")
         
+        # 节点编辑器
+        node_editor_action = QtWidgets.QAction("🛠️ 节点编辑器", self)
+        node_editor_action.setStatusTip("创建、编辑和管理节点")
+        node_editor_action.triggered.connect(self.open_node_editor)
+        plugin_menu.addAction(node_editor_action)
+        
+        plugin_menu.addSeparator()
+        
         # 安装插件
         install_plugin_action = QtWidgets.QAction("📦 安装插件", self)
         install_plugin_action.setStatusTip("从ZIP文件安装插件")
@@ -1831,6 +1839,19 @@ class MainWindow(QtWidgets.QMainWindow):
             self.current_node_graph.fit_to_selection()
     
     # === 插件管理方法 ===
+    
+    def open_node_editor(self):
+        """
+        打开节点编辑器
+        """
+        from ui.node_editor import NodeEditorDialog
+        
+        # 获取插件目录路径
+        plugins_dir = Path(__file__).parent.parent / "user_plugins"
+        
+        # 创建并显示节点编辑器（非模态）
+        editor = NodeEditorDialog(self, plugins_dir)
+        editor.show()
     
     def install_plugin(self):
         """
