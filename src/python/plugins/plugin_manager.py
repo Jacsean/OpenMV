@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Type
 from .models import PluginInfo, NodeDefinition
 from .sandbox import PluginSandbox, SandboxSecurityError
 from .permission_checker import PermissionChecker
+from .hot_reloader import HotReloader
 
 
 class PluginManager:
@@ -36,6 +37,9 @@ class PluginManager:
         
         # 初始化沙箱环境
         self.sandbox = PluginSandbox()
+        
+        # 初始化热重载器
+        self.hot_reloader = HotReloader()
     
     def scan_plugins(self) -> List[PluginInfo]:
         """
@@ -189,6 +193,15 @@ class PluginManager:
                     print(f"   ⚠️ 未找到节点类: {class_name}")
             
             print(f"✅ 插件 {plugin_name} 加载完成，注册 {registered_count} 个节点")
+            
+            # 启动热重载监听
+            plugin_path = self.plugins[plugin_name].path
+            self.hot_reloader.start_watching(
+                plugin_name,
+                plugin_path,
+                lambda name: self._on_plugin_changed(name)
+            )
+            
             return True
             
         except SandboxSecurityError as e:
@@ -199,6 +212,29 @@ class PluginManager:
             import traceback
             traceback.print_exc()
             return False
+    
+    def _on_plugin_changed(self, plugin_name: str):
+        """
+        插件文件变化回调（由热重载器触发）
+        
+        Args:
+            plugin_name: 插件名称
+        """
+        print(f"\n🔄 开始重载插件: {plugin_name}")
+        
+        # 1. 卸载旧节点
+        self.unload_plugin_nodes(plugin_name)
+        
+        # 2. 重新扫描元数据
+        plugin_path = Path(self.plugins[plugin_name].path)
+        new_info = self._load_plugin_metadata(plugin_path)
+        
+        if new_info:
+            self.plugins[plugin_name] = new_info
+        
+        # 3. 重新加载节点（需要外部传入node_graph，这里仅更新元数据）
+        print(f"✅ 插件 {plugin_name} 元数据已更新")
+        print(f"💡 提示：请刷新NodeGraph以应用更改")
     
     def unload_plugin_nodes(self, plugin_name: str) -> bool:
         """
@@ -212,6 +248,9 @@ class PluginManager:
         """
         if plugin_name not in self.plugins:
             return False
+        
+        # 停止热重载监听
+        self.hot_reloader.stop_watching(plugin_name)
         
         # 移除已注册的节点
         nodes_to_remove = [
