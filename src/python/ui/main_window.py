@@ -929,6 +929,29 @@ class MainWindow(QtWidgets.QMainWindow):
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
         
+        # === 插件管理菜单 ===
+        plugin_menu = menubar.addMenu("插件(&P)")
+        
+        # 安装插件
+        install_plugin_action = QtWidgets.QAction("📦 安装插件", self)
+        install_plugin_action.setStatusTip("从ZIP文件安装插件")
+        install_plugin_action.triggered.connect(self.install_plugin)
+        plugin_menu.addAction(install_plugin_action)
+        
+        # 管理插件
+        manage_plugins_action = QtWidgets.QAction("⚙️ 管理插件", self)
+        manage_plugins_action.setStatusTip("查看和管理已安装插件")
+        manage_plugins_action.triggered.connect(self.manage_plugins)
+        plugin_menu.addAction(manage_plugins_action)
+        
+        plugin_menu.addSeparator()
+        
+        # 刷新插件
+        reload_plugins_action = QtWidgets.QAction("🔄 刷新插件", self)
+        reload_plugins_action.setStatusTip("重新扫描并加载插件")
+        reload_plugins_action.triggered.connect(self.reload_plugins)
+        plugin_menu.addAction(reload_plugins_action)
+        
     def run_graph(self):
         """
         执行当前激活的节点图
@@ -1748,7 +1771,151 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         if self.current_node_graph:
             self.current_node_graph.fit_to_selection()
+    
+    # === 插件管理方法 ===
+    
+    def install_plugin(self):
+        """
+        从ZIP文件安装插件
+        """
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "选择插件ZIP文件",
+            "",
+            "插件文件 (*.zip);;所有文件 (*)"
+        )
         
+        if not file_path:
+            return
+        
+        print(f"\n📦 开始安装插件: {file_path}")
+        
+        # 执行安装
+        success, message = self.plugin_manager.install_plugin_from_zip(file_path)
+        
+        if success:
+            QtWidgets.QMessageBox.information(
+                self,
+                "安装成功",
+                f"{message}\n\n请重启程序以加载新插件。"
+            )
+            print(f"✅ {message}")
+        else:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "安装失败",
+                message
+            )
+            print(f"❌ {message}")
+    
+    def manage_plugins(self):
+        """
+        显示插件管理对话框
+        """
+        plugins = self.plugin_manager.get_installed_plugins()
+        
+        if not plugins:
+            QtWidgets.QMessageBox.information(
+                self,
+                "插件管理",
+                "当前没有安装任何插件。"
+            )
+            return
+        
+        # 构建插件列表信息
+        info_text = "已安装的插件:\n\n"
+        for plugin in plugins:
+            info_text += f"📦 {plugin.name} v{plugin.version}\n"
+            info_text += f"   作者: {plugin.author}\n"
+            info_text += f"   描述: {plugin.description}\n"
+            info_text += f"   节点数: {len(plugin.nodes)}\n"
+            info_text += f"   状态: {'✅ 已启用' if plugin.enabled else '❌ 已禁用'}\n"
+            info_text += "\n"
+        
+        # 创建对话框
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("插件管理")
+        dialog.setMinimumWidth(600)
+        
+        layout = QtWidgets.QVBoxLayout(dialog)
+        
+        # 文本显示
+        text_edit = QtWidgets.QTextEdit()
+        text_edit.setPlainText(info_text)
+        text_edit.setReadOnly(True)
+        layout.addWidget(text_edit)
+        
+        # 按钮
+        button_layout = QtWidgets.QHBoxLayout()
+        
+        uninstall_btn = QtWidgets.QPushButton("卸载选中插件")
+        uninstall_btn.clicked.connect(lambda: self._uninstall_selected_plugin(dialog))
+        button_layout.addWidget(uninstall_btn)
+        
+        close_btn = QtWidgets.QPushButton("关闭")
+        close_btn.clicked.connect(dialog.accept)
+        button_layout.addWidget(close_btn)
+        
+        layout.addLayout(button_layout)
+        
+        dialog.exec_()
+    
+    def _uninstall_selected_plugin(self, dialog):
+        """
+        卸载选中的插件（简化版：弹出输入框）
+        """
+        plugin_name, ok = QtWidgets.QInputDialog.getText(
+            self,
+            "卸载插件",
+            "请输入要卸载的插件名称:"
+        )
+        
+        if ok and plugin_name:
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "确认卸载",
+                f"确定要卸载插件 '{plugin_name}' 吗？",
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            )
+            
+            if reply == QtWidgets.QMessageBox.Yes:
+                success, message = self.plugin_manager.uninstall_plugin(plugin_name)
+                
+                if success:
+                    QtWidgets.QMessageBox.information(self, "成功", message)
+                    dialog.accept()
+                else:
+                    QtWidgets.QMessageBox.critical(self, "失败", message)
+    
+    def reload_plugins(self):
+        """
+        重新扫描并加载插件
+        """
+        print("\n🔄 重新扫描插件...")
+        
+        # 停止所有热重载监听
+        self.plugin_manager.hot_reloader.stop_all()
+        
+        # 重新扫描
+        plugins = self.plugin_manager.scan_plugins()
+        
+        print(f"✅ 扫描到 {len(plugins)} 个插件")
+        
+        # 重新加载到当前NodeGraph
+        if self.current_node_graph:
+            for plugin_info in plugins:
+                if plugin_info.enabled:
+                    self.plugin_manager.load_plugin_nodes(
+                        plugin_info.name,
+                        self.current_node_graph
+                    )
+        
+        QtWidgets.QMessageBox.information(
+            self,
+            "刷新完成",
+            f"已重新加载 {len(plugins)} 个插件。\n\n注意：UI分类可能需要重启程序才能完全更新。"
+        )
+    
     def closeEvent(self, event):
         """
         窗口关闭事件
