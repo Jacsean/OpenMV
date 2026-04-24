@@ -3,9 +3,11 @@
 """
 
 import os
+import sys
 import json
+import importlib.util
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 from .models import PluginInfo, NodeDefinition
 
@@ -26,6 +28,7 @@ class PluginManager:
         self._initialized = True
         
         self.plugins: Dict[str, PluginInfo] = {}
+        self.loaded_nodes: Dict[str, Type] = {}  # 已加载的节点类
         self.plugins_dir = Path(__file__).parent.parent / "user_plugins"
         self.plugins_dir.mkdir(exist_ok=True)
     
@@ -111,6 +114,101 @@ class PluginManager:
         except Exception as e:
             print(f"❌ 加载插件元数据失败 {plugin_path}: {e}")
             return None
+    
+    def load_plugin_nodes(self, plugin_name: str, node_graph) -> bool:
+        """
+        加载插件的节点类并注册到NodeGraph
+        
+        Args:
+            plugin_name: 插件名称
+            node_graph: NodeGraph实例
+        
+        Returns:
+            bool: 加载是否成功
+        """
+        if plugin_name not in self.plugins:
+            print(f"❌ 插件不存在: {plugin_name}")
+            return False
+        
+        plugin_info = self.plugins[plugin_name]
+        plugin_path = Path(plugin_info.path)
+        
+        try:
+            # 1. 加载 nodes.py 模块
+            nodes_file = plugin_path / "nodes.py"
+            if not nodes_file.exists():
+                print(f"❌ 插件缺少 nodes.py: {plugin_name}")
+                return False
+            
+            # 动态导入模块
+            module_name = f"plugin_{plugin_name}_nodes"
+            spec = importlib.util.spec_from_file_location(module_name, nodes_file)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+            
+            print(f"✅ 模块加载成功: {plugin_name}")
+            
+            # 2. 提取节点类并注册
+            registered_count = 0
+            for node_def in plugin_info.nodes:
+                class_name = node_def.class_name
+                
+                # 从模块中获取节点类
+                if hasattr(module, class_name):
+                    node_class = getattr(module, class_name)
+                    
+                    # 注册到NodeGraph
+                    node_graph.register_node(node_class)
+                    
+                    # 记录已加载的节点
+                    node_key = f"{plugin_name}.{class_name}"
+                    self.loaded_nodes[node_key] = node_class
+                    
+                    registered_count += 1
+                    print(f"   ✅ 注册节点: {node_def.display_name}")
+                else:
+                    print(f"   ⚠️ 未找到节点类: {class_name}")
+            
+            print(f"✅ 插件 {plugin_name} 加载完成，注册 {registered_count} 个节点")
+            return True
+            
+        except Exception as e:
+            print(f"❌ 加载插件节点失败 {plugin_name}: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def unload_plugin_nodes(self, plugin_name: str) -> bool:
+        """
+        卸载插件节点
+        
+        Args:
+            plugin_name: 插件名称
+        
+        Returns:
+            bool: 卸载是否成功
+        """
+        if plugin_name not in self.plugins:
+            return False
+        
+        # 移除已注册的节点
+        nodes_to_remove = [
+            key for key in self.loaded_nodes.keys()
+            if key.startswith(f"{plugin_name}.")
+        ]
+        
+        for node_key in nodes_to_remove:
+            del self.loaded_nodes[node_key]
+            print(f"   🗑️ 卸载节点: {node_key}")
+        
+        # 清除模块缓存
+        module_name = f"plugin_{plugin_name}_nodes"
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+        
+        print(f"✅ 插件 {plugin_name} 已卸载")
+        return True
     
     def get_installed_plugins(self) -> List[PluginInfo]:
         """
