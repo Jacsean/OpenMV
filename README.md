@@ -407,6 +407,7 @@ project = project_manager.open_project('file.proj')  # 打开
 **已完成功能**:
 - ✅ v3.0 工程管理体系（多工作流、持久化、最近工程）
 - ✅ v3.1 单文件模式（ZIP打包、全文索引、增强元数据）
+- ✅ **v4.0 插件系统**（热加载、安全沙箱、ZIP安装、UI管理）
 
 **即将实施**: v2.3 - 图像预览窗口增强
 1. 实现图像缩放功能（原始/适应/放大/缩小）
@@ -415,14 +416,84 @@ project = project_manager.open_project('file.proj')  # 打开
 4. 添加缩放比例显示
 5. 支持滚轮缩放快捷键
 
-**长期目标**: v4.0 - 高级功能
+**长期目标**: v4.x - 高级功能扩展
 1. 实时预览（参数调整即时生效）
 2. 视频处理支持（帧序列处理）
 3. 节点分组（子图折叠/展开）
 4. 撤销/重做功能
-5. 插件系统（动态加载节点）
-6. 性能分析工具
-7. 云端同步与协作
+5. 性能分析工具
+6. 云端同步与协作
+
+---
+
+## 🔌 插件系统（v4.0）
+
+### 📦 功能介绍
+
+完整的插件生态系统，支持动态扩展节点功能：
+
+- **🔄 热重载**: 修改插件代码后自动重新加载，无需重启程序
+- **🔒 安全沙箱**: AST静态分析+正则匹配，拦截危险代码（os.system/subprocess/socket等）
+- **📥 ZIP安装**: 拖拽ZIP文件一键安装，自动依赖解析与版本冲突检测
+- **🎨 UI自动归类**: 根据category字段自动注册到对应节点库标签页
+- **⚙️ 依赖管理**: 自动检查并pip安装缺失依赖，支持版本约束
+- **🗑️ 卸载回滚**: 支持插件卸载和安装失败自动回滚
+
+### 🛠️ 用法说明
+
+#### 1. 安装插件
+菜单栏 → **插件(P)** → **安装插件** → 选择ZIP文件
+
+#### 2. 管理插件
+菜单栏 → **插件(P)** → **管理插件** → 查看列表/卸载插件
+
+#### 3. 刷新插件
+菜单栏 → **插件(P)** → **刷新插件** → 重新扫描并加载
+
+#### 4. 开发插件
+```
+user_plugins/
+└── my_plugin/
+    ├── plugin.json      # 元数据（name/version/category/nodes）
+    └── nodes.py         # 节点定义（继承BaseNode）
+```
+
+**plugin.json示例**:
+```json
+{
+  "name": "my_plugin",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "description": "自定义插件",
+  "nodes": [
+    {
+      "class": "MyNode",
+      "display_name": "我的节点",
+      "category": "自定义"
+    }
+  ],
+  "dependencies": ["numpy>=1.20"]
+}
+```
+
+### ⚠️ 注意事项
+
+1. **安全限制**: 禁止导入os/subprocess/socket/requests等模块，禁止调用eval/exec/open('w')
+2. **命名规范**: 插件目录名必须与plugin.json中的name字段一致
+3. **热重载延迟**: 文件保存后0.5秒触发重载，避免频繁刷新
+4. **分类更新**: 新增分类需重启程序才能在UI中完全显示
+5. **依赖安装**: 首次加载时自动安装依赖，需保持网络连接
+6. **卸载确认**: 卸载前会弹出确认对话框，防止误操作
+
+### 📁 核心模块
+
+- `plugins/plugin_manager.py` - 插件管理器（单例）
+- `plugins/sandbox.py` - 安全沙箱环境
+- `plugins/permission_checker.py` - 权限检查器（AST分析）
+- `plugins/hot_reloader.py` - 热重载监听器
+- `plugins/dependency_resolver.py` - 依赖解析器
+- `plugins/plugin_installer.py` - ZIP安装器
+- `user_plugins/` - 用户插件目录
 
 ---
 
