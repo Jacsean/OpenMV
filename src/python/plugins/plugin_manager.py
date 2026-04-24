@@ -7,12 +7,14 @@ import sys
 import json
 import importlib.util
 from pathlib import Path
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Tuple
 
 from .models import PluginInfo, NodeDefinition
 from .sandbox import PluginSandbox, SandboxSecurityError
 from .permission_checker import PermissionChecker
 from .hot_reloader import HotReloader
+from .dependency_resolver import DependencyResolver
+from .plugin_installer import PluginInstaller
 
 
 class PluginManager:
@@ -40,6 +42,9 @@ class PluginManager:
         
         # 初始化热重载器
         self.hot_reloader = HotReloader()
+        
+        # 初始化安装器
+        self.installer = PluginInstaller(self.plugins_dir)
     
     def scan_plugins(self) -> List[PluginInfo]:
         """
@@ -290,3 +295,45 @@ class PluginManager:
             PluginInfo或None
         """
         return self.plugins.get(plugin_name)
+    
+    def install_plugin_from_zip(self, zip_path: str) -> Tuple[bool, str]:
+        """
+        从ZIP文件安装插件
+        
+        Args:
+            zip_path: ZIP文件路径
+            
+        Returns:
+            (success, message)
+        """
+        success, message = self.installer.install_from_zip(zip_path)
+        
+        if success:
+            # 重新扫描以加载新插件
+            self.scan_plugins()
+        
+        return success, message
+    
+    def uninstall_plugin(self, plugin_name: str) -> Tuple[bool, str]:
+        """
+        卸载插件
+        
+        Args:
+            plugin_name: 插件名称
+            
+        Returns:
+            (success, message)
+        """
+        # 先卸载节点
+        if plugin_name in self.loaded_nodes:
+            self.unload_plugin_nodes(plugin_name)
+        
+        # 再卸载文件
+        success, message = self.installer.uninstall_plugin(plugin_name)
+        
+        if success:
+            # 从注册表中移除
+            if plugin_name in self.plugins:
+                del self.plugins[plugin_name]
+        
+        return success, message
