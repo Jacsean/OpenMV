@@ -1,0 +1,29 @@
+{
+  "name": "example_advanced_nodes",
+  "version": "1.0.0",
+  "author": "OpenCV Team",
+  "description": "高级节点示例包（多输入输出、复杂处理、最佳实践演示）",
+  "category_group": "预处理",
+  "nodes": [
+    {
+      "class": "MultiInputBlendNode",
+      "display_name": "多图像混合",
+      "category": "图像融合",
+      "color": [200, 150, 255]
+    },
+    {
+      "class": "AdaptiveThresholdNode",
+      "display_name": "自适应阈值",
+      "category": "二值化",
+      "color": [255, 200, 150]
+    },
+    {
+      "class": "HistogramEqualizeNode",
+      "display_name": "直方图均衡化",
+      "category": "增强",
+      "color": [150, 255, 200]
+    }
+  ],
+  "dependencies": ["opencv-python>=4.5", "numpy"],
+  "min_app_version": "4.0.0"
+}
