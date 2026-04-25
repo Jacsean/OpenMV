@@ -665,6 +665,9 @@ class ProjectUIManager:
         """
         graph_widget = workflow.node_graph.widget
         
+        # 为 NodeGraph widget 安装事件过滤器（拦截节点删除）
+        graph_widget.installEventFilter(self.main_window)
+        
         tab_title = workflow.name
         if workflow.is_modified:
             tab_title += " *"
