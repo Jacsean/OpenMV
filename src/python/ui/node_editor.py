@@ -1235,18 +1235,19 @@ class TabOrderDialog(QtWidgets.QDialog):
         # 从父对话框获取所有插件包
         parent_dialog = self.parent()
         if hasattr(parent_dialog, 'plugin_packages'):
-            # 按 category_group 分组
-            categories = {}
+            # 构建 category_group 到 pkg_name 的映射
+            category_to_pkg = {}
             for pkg_name, pkg_info in parent_dialog.plugin_packages.items():
                 data = pkg_info['data']
                 category_group = data.get('category_group', pkg_name)
                 # 只保留有节点的插件
                 if len(data.get('nodes', [])) > 0:
-                    if category_group not in categories:
-                        categories[category_group] = pkg_name
+                    # 如果多个插件有相同的 category_group，只保留第一个
+                    if category_group not in category_to_pkg:
+                        category_to_pkg[category_group] = pkg_name
             
-            # 返回插件名称列表（去重）
-            return list(categories.values())
+            # 返回 category_group 列表（UI 显示用）
+            return list(category_to_pkg.keys())
         return []
     
     def _setup_ui(self):
@@ -1267,10 +1268,10 @@ class TabOrderDialog(QtWidgets.QDialog):
         self.list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.list_widget.setSpacing(5)
         
-        # 填充当前顺序
-        for pkg_name in self.tab_order:
-            item = QtWidgets.QListWidgetItem(pkg_name)
-            item.setData(QtCore.Qt.UserRole, pkg_name)
+        # 填充当前顺序（显示 category_group）
+        for category_group in self.tab_order:
+            item = QtWidgets.QListWidgetItem(category_group)
+            item.setData(QtCore.Qt.UserRole, category_group)
             self.list_widget.addItem(item)
         
         layout.addWidget(self.list_widget)
@@ -1300,19 +1301,19 @@ class TabOrderDialog(QtWidgets.QDialog):
         self.list_widget.clear()
         sorted_order = sorted(self.tab_order)
         
-        for pkg_name in sorted_order:
-            item = QtWidgets.QListWidgetItem(pkg_name)
-            item.setData(QtCore.Qt.UserRole, pkg_name)
+        for category_group in sorted_order:
+            item = QtWidgets.QListWidgetItem(category_group)
+            item.setData(QtCore.Qt.UserRole, category_group)
             self.list_widget.addItem(item)
     
     def get_tab_order(self):
-        """获取调整后的标签页顺序"""
+        """获取调整后的标签页顺序（category_group 列表）"""
         order = []
         for i in range(self.list_widget.count()):
             item = self.list_widget.item(i)
-            pkg_name = item.data(QtCore.Qt.UserRole)
-            if pkg_name:
-                order.append(pkg_name)
+            category_group = item.data(QtCore.Qt.UserRole)
+            if category_group:
+                order.append(category_group)
         return order
 
 class NewPackageDialog(QtWidgets.QDialog):

@@ -165,8 +165,44 @@ class PluginUIManager:
                 tab_text = tab_widget.tabText(i)
                 category_to_index[tab_text] = i
             
-            # 验证配置有效性（实际排序需要重启应用）
-            valid_categories = [cat for cat in custom_order if cat in category_to_index]
+            # 按照自定义顺序重新排列标签页
+            # QTabWidget 不支持直接移动，需要通过移除再添加的方式
+            tabs_data = []
+            for i in range(tab_widget.count()):
+                widget = tab_widget.widget(i)
+                tab_text = tab_widget.tabText(i)
+                icon = tab_widget.tabIcon(i)
+                tooltip = tab_widget.tabToolTip(i)
+                tabs_data.append({
+                    'widget': widget,
+                    'text': tab_text,
+                    'icon': icon,
+                    'tooltip': tooltip
+                })
+            
+            # 清除所有标签页
+            while tab_widget.count() > 0:
+                tab_widget.removeTab(0)
+            
+            # 按自定义顺序添加标签页
+            # 首先添加自定义顺序中的标签页
+            added_indices = set()
+            for category_group in custom_order:
+                if category_group in category_to_index:
+                    idx = category_to_index[category_group]
+                    if idx < len(tabs_data):
+                        data = tabs_data[idx]
+                        tab_index = tab_widget.addTab(data['widget'], data['icon'], data['text'])
+                        if data['tooltip']:
+                            tab_widget.setTabToolTip(tab_index, data['tooltip'])
+                        added_indices.add(idx)
+            
+            # 然后添加未在自定义顺序中的标签页（保持原有顺序）
+            for i, data in enumerate(tabs_data):
+                if i not in added_indices:
+                    tab_index = tab_widget.addTab(data['widget'], data['icon'], data['text'])
+                    if data['tooltip']:
+                        tab_widget.setTabToolTip(tab_index, data['tooltip'])
             
         except Exception as e:
             import traceback
