@@ -283,6 +283,44 @@ class MainWindow(QtWidgets.QMainWindow):
         
         return panel
     
+    def _print_widget_tree(self, widget, indent=0, max_depth=5):
+        """
+        递归打印widget的树形结构（用于调试）
+        
+        Args:
+            widget: 要打印的widget
+            indent: 缩进级别
+            max_depth: 最大深度
+        """
+        if indent > max_depth:
+            return
+            
+        prefix = "  " * indent
+        class_name = type(widget).__name__
+        obj_name = getattr(widget, 'objectName', lambda: '')()
+        print(f"{prefix}📦 {class_name} [obj={obj_name}]")
+        
+        # 打印一些关键属性
+        if hasattr(widget, 'count'):
+            try:
+                count = widget.count()
+                print(f"{prefix}   └─ count={count}")
+            except:
+                pass
+        
+        if hasattr(widget, 'selectedItems'):
+            print(f"{prefix}   └─ 有 selectedItems 方法")
+        
+        if hasattr(widget, 'installEventFilter'):
+            print(f"{prefix}   └─ 可安装事件过滤器 ✓")
+        
+        # 递归打印子组件
+        if hasattr(widget, 'children'):
+            for child in widget.children():
+                from PySide2.QtWidgets import QWidget
+                if isinstance(child, QWidget):
+                    self._print_widget_tree(child, indent + 1, max_depth)
+    
     def _connect_node_selection_signal(self):
         """
         连接节点库的选择信号到说明面板更新函数
@@ -295,13 +333,36 @@ class MainWindow(QtWidgets.QMainWindow):
             tab_widget = self.nodes_palette.tab_widget()
             
             if tab_widget:
-                print(f"🔍 开始为 {tab_widget.count()} 个标签页安装事件过滤器")
+                print(f"\n{'='*60}")
+                print(f"🔍 开始分析 NodesPaletteWidget 结构")
+                print(f"{'='*60}")
+                
+                # 打印整个组件树（用于调试）
+                print("\n📋 NodesPaletteWidget 组件树:")
+                self._print_widget_tree(self.nodes_palette, max_depth=4)
+                
+                print(f"\n🔧 开始为 {tab_widget.count()} 个标签页安装事件过滤器")
                 # 为每个标签页的内容widget安装事件过滤器
                 for i in range(tab_widget.count()):
                     widget = tab_widget.widget(i)
                     if widget:
+                        print(f"\n   📌 标签页 {i}: {tab_widget.tabText(i)}")
+                        print(f"      类型: {type(widget).__name__}")
+                        
+                        # 先为该widget安装
                         widget.installEventFilter(self)
-                        print(f"   ✅ 已为标签页 {i} ({tab_widget.tabText(i)}) 安装事件过滤器")
+                        print(f"      ✅ 已为标签页内容安装事件过滤器")
+                        
+                        # 再为该widget的所有子组件安装
+                        from PySide2.QtWidgets import QWidget
+                        installed_count = 0
+                        for child in widget.findChildren(QWidget):
+                            child.installEventFilter(self)
+                            installed_count += 1
+                        
+                        print(f"      ✅ 已为 {installed_count} 个子组件安装事件过滤器")
+                        
+                print(f"\n{'='*60}\n")
                         
         except Exception as e:
             print(f"⚠️ 连接节点选择信号失败: {e}")
@@ -339,8 +400,13 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         from PySide2.QtCore import QEvent
         
+        # 打印所有事件（用于调试）
+        if event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease, QEvent.MouseMove]:
+            print(f"📍 EventFilter触发: {type(obj).__name__}, 事件类型: {event.type()}")
+        
         # 监听鼠标按下事件
         if event.type() == QEvent.MouseButtonPress:
+            print(f"🖱️ 检测到鼠标按下事件，目标: {type(obj).__name__}")
             # 检查是否是节点库中的组件
             if hasattr(obj, 'parent') and obj.parent():
                 parent = obj.parent()
@@ -349,7 +415,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 while parent and depth < 10:
                     if parent == self.nodes_palette:
                         # 这是节点库中的点击事件
-                        print(f"🖱️ 检测到节点库点击事件 (深度={depth})")
+                        print(f"✅ 确认是节点库点击事件 (深度={depth})")
                         # 延迟获取选中的节点信息（因为点击后才会更新选中状态）
                         QtCore.QTimer.singleShot(50, self._update_node_info_from_selection)
                         break
@@ -374,20 +440,60 @@ class MainWindow(QtWidgets.QMainWindow):
             # 遍历所有标签页，查找选中的项
             for i in range(tab_widget.count()):
                 widget = tab_widget.widget(i)
-                if widget and hasattr(widget, 'selectedItems'):
-                    selected = widget.selectedItems()
-                    if selected:
-                        # 找到了选中的项
-                        print(f"   ✅ 在标签页 {i} 中找到 {len(selected)} 个选中项")
-                        item = selected[0]
-                        if hasattr(item, 'text'):
-                            node_name = item.text(0) if hasattr(item, 'text') else str(item)
-                            print(f"   📌 选中节点名称: {node_name}")
-                            # 尝试从 plugin_manager 获取节点详细信息
-                            self._display_node_info_by_name(node_name)
-                            return
-                        else:
-                            print(f"   ⚠️ 选中项没有 text 属性: {type(item)}")
+                if widget:
+                    print(f"   🔍 检查标签页 {i} ({tab_widget.tabText(i)}): {type(widget).__name__}")
+                    
+                    # 尝试不同的方法获取选中项
+                    selected_nodes = []
+                    node_name = None
+                    
+                    # 方法1: 如果有 selectedItems 方法（QTreeWidget/QListWidget）
+                    if hasattr(widget, 'selectedItems'):
+                        selected_nodes = widget.selectedItems()
+                        print(f"      ✅ 使用 selectedItems() 找到 {len(selected_nodes)} 项")
+                        if selected_nodes:
+                            item = selected_nodes[0]
+                            if hasattr(item, 'text'):
+                                node_name = item.text(0) if hasattr(item, 'text') else str(item)
+                    
+                    # 方法2: 如果是 NodesGridView，尝试其他方法
+                    elif hasattr(widget, 'selectedNodes'):
+                        selected_nodes = widget.selectedNodes()
+                        print(f"      ✅ 使用 selectedNodes() 找到 {len(selected_nodes)} 项")
+                    
+                    # 方法3: 检查是否有 selectionModel（NodesGridView 使用此方法）
+                    elif hasattr(widget, 'selectionModel'):
+                        sel_model = widget.selectionModel()
+                        if sel_model and hasattr(sel_model, 'selectedIndexes'):
+                            indexes = sel_model.selectedIndexes()
+                            print(f"      ✅ 使用 selectionModel 找到 {len(indexes)} 个索引")
+                            
+                            if indexes:
+                                # 从索引获取数据
+                                index = indexes[0]
+                                model = widget.model()
+                                if model:
+                                    # 尝试从模型中获取节点名称
+                                    data = model.data(index)
+                                    if data:
+                                        node_name = str(data)
+                                        print(f"      📌 从模型获取节点名称: {node_name}")
+                                    
+                                    # 如果上面没成功，尝试其他方式
+                                    if not node_name and hasattr(model, 'itemFromIndex'):
+                                        item = model.itemFromIndex(index)
+                                        if item and hasattr(item, 'text'):
+                                            node_name = item.text()
+                                            print(f"      📌 从item获取节点名称: {node_name}")
+                    
+                    # 如果找到了节点名称，显示信息
+                    if node_name:
+                        print(f"   ✅ 在标签页 {i} 中找到节点: {node_name}")
+                        # 尝试从 plugin_manager 获取节点详细信息
+                        self._display_node_info_by_name(node_name)
+                        return
+                    else:
+                        print(f"      ⚠️ 该标签页没有选中项或无法获取节点名称")
             
             print("   ⚠️ 未找到任何选中项")
                         
