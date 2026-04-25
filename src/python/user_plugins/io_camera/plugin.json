@@ -9,19 +9,31 @@
       "class": "ImageLoadNode",
       "display_name": "加载图像",
       "category": "文件IO",
-      "color": [100, 255, 100]
+      "color": [100, 255, 100],
+      "icon": "📂",
+      "width": 180,
+      "height": 100,
+      "description": "从文件系统加载图像文件，支持常见格式（JPG、PNG、BMP等）"
     },
     {
       "class": "ImageSaveNode",
       "display_name": "保存图像",
       "category": "文件IO",
-      "color": [100, 255, 100]
+      "color": [100, 255, 100],
+      "icon": "💾",
+      "width": 180,
+      "height": 100,
+      "description": "将图像保存到文件系统，可指定格式和质量参数"
     },
     {
       "class": "ImageViewNode",
       "display_name": "图像显示",
       "category": "显示",
-      "color": [100, 100, 255]
+      "color": [100, 100, 255],
+      "icon": "🖼️",
+      "width": 160,
+      "height": 90,
+      "description": "在窗口中显示图像，支持缩放和平移查看"
     }
   ],
   "dependencies": ["opencv-python>=4.5", "numpy"],

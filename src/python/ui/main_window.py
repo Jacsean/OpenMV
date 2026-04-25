@@ -203,6 +203,15 @@ class MainWindow(QtWidgets.QMainWindow):
         dock_nodes.setWidget(self.nodes_palette)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_nodes)
         
+        # === 左侧下方：节点说明面板 ===
+        self.node_info_panel = self._create_node_info_panel()
+        dock_info = QtWidgets.QDockWidget("节点说明", self)
+        dock_info.setWidget(self.node_info_panel)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_info)
+        
+        # 连接节点库的选择信号到说明面板
+        self._connect_node_selection_signal()
+        
         # === 右侧：属性面板（共享）===
         self.properties_bin = PropertiesBinWidget(node_graph=temp_graph)
         self.properties_bin.setWindowTitle("属性面板")
@@ -218,7 +227,99 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 创建菜单栏
         self._create_menu_bar()
+    
+    def _create_node_info_panel(self):
+        """
+        创建节点说明面板
         
+        Returns:
+            QtWidgets.QWidget: 节点说明面板组件
+        """
+        panel = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(panel)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
+        
+        # 标题
+        title_label = QtWidgets.QLabel("📋 节点说明")
+        title_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
+        layout.addWidget(title_label)
+        
+        # 分隔线
+        line = QtWidgets.QFrame()
+        line.setFrameShape(QtWidgets.QFrame.HLine)
+        line.setFrameShadow(QtWidgets.QFrame.Sunken)
+        layout.addWidget(line)
+        
+        # 节点名称
+        self.info_name_label = QtWidgets.QLabel("未选择节点")
+        self.info_name_label.setFont(QtGui.QFont("Arial", 9, QtGui.QFont.Bold))
+        self.info_name_label.setStyleSheet("color: #2c3e50;")
+        layout.addWidget(self.info_name_label)
+        
+        # 节点分类
+        self.info_category_label = QtWidgets.QLabel("")
+        self.info_category_label.setFont(QtGui.QFont("Arial", 8))
+        self.info_category_label.setStyleSheet("color: #7f8c8d;")
+        layout.addWidget(self.info_category_label)
+        
+        # 说明文本框（只读）
+        self.info_text = QtWidgets.QTextEdit()
+        self.info_text.setReadOnly(True)
+        self.info_text.setFont(QtGui.QFont("Consolas", 9))
+        self.info_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 8px;
+            }
+        """)
+        self.info_text.setPlaceholderText("点击节点库中的节点查看说明...")
+        layout.addWidget(self.info_text)
+        
+        # 占位符，让文本框填充剩余空间
+        layout.addStretch()
+        
+        return panel
+    
+    def _connect_node_selection_signal(self):
+        """
+        连接节点库的选择信号到说明面板更新函数
+        
+        注意：NodeGraphQt 的 NodesPaletteWidget 没有直接的节点选择信号
+        我们提供一个手动刷新按钮供用户查看节点信息
+        """
+        # 暂时不自动连接，提供手动触发方式
+        pass
+    
+    def update_node_info(self, node_class_name, display_name, category, description=""):
+        """
+        更新节点说明面板的内容
+        
+        Args:
+            node_class_name: 节点类名
+            display_name: 显示名称
+            category: 分类
+            description: 描述文本
+        """
+        self.info_name_label.setText(f"🔹 {display_name}")
+        self.info_category_label.setText(f"分类: {category} | 类名: {node_class_name}")
+        
+        if description:
+            self.info_text.setPlainText(description)
+        else:
+            self.info_text.setPlainText("暂无详细说明")
+    
+    def _on_node_selected_in_palette(self):
+        """
+        当在节点库中选择节点时调用
+        """
+        # 这里需要根据 NodesPaletteWidget 的实际实现来获取选中的节点信息
+        # 暂时显示提示信息
+        self.info_name_label.setText("节点选择功能开发中...")
+        self.info_text.setPlainText("此功能需要与 NodesPaletteWidget 的内部实现集成")
+    
     def _on_tab_close_requested(self, index):
         """
         标签页关闭请求（委托给ProjectUIManager）

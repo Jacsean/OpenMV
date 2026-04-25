@@ -189,6 +189,9 @@ class PluginManager:
                     # 注册到NodeGraph
                     node_graph.register_node(node_class)
                     
+                    # 应用节点样式配置（如果存在）
+                    self._apply_node_style(node_class, node_def)
+                    
                     # 记录已加载的节点
                     node_key = f"{plugin_name}.{class_name}"
                     self.loaded_nodes[node_key] = node_class
@@ -218,6 +221,48 @@ class PluginManager:
             import traceback
             traceback.print_exc()
             return False
+    
+    def _apply_node_style(self, node_class, node_def):
+        """
+        应用节点样式配置
+        
+        Args:
+            node_class: 节点类
+            node_def: 节点定义（PluginNodeDefinition）
+        """
+        try:
+            # 获取节点定义的额外属性
+            node_dict = node_def.__dict__ if hasattr(node_def, '__dict__') else {}
+            
+            # 设置节点图标（如果支持）
+            if 'icon' in node_dict and node_dict['icon']:
+                icon = node_dict['icon']
+                # NodeGraphQt 可能不支持直接设置图标，这里预留接口
+                # node_class.set_icon(icon)
+                print(f"   📌 节点图标: {icon}")
+            
+            # 设置节点尺寸（如果支持）
+            if 'width' in node_dict or 'height' in node_dict:
+                width = node_dict.get('width', None)
+                height = node_dict.get('height', None)
+                # NodeGraphQt 的节点尺寸通常在创建实例时设置
+                # 这里可以存储配置供后续使用
+                if hasattr(node_class, '_style_config'):
+                    node_class._style_config['width'] = width
+                    node_class._style_config['height'] = height
+                else:
+                    node_class._style_config = {'width': width, 'height': height}
+                print(f"   📐 节点尺寸: {width}x{height}")
+            
+            # 存储描述信息用于说明面板
+            if 'description' in node_dict and node_dict['description']:
+                description = node_dict['description']
+                if not hasattr(node_class, '_node_description'):
+                    node_class._node_description = description
+                print(f"   📝 节点描述已加载")
+                
+        except Exception as e:
+            print(f"   ⚠️ 应用节点样式失败: {e}")
     
     def _on_plugin_changed(self, plugin_name: str):
         """
