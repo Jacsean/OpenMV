@@ -105,7 +105,11 @@ class PluginManager:
                     class_name=node_data['class'],
                     display_name=node_data.get('display_name', node_data['class']),
                     category=node_data.get('category', '其他'),
-                    icon=node_data.get('icon')
+                    icon=node_data.get('icon'),
+                    width=node_data.get('width'),
+                    height=node_data.get('height'),
+                    description=node_data.get('description', ''),
+                    color=node_data.get('color')
                 )
                 nodes.append(node_def)
             
@@ -228,23 +232,20 @@ class PluginManager:
         
         Args:
             node_class: 节点类
-            node_def: 节点定义（PluginNodeDefinition）
+            node_def: 节点定义（NodeDefinition）
         """
         try:
-            # 获取节点定义的额外属性
-            node_dict = node_def.__dict__ if hasattr(node_def, '__dict__') else {}
-            
             # 设置节点图标（如果支持）
-            if 'icon' in node_dict and node_dict['icon']:
-                icon = node_dict['icon']
+            if node_def.icon:
+                icon = node_def.icon
                 # NodeGraphQt 可能不支持直接设置图标，这里预留接口
                 # node_class.set_icon(icon)
                 print(f"   📌 节点图标: {icon}")
             
             # 设置节点尺寸（如果支持）
-            if 'width' in node_dict or 'height' in node_dict:
-                width = node_dict.get('width', None)
-                height = node_dict.get('height', None)
+            if node_def.width is not None or node_def.height is not None:
+                width = node_def.width
+                height = node_def.height
                 # NodeGraphQt 的节点尺寸通常在创建实例时设置
                 # 这里可以存储配置供后续使用
                 if hasattr(node_class, '_style_config'):
@@ -255,14 +256,21 @@ class PluginManager:
                 print(f"   📐 节点尺寸: {width}x{height}")
             
             # 存储描述信息用于说明面板
-            if 'description' in node_dict and node_dict['description']:
-                description = node_dict['description']
+            if node_def.description:
+                description = node_def.description
                 if not hasattr(node_class, '_node_description'):
                     node_class._node_description = description
-                print(f"   📝 节点描述已加载")
+                print(f"   📝 节点描述已加载 ({len(description)} 字符)")
+                
+            # 设置节点颜色（如果支持）
+            if node_def.color:
+                color = node_def.color
+                print(f"   🎨 节点颜色: RGB{tuple(color)}")
                 
         except Exception as e:
             print(f"   ⚠️ 应用节点样式失败: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _on_plugin_changed(self, plugin_name: str):
         """

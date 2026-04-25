@@ -102,6 +102,10 @@ class PluginUIManager:
         # 清除待加载标记，避免重复加载
         delattr(self.main_window, '_pending_plugins')
         
+        # 刷新节点库的事件过滤器（使新加载的插件标签页也能响应点击）
+        if hasattr(self.main_window, 'refresh_node_info_event_filters'):
+            self.main_window.refresh_node_info_event_filters()
+        
         return new_categories
     
     def _apply_custom_tab_names(self, identifier_to_display_name):

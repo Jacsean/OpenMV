@@ -14,7 +14,11 @@ class NodeDefinition:
     class_name: str           # 节点类名
     display_name: str         # 显示名称
     category: str             # 分类（如"形态学"）
-    icon: Optional[str] = None # 图标路径
+    icon: Optional[str] = None # 图标路径（Unicode emoji）
+    width: Optional[int] = None  # 节点宽度（像素）
+    height: Optional[int] = None # 节点高度（像素）
+    description: str = ""     # 节点详细描述
+    color: Optional[List[int]] = None  # 节点颜色 RGB [R, G, B]
 
 
 @dataclass
