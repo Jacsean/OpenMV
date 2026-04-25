@@ -242,36 +242,34 @@ class ProjectUIManager:
             print(f"✅ 工程已打开: {project.name}")
             print(f"   工作流数量: {len(project.workflows)}")
             
+            # 获取预加载的节点图数据（如果有）
+            workflows_session_data = getattr(project, '_workflows_session_data', {})
+            
             # 为每个工作流创建标签页
-            for workflow in project.workflows:
+            for i, workflow in enumerate(project.workflows):
                 # 创建工作流的NodeGraph
                 node_graph = NodeGraph()
                 workflow.node_graph = node_graph
                 
-                # 加载节点图数据
-                if workflow.file_path:
-                    # 注意：导入时工程被解压到临时目录
-                    import tempfile
-                    import glob
-                    temp_base = tempfile.gettempdir()
-                    temp_dirs = glob.glob(os.path.join(temp_base, 'proj_import_*'))
-                    if temp_dirs:
-                        latest_temp = max(temp_dirs, key=os.path.getmtime)
-                        wf_full_path = os.path.join(latest_temp, workflow.file_path)
-                        
-                        if os.path.exists(wf_full_path):
-                            try:
-                                import json
-                                with open(wf_full_path, 'r', encoding='utf-8') as f:
-                                    session_data = json.load(f)
-                                node_graph.deserialize_session(session_data)
-                                print(f"✅ 加载工作流: {workflow.name}")
-                            except Exception as e:
-                                print(f"❌ 加载工作流失败: {e}")
-                                import traceback
-                                traceback.print_exc()
-                        else:
-                            print(f"⚠️ 工作流文件不存在: {wf_full_path}")
+                # 加载节点图数据（优先使用预加载的数据）
+                session_data = workflows_session_data.get(i)
+                if session_data:
+                    try:
+                        node_graph.deserialize_session(session_data)
+                        print(f"✅ 加载工作流: {workflow.name} ({len(node_graph.all_nodes())} 个节点)")
+                    except Exception as e:
+                        print(f"❌ 加载工作流失败: {e}")
+                        import traceback
+                        traceback.print_exc()
+                elif workflow.file_path:
+                    # 备用方案：从文件路径加载（兼容旧格式）
+                    wf_full_path = os.path.join(os.path.dirname(proj_file), workflow.file_path)
+                    if os.path.exists(wf_full_path):
+                        try:
+                            node_graph.deserialize_session(wf_full_path)
+                            print(f"✅ 从文件加载工作流: {workflow.name}")
+                        except Exception as e:
+                            print(f"❌ 从文件加载工作流失败: {e}")
                 
                 # 连接信号
                 node_graph.node_created.connect(lambda n, wf=workflow: self.main_window._on_node_created(n, wf))

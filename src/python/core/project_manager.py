@@ -542,8 +542,29 @@ class ProjectManager:
             self.current_project.file_path = os.path.dirname(os.path.abspath(proj_file))
             self.current_project.format_type = "single_file"
             
+            # === 关键修复：预加载工作流节点图数据到内存 ===
+            workflows_data = {}
+            workflows_dir = os.path.join(temp_dir, "workflows")
+            if os.path.exists(workflows_dir):
+                for wf_file in os.listdir(workflows_dir):
+                    if wf_file.endswith('.json'):
+                        wf_index = int(wf_file.replace('workflow_', '').replace('.json', '')) - 1
+                        wf_full_path = os.path.join(workflows_dir, wf_file)
+                        
+                        try:
+                            with open(wf_full_path, 'r', encoding='utf-8') as f:
+                                workflows_data[wf_index] = json.load(f)
+                            print(f"   📦 预加载工作流数据: {wf_file}")
+                        except Exception as e:
+                            print(f"   ⚠️ 加载工作流数据失败 {wf_file}: {e}")
+            
+            # 将预加载的数据附加到工程对象（供UI管理器使用）
+            self.current_project._workflows_session_data = workflows_data
+            self.current_project._import_temp_dir = temp_dir  # 保存临时目录引用
+            
             print(f"✅ 工程已从 {proj_file} 导入")
             print(f"   工作流数量: {len(self.current_project.workflows)}")
+            print(f"   预加载节点图数据: {len(workflows_data)} 个")
             
             return self.current_project
             

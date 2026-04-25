@@ -1,8 +1,8 @@
 {
   "name": "preprocessing",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "OpenCV Team",
-  "description": "图像预处理节点包",
+  "description": "图像预处理节点包 - 滤波、色彩转换、变换、校准",
   "category_group": "预处理",
   "nodes": [
     {
@@ -24,6 +24,66 @@
       "width": 180,
       "height": 100,
       "description": "应用高斯滤波器平滑图像，可调节核大小和标准差参数"
+    },
+    {
+      "class": "MedianBlurNode",
+      "display_name": "中值滤波",
+      "category": "滤波",
+      "color": [255, 150, 100],
+      "icon": "🔘",
+      "width": 180,
+      "height": 100,
+      "description": "使用中值滤波器去除噪声，特别适合椒盐噪声处理"
+    },
+    {
+      "class": "BilateralFilterNode",
+      "display_name": "双边滤波",
+      "category": "滤波",
+      "color": [255, 150, 100],
+      "icon": "✨",
+      "width": 180,
+      "height": 100,
+      "description": "保边去噪滤波器，在平滑的同时保持边缘清晰"
+    },
+    {
+      "class": "ResizeNode",
+      "display_name": "图像缩放",
+      "category": "几何变换",
+      "color": [200, 150, 255],
+      "icon": "📐",
+      "width": 180,
+      "height": 100,
+      "description": "调整图像尺寸，支持多种插值方法（最近邻、线性、双三次等）"
+    },
+    {
+      "class": "RotateNode",
+      "display_name": "图像旋转",
+      "category": "几何变换",
+      "color": [200, 150, 255],
+      "icon": "🔄",
+      "width": 180,
+      "height": 100,
+      "description": "按指定角度旋转图像，支持任意中心点和缩放比例"
+    },
+    {
+      "class": "BrightnessContrastNode",
+      "display_name": "亮度对比度",
+      "category": "色彩调整",
+      "color": [255, 200, 100],
+      "icon": "☀️",
+      "width": 180,
+      "height": 100,
+      "description": "调整图像的亮度和对比度，支持线性变换"
+    },
+    {
+      "class": "ThresholdNode",
+      "display_name": "阈值二值化",
+      "category": "二值化",
+      "color": [100, 200, 255],
+      "icon": "⚫",
+      "width": 180,
+      "height": 100,
+      "description": "将图像转换为二值图像，支持多种阈值类型（普通、反向、截断等）"
     }
   ],
   "dependencies": ["opencv-python>=4.5", "numpy"],

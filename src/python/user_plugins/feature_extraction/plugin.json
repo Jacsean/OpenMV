@@ -1,15 +1,69 @@
 {
   "name": "feature_extraction",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "OpenCV Team",
-  "description": "特征提取节点包（边缘检测、Blob分析、几何匹配）",
+  "description": "特征提取节点包 - 边缘检测、Blob分析、几何匹配、角点检测",
   "category_group": "特征提取",
   "nodes": [
     {
       "class": "CannyEdgeNode",
       "display_name": "Canny边缘检测",
       "category": "边缘检测",
-      "color": [255, 200, 100]
+      "color": [255, 200, 100],
+      "icon": "🔍",
+      "width": 180,
+      "height": 100,
+      "description": "使用Canny算法检测图像边缘，可调节高低阈值参数"
+    },
+    {
+      "class": "SobelEdgeNode",
+      "display_name": "Sobel边缘检测",
+      "category": "边缘检测",
+      "color": [255, 200, 100],
+      "icon": "📊",
+      "width": 180,
+      "height": 100,
+      "description": "使用Sobel算子计算图像梯度，支持X/Y/XY方向"
+    },
+    {
+      "class": "LaplacianNode",
+      "display_name": "Laplacian边缘检测",
+      "category": "边缘检测",
+      "color": [255, 200, 100],
+      "icon": "🔬",
+      "width": 180,
+      "height": 100,
+      "description": "使用拉普拉斯算子检测图像边缘，对噪声敏感"
+    },
+    {
+      "class": "HarrisCornerNode",
+      "display_name": "Harris角点检测",
+      "category": "角点检测",
+      "color": [200, 150, 255],
+      "icon": "📍",
+      "width": 180,
+      "height": 100,
+      "description": "检测图像中的角点特征，适用于特征匹配和跟踪"
+    },
+    {
+      "class": "HoughLinesNode",
+      "display_name": "Hough直线检测",
+      "category": "形状检测",
+      "color": [100, 200, 255],
+      "icon": "📏",
+      "width": 180,
+      "height": 100,
+      "description": "使用Hough变换检测图像中的直线，可调节精度和阈值"
+    },
+    {
+      "class": "HoughCirclesNode",
+      "display_name": "Hough圆检测",
+      "category": "形状检测",
+      "color": [100, 200, 255],
+      "icon": "⭕",
+      "width": 180,
+      "height": 100,
+      "description": "使用Hough变换检测图像中的圆形，支持半径范围限制"
     }
   ],
   "dependencies": ["opencv-python>=4.5", "numpy"],
