@@ -287,11 +287,116 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         连接节点库的选择信号到说明面板更新函数
         
-        注意：NodeGraphQt 的 NodesPaletteWidget 没有直接的节点选择信号
-        我们提供一个手动刷新按钮供用户查看节点信息
+        由于 NodeGraphQt 的 NodesPaletteWidget 没有公开的节点选择信号，
+        我们采用事件过滤器的方式监听鼠标点击事件
         """
-        # 暂时不自动连接，提供手动触发方式
-        pass
+        try:
+            # 获取 tab_widget
+            tab_widget = self.nodes_palette.tab_widget()
+            
+            if tab_widget:
+                # 为每个标签页的内容widget安装事件过滤器
+                for i in range(tab_widget.count()):
+                    widget = tab_widget.widget(i)
+                    if widget:
+                        widget.installEventFilter(self)
+                        
+        except Exception as e:
+            print(f"⚠️ 连接节点选择信号失败: {e}")
+    
+    def eventFilter(self, obj, event):
+        """
+        事件过滤器 - 捕获节点库中的鼠标点击事件
+        
+        Args:
+            obj: 事件目标对象
+            event: 事件对象
+            
+        Returns:
+            bool: 是否拦截事件
+        """
+        from PySide2.QtCore import QEvent
+        
+        # 监听鼠标按下事件
+        if event.type() == QEvent.MouseButtonPress:
+            # 检查是否是节点库中的组件
+            if hasattr(obj, 'parent') and obj.parent():
+                parent = obj.parent()
+                # 尝试从父级追溯到 nodes_palette
+                while parent:
+                    if parent == self.nodes_palette:
+                        # 这是节点库中的点击事件
+                        # 延迟获取选中的节点信息（因为点击后才会更新选中状态）
+                        QtCore.QTimer.singleShot(50, self._update_node_info_from_selection)
+                        break
+                    parent = parent.parent() if hasattr(parent, 'parent') else None
+        
+        return False  # 不拦截事件，让事件继续传递
+    
+    def _update_node_info_from_selection(self):
+        """
+        从节点库的当前选中状态更新说明面板
+        """
+        try:
+            # 获取 tab_widget
+            tab_widget = self.nodes_palette.tab_widget()
+            if not tab_widget:
+                return
+            
+            # 遍历所有标签页，查找选中的项
+            for i in range(tab_widget.count()):
+                widget = tab_widget.widget(i)
+                if widget and hasattr(widget, 'selectedItems'):
+                    selected = widget.selectedItems()
+                    if selected:
+                        # 找到了选中的项
+                        item = selected[0]
+                        if hasattr(item, 'text'):
+                            node_name = item.text(0) if hasattr(item, 'text') else str(item)
+                            # 尝试从 plugin_manager 获取节点详细信息
+                            self._display_node_info_by_name(node_name)
+                            return
+                        
+        except Exception as e:
+            pass  # 静默失败，不影响主流程
+    
+    def _display_node_info_by_name(self, node_display_name):
+        """
+        根据节点显示名称查找并显示节点信息
+        
+        Args:
+            node_display_name: 节点的显示名称
+        """
+        try:
+            # 从 plugin_manager 中查找匹配的节点
+            if hasattr(self, 'plugin_manager') and self.plugin_manager:
+                for plugin_name, plugin_info in self.plugin_manager.plugins.items():
+                    for node_def in plugin_info.nodes:
+                        if node_def.display_name == node_display_name:
+                            # 找到匹配的节点，显示信息
+                            description = ""
+                            # 尝试从已加载的节点类中获取描述
+                            node_key = f"{plugin_name}.{node_def.class_name}"
+                            if node_key in self.plugin_manager.loaded_nodes:
+                                node_class = self.plugin_manager.loaded_nodes[node_key]
+                                if hasattr(node_class, '_node_description'):
+                                    description = node_class._node_description
+                            
+                            self.update_node_info(
+                                node_class_name=node_def.class_name,
+                                display_name=node_def.display_name,
+                                category=node_def.category,
+                                description=description
+                            )
+                            return
+            
+            # 如果没找到详细信息，至少显示名称
+            self.info_name_label.setText(f"🔹 {node_display_name}")
+            self.info_category_label.setText("分类: 未知")
+            self.info_text.setPlainText("暂无详细说明")
+            
+        except Exception as e:
+            pass
     
     def update_node_info(self, node_class_name, display_name, category, description=""):
         """
