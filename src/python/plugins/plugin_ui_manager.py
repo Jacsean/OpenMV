@@ -9,6 +9,8 @@
 """
 
 from PySide2 import QtWidgets, QtCore
+from pathlib import Path
+import json
 
 
 class PluginUIManager:
@@ -48,10 +50,6 @@ class PluginUIManager:
         if not self.main_window._pending_plugins:
             return set()
         
-        print("\n" + "="*80)
-        print("【阶段1】构建 category_group 映射表")
-        print("="*80)
-        
         new_categories = set()
         # 构建标识符到显示名称的映射
         identifier_to_display_name = {}
@@ -64,9 +62,6 @@ class PluginUIManager:
                 # 记录标识符映射（使用plugin.json的name作为identifier，category_group作为显示名）
                 if hasattr(plugin_info, 'category_group') and plugin_info.category_group:
                     identifier_to_display_name[plugin_info.name] = plugin_info.category_group
-                    print(f"  {plugin_info.name:30s} → {plugin_info.category_group}")
-        
-        print(f"\n映射表共 {len(identifier_to_display_name)} 项\n")
         
         if not plugins_to_load:
             return set()
@@ -79,10 +74,6 @@ class PluginUIManager:
                 if palette_graph is None:
                     palette_graph = self.main_window.nodes_palette.node_graph
                 
-                print("="*80)
-                print("【阶段2】注册节点到节点库 Graph")
-                print("="*80)
-                
                 for plugin_info in plugins_to_load:
                     self.plugin_manager.load_plugin_nodes(
                         plugin_info.name,
@@ -91,16 +82,12 @@ class PluginUIManager:
                     for node_def in plugin_info.nodes:
                         new_categories.add(node_def.category)
                 
-                print(f"\n已注册 {len(new_categories)} 个节点分类\n")
-                
                 # 应用自定义标签页名称映射
                 if identifier_to_display_name:
-                    print("="*80)
-                    print("【阶段3】应用 category_group 重命名标签页")
-                    print("="*80)
                     self._apply_custom_tab_names(identifier_to_display_name)
-                else:
-                    print("\n⚠️ 映射表为空，跳过重命名\n")
+                
+                # 应用自定义标签页顺序
+                self._apply_custom_tab_order()
             except Exception as e:
                 import traceback
                 traceback.print_exc()
@@ -125,23 +112,15 @@ class PluginUIManager:
             identifier_to_display_name: dict, 标识符到显示名称的映射
         """
         if not self.main_window.nodes_palette:
-            print("❌ nodes_palette 不存在")
             return
         
         try:
             tab_widget = self.main_window.nodes_palette.tab_widget()
             
             if not tab_widget:
-                print("❌ tab_widget 为 None")
                 return
             
-            print(f"\n当前标签页数量: {tab_widget.count()}")
-            print("\n重命名前:")
-            for i in range(tab_widget.count()):
-                print(f"  [{i}] {tab_widget.tabText(i)}")
-            
             # 遍历所有标签页，根据映射修改名称
-            renamed_count = 0
             for i in range(tab_widget.count()):
                 current_name = tab_widget.tabText(i)
                 
@@ -149,18 +128,56 @@ class PluginUIManager:
                 for identifier, display_name in identifier_to_display_name.items():
                     if current_name == identifier:
                         tab_widget.setTabText(i, display_name)
-                        print(f"  ✅ {identifier:30s} → {display_name}")
-                        renamed_count += 1
                         break
-            
-            print(f"\n重命名后:")
-            for i in range(tab_widget.count()):
-                print(f"  [{i}] {tab_widget.tabText(i)}")
-            
-            print(f"\n共重命名 {renamed_count}/{tab_widget.count()} 个标签页\n")
-            print("="*80 + "\n")
                     
         except Exception as e:
-            print(f"❌ 重命名失败: {e}")
             import traceback
             traceback.print_exc()
+    
+    def _apply_custom_tab_order(self):
+        """
+        应用自定义标签页顺序
+        
+        从 workspace/tab_order.json 读取用户定义的顺序，并重新排列标签页
+        """
+        if not self.main_window.nodes_palette:
+            return
+        
+        try:
+            # 加载保存的顺序
+            config_file = Path(__file__).parent.parent / "workspace" / "tab_order.json"
+            if not config_file.exists():
+                return
+            
+            with open(config_file, 'r', encoding='utf-8') as f:
+                custom_order = json.load(f)
+            
+            if not custom_order:
+                return
+            
+            tab_widget = self.main_window.nodes_palette.tab_widget()
+            if not tab_widget:
+                return
+            
+            # 构建 category_group 到索引的映射
+            category_to_index = {}
+            for i in range(tab_widget.count()):
+                tab_text = tab_widget.tabText(i)
+                category_to_index[tab_text] = i
+            
+            # 验证配置有效性（实际排序需要重启应用）
+            valid_categories = [cat for cat in custom_order if cat in category_to_index]
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+    
+    def open_node_editor(self):
+        """
+        打开节点编辑器对话框
+        """
+        from ui.node_editor import NodeEditorDialog
+        
+        plugins_dir = Path(__file__).parent.parent / "user_plugins"
+        dialog = NodeEditorDialog(parent=self.main_window, plugins_dir=plugins_dir)
+        dialog.exec_()

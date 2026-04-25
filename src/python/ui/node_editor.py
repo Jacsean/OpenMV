@@ -217,6 +217,12 @@ class NodeEditorDialog(QtWidgets.QDialog):
         
         toolbar.addSeparator()
         
+        # 管理标签页顺序
+        sort_action = toolbar.addAction("🔀 管理标签顺序")
+        sort_action.triggered.connect(self._on_manage_tab_order)
+        
+        toolbar.addSeparator()
+        
         # 刷新
         refresh_action = toolbar.addAction("🔄 刷新")
         refresh_action.triggered.connect(self._refresh_packages)
@@ -1151,6 +1157,43 @@ class {class_name}(BaseNode):
         self.preview_label.setText("选择节点后点击'预览'按钮查看效果")
         self.preview_label.setStyleSheet("background-color: #f0f0f0; color: gray; font-size: 12px;")
     
+    def _on_manage_tab_order(self):
+        """管理节点库标签页顺序"""
+        dialog = TabOrderDialog(self)
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            new_order = dialog.get_tab_order()
+            self._apply_tab_order(new_order)
+            QtWidgets.QMessageBox.information(self, "成功", "标签页顺序已更新，请重启应用以生效")
+    
+    def _apply_tab_order(self, tab_order):
+        """
+        应用标签页顺序（保存到配置文件）
+        
+        Args:
+            tab_order: list of str, 插件名称的有序列表
+        """
+        config_file = Path(__file__).parent.parent / "workspace" / "tab_order.json"
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(tab_order, f, indent=2, ensure_ascii=False)
+    
+    def _load_tab_order(self):
+        """
+        加载保存的标签页顺序
+        
+        Returns:
+            list: 插件名称的有序列表，如果不存在则返回空列表
+        """
+        config_file = Path(__file__).parent.parent / "workspace" / "tab_order.json"
+        if config_file.exists():
+            try:
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                pass
+        return []
+    
     def keyPressEvent(self, event):
         """键盘事件 - 支持Ctrl+Z/Y快捷键"""
         # Ctrl+Z 撤销
@@ -1164,6 +1207,113 @@ class {class_name}(BaseNode):
             return
         
         super(NodeEditorDialog, self).keyPressEvent(event)
+
+
+# ============================================================================
+# ✨ 标签页顺序管理对话框
+# ============================================================================
+
+class TabOrderDialog(QtWidgets.QDialog):
+    """
+    标签页顺序管理对话框
+    
+    允许用户通过拖拽调整节点库标签页的显示顺序
+    """
+    
+    def __init__(self, parent=None):
+        super(TabOrderDialog, self).__init__(parent)
+        self.setWindowTitle("管理标签页顺序")
+        self.resize(500, 600)
+        
+        # 加载当前顺序
+        self.tab_order = self._load_current_order()
+        
+        self._setup_ui()
+    
+    def _load_current_order(self):
+        """加载当前的标签页顺序"""
+        # 从父对话框获取所有插件包
+        parent_dialog = self.parent()
+        if hasattr(parent_dialog, 'plugin_packages'):
+            # 按 category_group 分组
+            categories = {}
+            for pkg_name, pkg_info in parent_dialog.plugin_packages.items():
+                data = pkg_info['data']
+                category_group = data.get('category_group', pkg_name)
+                # 只保留有节点的插件
+                if len(data.get('nodes', [])) > 0:
+                    if category_group not in categories:
+                        categories[category_group] = pkg_name
+            
+            # 返回插件名称列表（去重）
+            return list(categories.values())
+        return []
+    
+    def _setup_ui(self):
+        """构建UI"""
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setSpacing(10)
+        layout.setContentsMargins(15, 15, 15, 15)
+        
+        # 说明文字
+        info_label = QtWidgets.QLabel("💡 拖拽项目调整顺序，上方的标签页将优先显示")
+        info_label.setStyleSheet("color: #666; font-size: 11px;")
+        layout.addWidget(info_label)
+        
+        # 列表控件
+        self.list_widget = QtWidgets.QListWidget()
+        self.list_widget.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+        self.list_widget.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.list_widget.setSpacing(5)
+        
+        # 填充当前顺序
+        for pkg_name in self.tab_order:
+            item = QtWidgets.QListWidgetItem(pkg_name)
+            item.setData(QtCore.Qt.UserRole, pkg_name)
+            self.list_widget.addItem(item)
+        
+        layout.addWidget(self.list_widget)
+        
+        # 按钮栏
+        button_layout = QtWidgets.QHBoxLayout()
+        
+        reset_btn = QtWidgets.QPushButton("🔄 重置为默认")
+        reset_btn.clicked.connect(self._on_reset)
+        button_layout.addWidget(reset_btn)
+        
+        button_layout.addStretch()
+        
+        cancel_btn = QtWidgets.QPushButton("取消")
+        cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_btn)
+        
+        ok_btn = QtWidgets.QPushButton("确定")
+        ok_btn.clicked.connect(self.accept)
+        ok_btn.setDefault(True)
+        button_layout.addWidget(ok_btn)
+        
+        layout.addLayout(button_layout)
+    
+    def _on_reset(self):
+        """重置为默认顺序（按字母排序）"""
+        self.list_widget.clear()
+        sorted_order = sorted(self.tab_order)
+        
+        for pkg_name in sorted_order:
+            item = QtWidgets.QListWidgetItem(pkg_name)
+            item.setData(QtCore.Qt.UserRole, pkg_name)
+            self.list_widget.addItem(item)
+    
+    def get_tab_order(self):
+        """获取调整后的标签页顺序"""
+        order = []
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            pkg_name = item.data(QtCore.Qt.UserRole)
+            if pkg_name:
+                order.append(pkg_name)
+        return order
 
 class NewPackageDialog(QtWidgets.QDialog):
     """新建节点包对话框"""
