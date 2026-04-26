@@ -1,0 +1,29 @@
+# YOLO 完整套件依赖（重量级）
+# 适用于开发工作站，约 2GB + CUDA
+# 硬件要求：CPU 8+核，内存 16GB+，GPU 必需（CUDA 11.8+，8GB+ 显存）
+
+# 包含推理依赖
+-r requirements_inference.txt
+
+# 训练框架
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# 数据增强
+albumentations>=1.3.0
+
+# 标注工具
+labelme>=5.0.0
+
+# GPU 支持（二选一，根据环境选择）
+# ============================================
+# CPU 版本（仅用于测试，不推荐训练）
+# pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# GPU 版本（推荐，需要 CUDA 11.8）
+# pip install torch --index-url https://download.pytorch.org/whl/cu118
+# ============================================
+
+# 可选：TensorRT 支持（边缘部署优化）
+# tensorrt>=8.6.0

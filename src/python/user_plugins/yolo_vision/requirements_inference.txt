@@ -1,0 +1,12 @@
+# YOLO 推理依赖（轻量级）
+# 适用于工厂现场部署，约 500MB
+# 硬件要求：CPU 2核，内存 2GB，GPU 可选
+
+# 核心依赖
+ultralytics>=8.0.0
+opencv-python>=4.5.0
+numpy>=1.19.0,<2.0.0
+Pillow>=8.0.0
+
+# 可选优化（GPU 加速推理）
+# onnxruntime-gpu>=1.15.0

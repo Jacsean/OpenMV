@@ -1,0 +1,157 @@
+{
+  "name": "yolo_vision",
+  "version": "1.0.0",
+  "author": "OpenCV视觉系统开发团队",
+  "description": "YOLO 视觉算法套件（支持检测/分类/分割/姿态估计）",
+  "category_group": "识别分类",
+  
+  "nodes": [
+    {
+      "class": "YOLODetectNode",
+      "display_name": "YOLO 目标检测",
+      "category": "AI推理",
+      "resource_level": "light",
+      "color": [255, 100, 100],
+      "hardware_requirements": {
+        "cpu_cores": 2,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": ["ultralytics>=8.0.0"]
+    },
+    {
+      "class": "YOLOClassifyNode",
+      "display_name": "YOLO 图像分类",
+      "category": "AI推理",
+      "resource_level": "light",
+      "color": [255, 100, 100],
+      "hardware_requirements": {
+        "cpu_cores": 2,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": ["ultralytics>=8.0.0"]
+    },
+    {
+      "class": "YOLOSegmentNode",
+      "display_name": "YOLO 实例分割",
+      "category": "AI推理",
+      "resource_level": "light",
+      "color": [255, 100, 100],
+      "hardware_requirements": {
+        "cpu_cores": 2,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": ["ultralytics>=8.0.0"]
+    },
+    {
+      "class": "YOLOPoseNode",
+      "display_name": "YOLO 姿态估计",
+      "category": "AI推理",
+      "resource_level": "light",
+      "color": [255, 100, 100],
+      "hardware_requirements": {
+        "cpu_cores": 2,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": ["ultralytics>=8.0.0"]
+    },
+    {
+      "class": "YOLOAnnotatorNode",
+      "display_name": "YOLO 标注辅助",
+      "category": "标注工具",
+      "resource_level": "medium",
+      "color": [255, 150, 100],
+      "hardware_requirements": {
+        "cpu_cores": 4,
+        "memory_gb": 8,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": ["ultralytics>=8.0.0", "labelme"]
+    },
+    {
+      "class": "YOLOTrainerNode",
+      "display_name": "YOLO 模型训练",
+      "category": "模型训练",
+      "resource_level": "heavy",
+      "color": [255, 200, 100],
+      "hardware_requirements": {
+        "cpu_cores": 8,
+        "memory_gb": 16,
+        "gpu_required": true,
+        "gpu_memory_gb": 8,
+        "cuda_version": "11.8"
+      },
+      "dependencies": ["ultralytics>=8.0.0", "torch>=2.0.0"],
+      "optional_dependencies": {
+        "gpu": ["torch --index-url https://download.pytorch.org/whl/cu118"]
+      }
+    },
+    {
+      "class": "YOLOQuantizerNode",
+      "display_name": "YOLO 模型量化",
+      "category": "模型优化",
+      "resource_level": "heavy",
+      "color": [255, 200, 100],
+      "hardware_requirements": {
+        "cpu_cores": 8,
+        "memory_gb": 16,
+        "gpu_required": true,
+        "gpu_memory_gb": 8
+      },
+      "dependencies": ["ultralytics>=8.0.0", "torch>=2.0.0"]
+    },
+    {
+      "class": "YOLOExporterNode",
+      "display_name": "YOLO 格式导出",
+      "category": "模型优化",
+      "resource_level": "heavy",
+      "color": [255, 200, 100],
+      "hardware_requirements": {
+        "cpu_cores": 4,
+        "memory_gb": 8,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": ["ultralytics>=8.0.0", "torch>=2.0.0"]
+    }
+  ],
+  
+  "min_app_version": "4.0.0",
+  
+  "installation_guide": {
+    "inference_only": {
+      "description": "仅安装推理依赖（适合工厂现场，约 500MB）",
+      "command": "pip install -r requirements_inference.txt"
+    },
+    "full_suite": {
+      "description": "安装完整套件（适合开发工作站，约 2GB + CUDA）",
+      "command": "pip install -r requirements_training.txt"
+    }
+  },
+  
+  "hardware_recommendations": {
+    "factory_deployment": {
+      "description": "工厂现场部署（低配工控机）",
+      "install_mode": "inference_only",
+      "recommended_nodes": ["YOLODetectNode", "YOLOClassifyNode"]
+    },
+    "office_workstation": {
+      "description": "办公室工作站（中高配）",
+      "install_mode": "full_suite",
+      "recommended_nodes": "all"
+    },
+    "cloud_training": {
+      "description": "云端训练（高性能服务器）",
+      "install_mode": "full_suite",
+      "recommended_nodes": ["YOLOTrainerNode", "YOLOQuantizerNode"]
+    }
+  }
+}
