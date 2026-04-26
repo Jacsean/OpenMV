@@ -7,6 +7,7 @@ AI 节点基类模块
 - 异步推理支持
 - 资源等级声明
 - 友好的错误提示
+- 性能监控与结果缓存
 
 遵循《AI 模块资源隔离设计规范》
 """
@@ -17,6 +18,13 @@ import time
 from typing import Dict, Any, Optional, Callable
 from concurrent.futures import ThreadPoolExecutor, Future
 from NodeGraphQt import BaseNode
+
+# 导入性能监控工具
+try:
+    from user_plugins.performance_monitor import PerformanceMonitor, ResultCache, ResourceOptimizer
+    HAS_PERFORMANCE_TOOLS = True
+except ImportError:
+    HAS_PERFORMANCE_TOOLS = False
 
 
 class AIBaseNode(BaseNode):
@@ -29,6 +37,8 @@ class AIBaseNode(BaseNode):
     - 模型缓存（类级别共享，避免重复加载）
     - 资源等级声明（light/medium/heavy）
     - 统一的错误处理和日志输出
+    - 性能监控（执行时间、内存使用）
+    - 结果缓存（避免重复计算）
     
     使用示例：
         class YOLODetectNode(AIBaseNode):
@@ -66,6 +76,31 @@ class AIBaseNode(BaseNode):
             'gpu_required': False,
             'gpu_memory_gb': 0
         }
+        
+        # 性能监控器（如果可用）
+        if HAS_PERFORMANCE_TOOLS:
+            self.performance_monitor = PerformanceMonitor()
+            self.result_cache = ResultCache(max_size=5, ttl_seconds=1800)  # 30分钟TTL
+        else:
+            self.performance_monitor = None
+            self.result_cache = None
+    
+    def measure_performance(self, label: str = "process"):
+        """
+        装饰器：测量 process 方法的性能
+        
+        Usage:
+            @node.measure_performance("yolo_detect")
+            def process(self, inputs):
+                pass
+        """
+        if not HAS_PERFORMANCE_TOOLS or not self.performance_monitor:
+            # 如果没有性能监控工具，返回空装饰器
+            def decorator(func):
+                return func
+            return decorator
+        
+        return self.performance_monitor.measure_time(label)
     
     def check_dependencies(self, required_packages: list) -> bool:
         """
@@ -239,6 +274,70 @@ class AIBaseNode(BaseNode):
     def log_success(self, message: str):
         """记录成功日志"""
         print(f"✅ [{self.NODE_NAME}] {message}")
+    
+    def get_performance_report(self) -> Optional[Dict[str, Any]]:
+        """
+        获取性能报告
+        
+        Returns:
+            dict: 性能报告字典，如果性能监控不可用则返回 None
+        """
+        if not HAS_PERFORMANCE_TOOLS or not self.performance_monitor:
+            return None
+        
+        return self.performance_monitor.generate_report()
+    
+    def get_cache_stats(self) -> Optional[Dict[str, Any]]:
+        """
+        获取缓存统计信息
+        
+        Returns:
+            dict: 缓存统计信息，如果缓存不可用则返回 None
+        """
+        if not HAS_PERFORMANCE_TOOLS or not self.result_cache:
+            return None
+        
+        return self.result_cache.get_stats()
+    
+    def clear_result_cache(self):
+        """清空结果缓存"""
+        if HAS_PERFORMANCE_TOOLS and self.result_cache:
+            self.result_cache.clear()
+            self.log_info("已清空结果缓存")
+    
+    def optimize_resources(self):
+        """优化资源使用（在执行重量级任务前调用）"""
+        if HAS_PERFORMANCE_TOOLS:
+            opt_result = ResourceOptimizer.optimize_before_heavy_task()
+            self.log_info(f"资源优化完成: {opt_result['memory_before_mb']:.1f}MB")
+            return opt_result
+        return None
+    
+    def check_cached_result(self, **kwargs) -> Optional[Any]:
+        """
+        检查缓存中是否有结果
+        
+        Args:
+            **kwargs: 缓存查询参数
+            
+        Returns:
+            缓存的结果，如果不存在则返回 None
+        """
+        if not HAS_PERFORMANCE_TOOLS or not self.result_cache:
+            return None
+        
+        return self.result_cache.get(**kwargs)
+    
+    def cache_result(self, result: Any, **kwargs):
+        """
+        将结果存入缓存
+        
+        Args:
+            result: 要缓存的结果
+            **kwargs: 缓存参数
+        """
+        if HAS_PERFORMANCE_TOOLS and self.result_cache:
+            self.result_cache.set(result, **kwargs)
 
 
 class AsyncAINode(AIBaseNode):
