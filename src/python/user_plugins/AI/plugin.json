@@ -2,9 +2,15 @@
   "name": "AI",
   "version": "1.0.0",
   "author": "",
-  "description": "",
+  "description": "AI 功能插件包（预留）",
   "category_group": "AI",
   "nodes": [],
   "dependencies": [],
-  "min_app_version": "4.0.0"
+  "min_app_version": "4.0.0",
+  "resource_level": "light",
+  "hardware_recommendations": {
+    "factory_deployment": "适合工厂现场部署",
+    "office_workstation": "适合办公室工作站",
+    "cloud_training": "不需要云端训练"
+  }
 }

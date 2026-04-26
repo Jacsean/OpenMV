@@ -48,5 +48,6 @@ class PluginInfo:
     installed_at: Optional[datetime] = None
     
     # AI 插件扩展字段
+    resource_level: str = "light"  # 资源等级: light/medium/heavy
     installation_guide: Dict[str, Any] = field(default_factory=dict)  # 安装指南
     hardware_recommendations: Dict[str, Any] = field(default_factory=dict)  # 硬件推荐

@@ -134,6 +134,7 @@ class PluginManager:
                 min_app_version=data.get('min_app_version', '3.1.0'),
                 path=str(plugin_path),
                 # AI 插件扩展字段
+                resource_level=data.get('resource_level', 'light'),
                 installation_guide=data.get('installation_guide', {}),
                 hardware_recommendations=data.get('hardware_recommendations', {})
             )
