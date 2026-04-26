@@ -199,15 +199,28 @@ class MainWindow(QtWidgets.QMainWindow):
             if hasattr(self.nodes_palette, 'tab_widget'):
                 self.nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
         
-        dock_nodes = QtWidgets.QDockWidget("节点库", self)
-        dock_nodes.setWidget(self.nodes_palette)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_nodes)
-        
         # === 左侧下方：节点说明面板 ===
         self.node_info_panel = self._create_node_info_panel()
-        dock_info = QtWidgets.QDockWidget("节点说明", self)
-        dock_info.setWidget(self.node_info_panel)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_info)
+        
+        # 创建左侧垂直布局容器，实现节点说明固定在底部
+        left_container = QtWidgets.QWidget()
+        left_layout = QtWidgets.QVBoxLayout(left_container)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
+        
+        # 添加节点库（占据主要空间）
+        left_layout.addWidget(self.nodes_palette)
+        
+        # 添加节点说明面板（固定高度）
+        self.node_info_panel.setMaximumHeight(250)  # 设置最大高度
+        self.node_info_panel.setMinimumHeight(200)  # 设置最小高度
+        left_layout.addWidget(self.node_info_panel)
+        
+        # 将整个左侧容器作为一个DockWidget
+        dock_left = QtWidgets.QDockWidget("左侧面板", self)
+        dock_left.setWidget(left_container)
+        dock_left.setFeatures(QtWidgets.QDockWidget.NoDockWidgetFeatures)  # 禁用浮动和关闭
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_left)
         
         # 连接节点库的选择信号到说明面板
         self._connect_node_selection_signal()
