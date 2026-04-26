@@ -167,16 +167,45 @@ class PluginManager:
         plugin_path = Path(plugin_info.path)
         
         try:
-            # 1. 读取源代码进行安全检查
+            # 1. 确定插件结构类型（新体系 vs 旧体系）
+            nodes_dir = plugin_path / "nodes"
             nodes_file = plugin_path / "nodes.py"
-            if not nodes_file.exists():
-                print(f"❌ 插件缺少 nodes.py: {plugin_name}")
+            
+            is_new_structure = nodes_dir.exists() and nodes_dir.is_dir()
+            is_old_structure = nodes_file.exists()
+            
+            if not is_new_structure and not is_old_structure:
+                print(f"❌ 插件缺少节点文件: {plugin_name}")
                 return False
             
-            with open(nodes_file, 'r', encoding='utf-8') as f:
-                source_code = f.read()
+            # 2. 读取源代码进行安全检查
+            if is_new_structure:
+                # 新体系：检查 nodes/__init__.py
+                init_file = nodes_dir / "__init__.py"
+                if not init_file.exists():
+                    print(f"❌ 新体系插件缺少 nodes/__init__.py: {plugin_name}")
+                    return False
+                
+                with open(init_file, 'r', encoding='utf-8') as f:
+                    source_code = f.read()
+                
+                # 还需要检查所有子模块
+                for py_file in nodes_dir.rglob("*.py"):
+                    if py_file.name != "__init__.py":
+                        with open(py_file, 'r', encoding='utf-8') as f:
+                            source_code += "\n" + f.read()
+                
+                module_path = init_file
+                module_name = f"{plugin_name}.nodes"
+            else:
+                # 旧体系：检查 nodes.py
+                with open(nodes_file, 'r', encoding='utf-8') as f:
+                    source_code = f.read()
+                
+                module_path = nodes_file
+                module_name = f"plugin_{plugin_name}_nodes"
             
-            # 2. 权限检查
+            # 3. 权限检查
             violations = PermissionChecker.check_source_code(source_code)
             if violations:
                 print(f"🚫 插件 {plugin_name} 安全检查失败:")
@@ -186,16 +215,15 @@ class PluginManager:
             
             print(f"✅ 安全检查通过: {plugin_name}")
             
-            # 3. 动态导入模块
-            module_name = f"plugin_{plugin_name}_nodes"
-            spec = importlib.util.spec_from_file_location(module_name, nodes_file)
+            # 4. 动态导入模块
+            spec = importlib.util.spec_from_file_location(module_name, module_path)
             module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = module
             spec.loader.exec_module(module)
             
             print(f"✅ 模块加载成功: {plugin_name}")
             
-            # 4. 提取节点类并注册
+            # 5. 提取节点类并注册
             registered_count = 0
             for node_def in plugin_info.nodes:
                 class_name = node_def.class_name
