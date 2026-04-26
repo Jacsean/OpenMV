@@ -200,6 +200,41 @@ python3 vision_system.py
 
 ---
 
+## ⚙️ 开发环境配置
+
+### VSCode Python 解释器配置
+
+当项目使用虚拟环境（`.venv`）时，Pylance 可能无法正确识别已安装的依赖包，导致出现导入警告（如 "无法解析导入 PySide2"），但实际程序可以正常运行。
+
+#### 配置步骤
+
+1. **选择虚拟环境解释器**
+   - 按 `Ctrl+Shift+P` 打开命令面板
+   - 输入并选择 **"Python: Select Interpreter"**
+   - 在列表中选择项目虚拟环境的 Python 解释器
+     - Windows 路径示例：`d:\example\projects\StduyOpenCV\.venv\Scripts\python.exe`
+     - Linux/Mac 路径示例：`./venv/bin/python`
+
+2. **验证配置**
+   - 查看 VSCode 右下角状态栏，应显示当前选择的 Python 解释器路径
+   - Pylance 的导入警告应该消失
+   - 代码补全和类型检查功能正常工作
+
+#### 优势
+
+- ✅ **准确的依赖检测**：Pylance 能够正确识别虚拟环境中安装的包
+- ✅ **完整的智能提示**：基于实际安装的库提供代码补全
+- ✅ **避免误报**：消除虚假的导入错误警告
+- ✅ **多项目管理**：不同项目可以使用不同的虚拟环境和依赖版本
+
+#### 注意事项
+
+- 每个项目应独立配置其虚拟环境解释器
+- 创建新虚拟环境后，需要重新执行上述配置步骤
+- 如果虚拟环境路径变更，需要重新选择解释器
+
+---
+
 ## 🔧 技术栈
 
 ### Python版本
@@ -215,7 +250,7 @@ python3 vision_system.py
 
 ### Python版本添加新算法
 
-```python
+```
 # 1. 在 core/image_processor.py 中添加
 def apply_your_algorithm(self, image):
     """你的算法"""
@@ -358,7 +393,7 @@ graph TD
 - 📊 **资源追踪**：支持去重和清理
 
 **使用方法**:
-```bash
+```
 # UI操作（统一使用保存/打开）
 文件 → 💾 保存工程    # 保存为.proj单文件
 文件 → 📂 打开工程    # 从.proj单文件打开
