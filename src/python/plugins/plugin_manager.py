@@ -109,7 +109,17 @@ class PluginManager:
                     width=node_data.get('width'),
                     height=node_data.get('height'),
                     description=node_data.get('description', ''),
-                    color=node_data.get('color')
+                    color=node_data.get('color'),
+                    # AI 节点扩展字段
+                    resource_level=node_data.get('resource_level', 'light'),
+                    hardware_requirements=node_data.get('hardware_requirements', {
+                        'cpu_cores': 2,
+                        'memory_gb': 2,
+                        'gpu_required': False,
+                        'gpu_memory_gb': 0
+                    }),
+                    dependencies=node_data.get('dependencies', []),
+                    optional_dependencies=node_data.get('optional_dependencies', {})
                 )
                 nodes.append(node_def)
             
@@ -122,7 +132,10 @@ class PluginManager:
                 nodes=nodes,
                 dependencies=data.get('dependencies', []),
                 min_app_version=data.get('min_app_version', '3.1.0'),
-                path=str(plugin_path)
+                path=str(plugin_path),
+                # AI 插件扩展字段
+                installation_guide=data.get('installation_guide', {}),
+                hardware_recommendations=data.get('hardware_recommendations', {})
             )
             
             return plugin_info

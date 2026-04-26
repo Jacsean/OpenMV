@@ -4,7 +4,7 @@
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 
@@ -19,6 +19,17 @@ class NodeDefinition:
     height: Optional[int] = None # 节点高度（像素）
     description: str = ""     # 节点详细描述
     color: Optional[List[int]] = None  # 节点颜色 RGB [R, G, B]
+    
+    # AI 节点扩展字段（遵循《AI 模块资源隔离设计规范》）
+    resource_level: str = "light"  # 资源等级: light/medium/heavy
+    hardware_requirements: Dict[str, Any] = field(default_factory=lambda: {
+        'cpu_cores': 2,
+        'memory_gb': 2,
+        'gpu_required': False,
+        'gpu_memory_gb': 0
+    })  # 硬件要求
+    dependencies: List[str] = field(default_factory=list)  # 节点级依赖
+    optional_dependencies: Dict[str, List[str]] = field(default_factory=dict)  # 可选依赖
 
 
 @dataclass
@@ -35,3 +46,7 @@ class PluginInfo:
     path: str = ""            # 插件路径
     enabled: bool = True
     installed_at: Optional[datetime] = None
+    
+    # AI 插件扩展字段
+    installation_guide: Dict[str, Any] = field(default_factory=dict)  # 安装指南
+    hardware_recommendations: Dict[str, Any] = field(default_factory=dict)  # 硬件推荐
