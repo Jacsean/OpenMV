@@ -1,0 +1,307 @@
+{
+  "graph": {
+    "layout_direction": 0,
+    "acyclic": true,
+    "pipe_collision": false,
+    "pipe_slicing": true,
+    "pipe_style": 1,
+    "accept_connection_types": "{}",
+    "reject_connection_types": "{}"
+  },
+  "nodes": {
+    "node_dataset_path": {
+      "type_": "io_camera.DataPathNode",
+      "icon": null,
+      "name": "数据集路径",
+      "color": [200, 150, 255, 255],
+      "border_color": [74, 84, 85, 255],
+      "text_color": [255, 255, 255, 180],
+      "disabled": false,
+      "selected": false,
+      "visible": true,
+      "width": 200.0,
+      "height": 90.0,
+      "pos": [50.0, 50.0],
+      "layout_direction": 0,
+      "port_deletion_allowed": false,
+      "subgraph_session": {},
+      "custom": {
+        "dataset_path": "path/to/annotated_dataset",
+        "dataset_yaml": "path/to/dataset.yaml"
+      }
+    },
+    "node_yolo_trainer": {
+      "type_": "yolo_vision.YOLOTrainerNode",
+      "icon": null,
+      "name": "YOLO 模型训练",
+      "color": [255, 100, 100, 255],
+      "border_color": [74, 84, 85, 255],
+      "text_color": [255, 255, 255, 180],
+      "disabled": false,
+      "selected": false,
+      "visible": true,
+      "width": 240.0,
+      "height": 140.0,
+      "pos": [350.0, 50.0],
+      "layout_direction": 0,
+      "port_deletion_allowed": false,
+      "subgraph_session": {},
+      "custom": {
+        "model_name": "yolov8n",
+        "epochs": "100",
+        "batch_size": "16",
+        "img_size": "640",
+        "learning_rate": "0.01",
+        "output_dir": "./trained_models"
+      }
+    },
+    "node_trained_model": {
+      "type_": "yolo_vision.TrainedModelOutputNode",
+      "icon": null,
+      "name": "训练好的模型",
+      "color": [100, 200, 100, 255],
+      "border_color": [74, 84, 85, 255],
+      "text_color": [255, 255, 255, 180],
+      "disabled": false,
+      "selected": false,
+      "visible": true,
+      "width": 200.0,
+      "height": 90.0,
+      "pos": [650.0, 50.0],
+      "layout_direction": 0,
+      "port_deletion_allowed": false,
+      "subgraph_session": {},
+      "custom": {
+        "model_path": "./trained_models/best.pt",
+        "metrics": "mAP: 0.85, Precision: 0.88, Recall: 0.82"
+      }
+    },
+    "node_yolo_quantizer": {
+      "type_": "yolo_vision.YOLOQuantizerNode",
+      "icon": null,
+      "name": "YOLO 模型量化",
+      "color": [255, 100, 100, 255],
+      "border_color": [74, 84, 85, 255],
+      "text_color": [255, 255, 255, 180],
+      "disabled": false,
+      "selected": false,
+      "visible": true,
+      "width": 240.0,
+      "height": 140.0,
+      "pos": [350.0, 250.0],
+      "layout_direction": 0,
+      "port_deletion_allowed": false,
+      "subgraph_session": {},
+      "custom": {
+        "export_format": "onnx",
+        "precision": "fp16",
+        "opset_version": "11",
+        "dynamic_axes": "true",
+        "output_dir": "./quantized_models"
+      }
+    },
+    "node_quantized_model": {
+      "type_": "yolo_vision.QuantizedModelOutputNode",
+      "icon": null,
+      "name": "量化后的模型",
+      "color": [100, 200, 100, 255],
+      "border_color": [74, 84, 85, 255],
+      "text_color": [255, 255, 255, 180],
+      "disabled": false,
+      "selected": false,
+      "visible": true,
+      "width": 200.0,
+      "height": 90.0,
+      "pos": [650.0, 250.0],
+      "layout_direction": 0,
+      "port_deletion_allowed": false,
+      "subgraph_session": {},
+      "custom": {
+        "model_path": "./quantized_models/best.onnx",
+        "performance_report": "Speedup: 1.67x, Original: 50ms, Quantized: 30ms"
+      }
+    },
+    "node_test_image": {
+      "type_": "io_camera.ImageLoadNode",
+      "icon": null,
+      "name": "测试图像",
+      "color": [100, 255, 100, 255],
+      "border_color": [74, 84, 85, 255],
+      "text_color": [255, 255, 255, 180],
+      "disabled": false,
+      "selected": false,
+      "visible": true,
+      "width": 200.0,
+      "height": 90.0,
+      "pos": [50.0, 450.0],
+      "layout_direction": 0,
+      "port_deletion_allowed": false,
+      "subgraph_session": {},
+      "custom": {
+        "file_path": "path/to/test/image.jpg"
+      }
+    },
+    "node_yolo_inference": {
+      "type_": "yolo_vision.YOLODetectNode",
+      "icon": null,
+      "name": "YOLO 推理（量化模型）",
+      "color": [100, 200, 100, 255],
+      "border_color": [74, 84, 85, 255],
+      "text_color": [255, 255, 255, 180],
+      "disabled": false,
+      "selected": false,
+      "visible": true,
+      "width": 240.0,
+      "height": 120.0,
+      "pos": [350.0, 450.0],
+      "layout_direction": 0,
+      "port_deletion_allowed": false,
+      "subgraph_session": {},
+      "custom": {
+        "model_path": "./quantized_models/best.onnx",
+        "confidence_threshold": "0.5",
+        "iou_threshold": "0.45",
+        "classes": "person,car,bicycle"
+      }
+    },
+    "node_result_display": {
+      "type_": "io_camera.ImageViewNode",
+      "icon": null,
+      "name": "结果可视化",
+      "color": [100, 100, 255, 255],
+      "border_color": [74, 84, 85, 255],
+      "text_color": [255, 255, 255, 180],
+      "disabled": false,
+      "selected": false,
+      "visible": true,
+      "width": 337.0,
+      "height": 94.95,
+      "pos": [650.0, 450.0],
+      "layout_direction": 0,
+      "port_deletion_allowed": false,
+      "subgraph_session": {},
+      "custom": {
+        "status": "等待执行..."
+      }
+    }
+  },
+  "connections": [
+    {
+      "out": ["node_dataset_path", "输出数据集路径"],
+      "in": ["node_yolo_trainer", "输入数据集"]
+    },
+    {
+      "out": ["node_yolo_trainer", "输出训练模型"],
+      "in": ["node_trained_model", "输入模型路径"]
+    },
+    {
+      "out": ["node_trained_model", "输出模型路径"],
+      "in": ["node_yolo_quantizer", "输入模型"]
+    },
+    {
+      "out": ["node_yolo_quantizer", "输出量化模型"],
+      "in": ["node_quantized_model", "输入模型路径"]
+    },
+    {
+      "out": ["node_test_image", "输出图像"],
+      "in": ["node_yolo_inference", "输入图像"]
+    },
+    {
+      "out": ["node_quantized_model", "输出模型路径"],
+      "in": ["node_yolo_inference", "输入模型"]
+    },
+    {
+      "out": ["node_yolo_inference", "输出图像"],
+      "in": ["node_result_display", "输入图像"]
+    }
+  ],
+  "metadata": {
+    "name": "端到端示例：YOLO 训练 → 量化 → 推理",
+    "description": "完整的 AI 开发工作流，展示从数据集准备、模型训练、量化优化到最终推理的完整生命周期",
+    "version": "1.0.0",
+    "author": "OpenCV Team",
+    "created_at": "2026-04-26",
+    "tags": ["example", "yolo", "training", "quantization", "inference", "end-to-end"],
+    "workflow_steps": [
+      {
+        "step": 1,
+        "name": "数据集准备",
+        "node": "node_dataset_path",
+        "description": "指定已标注的数据集路径和 dataset.yaml 配置文件"
+      },
+      {
+        "step": 2,
+        "name": "模型训练",
+        "node": "node_yolo_trainer",
+        "description": "使用 YOLOv8n 模型进行训练，设置 epochs、batch_size 等超参数",
+        "hardware_note": "重量级节点，需要 GPU（CUDA 11.8+，8GB+ 显存）"
+      },
+      {
+        "step": 3,
+        "name": "训练结果",
+        "node": "node_trained_model",
+        "description": "获取训练好的模型文件（.pt 格式）和性能指标"
+      },
+      {
+        "step": 4,
+        "name": "模型量化",
+        "node": "node_yolo_quantizer",
+        "description": "将 PyTorch 模型导出为 ONNX/TensorRT 格式，支持 FP16/INT8 量化",
+        "hardware_note": "重量级节点，需要 GPU 用于 TensorRT 优化"
+      },
+      {
+        "step": 5,
+        "name": "量化结果",
+        "node": "node_quantized_model",
+        "description": "获取量化后的模型文件和性能对比报告"
+      },
+      {
+        "step": 6,
+        "name": "推理测试",
+        "node": "node_yolo_inference",
+        "description": "使用量化后的模型对测试图像进行目标检测"
+      },
+      {
+        "step": 7,
+        "name": "结果可视化",
+        "node": "node_result_display",
+        "description": "显示带有检测框和标签的最终结果图像"
+      }
+    ],
+    "hardware_requirements": {
+      "cpu_cores": 8,
+      "memory_gb": 16,
+      "gpu_required": true,
+      "gpu_memory_gb": 8,
+      "recommended_gpu": "NVIDIA RTX 3060 或更高（用于训练和量化）"
+    },
+    "performance_expectations": {
+      "training_time": "约 2-4 小时（100 epochs，yolov8n）",
+      "quantization_time": "约 5-10 分钟",
+      "inference_latency": "~30ms/帧（FP16 量化后）",
+      "speedup_ratio": "1.5-2x（相比原始 PyTorch 模型）"
+    },
+    "usage_tips": [
+      "步骤 1-5 建议在办公室工作站或云端完成（需要高性能 GPU）",
+      "步骤 6-7 可以部署到工厂现场的工控机（使用量化后的模型）",
+      "修改 node_dataset_path 的 dataset_path 为你的数据集路径",
+      "训练前确保数据集符合 YOLO 格式（images/labels 目录结构）",
+      "可以根据硬件条件调整 batch_size（显存不足时减小）",
+      "量化时选择 export_format：ONNX（通用）或 TensorRT（NVIDIA GPU 极致优化）",
+      "INT8 量化需要准备校准数据集，否则会自动降级为 FP16"
+    ],
+    "deployment_guide": {
+      "office_workstation": {
+        "description": "办公室工作站（训练和量化）",
+        "steps": ["步骤 1-5"],
+        "hardware": "CPU 8核+, 内存 16GB+, GPU RTX 3060+"
+      },
+      "factory_deployment": {
+        "description": "工厂现场部署（推理）",
+        "steps": ["步骤 6-7"],
+        "hardware": "CPU 4核+, 内存 8GB+, GPU 可选",
+        "model_format": "使用量化后的 ONNX 模型"
+      }
+    }
+  }
+}
