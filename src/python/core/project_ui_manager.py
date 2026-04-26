@@ -106,6 +106,14 @@ class ProjectUIManager:
         if project and index < len(project.workflows):
             workflow = project.workflows[index]
             
+            # 断开信号连接（防止内存泄漏和重复触发）
+            if workflow.node_graph:
+                try:
+                    workflow.node_graph.node_created.disconnect()
+                    workflow.node_graph.node_double_clicked.disconnect()
+                except:
+                    pass  # 如果信号未连接则忽略
+            
             # 从工程中移除
             self.project_manager.remove_workflow(index)
             
@@ -247,33 +255,46 @@ class ProjectUIManager:
             
             # 为每个工作流创建标签页
             for i, workflow in enumerate(project.workflows):
-                # 创建工作流的NodeGraph
-                node_graph = NodeGraph()
-                workflow.node_graph = node_graph
-                
-                # 加载节点图数据（优先使用预加载的数据）
-                session_data = workflows_session_data.get(i)
-                if session_data:
-                    try:
-                        node_graph.deserialize_session(session_data)
-                        print(f"✅ 加载工作流: {workflow.name} ({len(node_graph.all_nodes())} 个节点)")
-                    except Exception as e:
-                        print(f"❌ 加载工作流失败: {e}")
-                        import traceback
-                        traceback.print_exc()
-                elif workflow.file_path:
-                    # 备用方案：从文件路径加载（兼容旧格式）
-                    wf_full_path = os.path.join(os.path.dirname(proj_file), workflow.file_path)
-                    if os.path.exists(wf_full_path):
+                # 检查工作流是否已有NodeGraph（从缓存中）
+                if workflow.node_graph is None:
+                    # 创建工作流的NodeGraph
+                    node_graph = NodeGraph()
+                    workflow.node_graph = node_graph
+                    
+                    # 加载节点图数据
+                    session_data = workflows_session_data.get(i)
+                    if session_data:
                         try:
-                            node_graph.deserialize_session(wf_full_path)
-                            print(f"✅ 从文件加载工作流: {workflow.name}")
+                            node_graph.deserialize_session(session_data)
+                            print(f"✅ 加载工作流: {workflow.name} ({len(node_graph.all_nodes())} 个节点)")
                         except Exception as e:
-                            print(f"❌ 从文件加载工作流失败: {e}")
-                
-                # 连接信号
-                node_graph.node_created.connect(lambda n, wf=workflow: self.main_window._on_node_created(n, wf))
-                node_graph.node_double_clicked.connect(lambda n, wf=workflow: self.main_window._on_node_double_clicked(n, wf))
+                            print(f"❌ 加载工作流失败: {e}")
+                            import traceback
+                            traceback.print_exc()
+                    elif workflow.file_path:
+                        # 备用方案：从文件路径加载（兼容旧格式）
+                        wf_full_path = os.path.join(os.path.dirname(proj_file), workflow.file_path)
+                        if os.path.exists(wf_full_path):
+                            try:
+                                node_graph.deserialize_session(wf_full_path)
+                                print(f"✅ 从文件加载工作流: {workflow.name}")
+                            except Exception as e:
+                                print(f"❌ 从文件加载工作流失败: {e}")
+                    
+                    # 连接信号（新创建的NodeGraph，无需断开）
+                    node_graph.node_created.connect(lambda n, wf=workflow: self.main_window._on_node_created(n, wf))
+                    node_graph.node_double_clicked.connect(lambda n, wf=workflow: self.main_window._on_node_double_clicked(n, wf))
+                else:
+                    # 已存在的NodeGraph，需要先断开旧信号再重新连接
+                    try:
+                        workflow.node_graph.node_created.disconnect()
+                        workflow.node_graph.node_double_clicked.disconnect()
+                    except:
+                        pass  # 如果信号未连接则忽略
+                    
+                    # 重新连接信号
+                    workflow.node_graph.node_created.connect(lambda n, wf=workflow: self.main_window._on_node_created(n, wf))
+                    workflow.node_graph.node_double_clicked.connect(lambda n, wf=workflow: self.main_window._on_node_double_clicked(n, wf))
                 
                 # 添加到标签页
                 self.add_workflow_tab_to_ui(workflow)

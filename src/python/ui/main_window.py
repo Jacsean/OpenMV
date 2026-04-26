@@ -827,31 +827,25 @@ class MainWindow(QtWidgets.QMainWindow):
                     print(f"   ✅ 获取到缓存图像，形状: {image.shape}")
                     # 检查是否已经打开了该节点的预览窗口
                     node_id = node.id  # id是属性，不是方法
+                    
+                    # 修复问题1和3：检查窗口是否存在且可见
                     if node_id in self.preview_windows:
-                        # 如果窗口已存在，将其提到前面并刷新
                         existing_dialog = self.preview_windows[node_id]
-                        existing_dialog.raise_()
-                        existing_dialog.activateWindow()
-                        existing_dialog.refresh_preview()
-                        print(f"   🔄 刷新已存在的预览窗口")
+                        # 检查窗口是否仍然有效且可见
+                        if existing_dialog.isVisible():
+                            # 如果窗口已存在且可见，将其提到前面并刷新
+                            existing_dialog.raise_()
+                            existing_dialog.activateWindow()
+                            existing_dialog.refresh_preview()
+                            print(f"   🔄 刷新已存在的预览窗口")
+                        else:
+                            # 窗口存在但已隐藏/关闭，需要重新创建
+                            print(f"   🗑️ 窗口已关闭，删除旧引用并创建新窗口")
+                            del self.preview_windows[node_id]
+                            self._create_new_preview_window(node, image, node_id)
                     else:
                         # 创建新的预览对话框（非模态）
-                        dialog = ImagePreviewDialog(
-                            image, 
-                            node=node,  # 传递节点引用用于刷新
-                            title=f"图像预览 - {node.name()}",
-                            parent=self
-                        )
-                        
-                        # 保存窗口引用
-                        self.preview_windows[node_id] = dialog
-                        
-                        # 监听窗口关闭事件，清理引用
-                        dialog.finished.connect(lambda nid=node_id: self._on_preview_window_closed(nid))
-                        
-                        # 显示非模态窗口
-                        dialog.show()
-                        print(f"   📷 打开新的预览窗口")
+                        self._create_new_preview_window(node, image, node_id)
                         
                     print(f"✅ 成功打开预览窗口: {node.name()}")
                 else:
@@ -865,6 +859,33 @@ class MainWindow(QtWidgets.QMainWindow):
                 print(f"   ❌ 节点没有get_cached_image方法")
         else:
             print(f"   ℹ️ 未识别的节点类型，不执行任何操作")
+
+    def _create_new_preview_window(self, node, image, node_id):
+        """
+        创建新的预览窗口
+        
+        Args:
+            node: ImageViewNode实例
+            image: 要显示的图像
+            node_id: 节点ID
+        """
+        # 创建新的预览对话框（非模态）
+        dialog = ImagePreviewDialog(
+            image, 
+            node=node,  # 传递节点引用用于刷新
+            title=f"图像预览 - {node.name()}",
+            parent=self
+        )
+        
+        # 保存窗口引用
+        self.preview_windows[node_id] = dialog
+        
+        # 监听窗口关闭事件，清理引用
+        dialog.finished.connect(lambda nid=node_id: self._on_preview_window_closed(nid))
+        
+        # 显示非模态窗口
+        dialog.show()
+        print(f"   📷 打开新的预览窗口")
 
     def _on_preview_window_closed(self, node_id):
         """
