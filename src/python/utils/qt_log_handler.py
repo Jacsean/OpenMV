@@ -37,10 +37,6 @@ class QtLogHandler(LogHandler):
         
         # 最大日志行数（防止内存溢出）
         self.max_lines = 1000
-        
-        # 信号槽连接：确保线程安全
-        self.log_signal = QtCore.Signal(str)
-        self.log_signal.connect(self._append_log_safe)
     
     def handle(self, level: str, message: str, formatted: str):
         """
@@ -51,12 +47,19 @@ class QtLogHandler(LogHandler):
             message: 原始消息内容
             formatted: 格式化后的完整消息
         """
-        # 通过信号发送，确保线程安全
-        self.log_signal.emit(formatted)
-    
-    def _append_log_safe(self, formatted_text: str):
+        if self.text_browser:
+            # 使用QMetaObject.invokeMethod确保线程安全，在主线程执行UI更新
+            QtCore.QMetaObject.invokeMethod(
+                self,
+                "_process_log",
+                QtCore.Qt.QueuedConnection,
+                QtCore.Q_ARG(str, formatted)
+            )
+
+    @QtCore.Slot(str)
+    def _process_log(self, formatted_text: str):
         """
-        安全地追加日志到文本浏览器（槽函数）
+        处理日志显示的UI更新（在主线程执行）
         
         Args:
             formatted_text: 格式化后的日志文本

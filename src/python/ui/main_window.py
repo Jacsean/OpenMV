@@ -242,6 +242,12 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 创建菜单栏
         self._create_menu_bar()
+        
+        # === 底部：日志和状态面板 ===
+        self.log_panel = self._create_log_panel()
+        
+        # 将日志面板添加到主布局底部
+        main_layout.addWidget(self.log_panel)
     
     def _create_node_info_panel(self):
         """
@@ -297,6 +303,123 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addStretch()
         
         return panel
+    
+    def _create_log_panel(self):
+        """
+        创建底部日志和状态面板
+        
+        Returns:
+            QtWidgets.QWidget: 日志面板组件
+        """
+        from utils.qt_log_handler import QtLogHandler
+        
+        # 创建容器widget
+        panel = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(panel)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
+        
+        # === 标题栏（带折叠按钮）===
+        header_layout = QtWidgets.QHBoxLayout()
+        
+        # 标题
+        title_label = QtWidgets.QLabel("📋 运行日志")
+        title_label.setFont(QtGui.QFont("Arial", 9, QtGui.QFont.Bold))
+        header_layout.addWidget(title_label)
+        
+        # 弹簧，将按钮推到右侧
+        header_layout.addStretch()
+        
+        # 清空按钮
+        clear_btn = QtWidgets.QPushButton("🗑️ 清空")
+        clear_btn.setMaximumWidth(80)
+        clear_btn.clicked.connect(self._clear_logs)
+        header_layout.addWidget(clear_btn)
+        
+        # 折叠/展开按钮
+        self.toggle_log_btn = QtWidgets.QPushButton("▼ 折叠")
+        self.toggle_log_btn.setMaximumWidth(80)
+        self.toggle_log_btn.clicked.connect(self._toggle_log_panel)
+        header_layout.addWidget(self.toggle_log_btn)
+        
+        layout.addLayout(header_layout)
+        
+        # === 日志显示区域 ===
+        self.log_text_browser = QtWidgets.QTextBrowser()
+        self.log_text_browser.setFont(QtGui.QFont("Consolas", 9))
+        self.log_text_browser.setStyleSheet("""
+            QTextBrowser {
+                background-color: #1e1e1e;
+                border: 1px solid #3c3c3c;
+                border-radius: 4px;
+                padding: 8px;
+            }
+        """)
+        self.log_text_browser.setMinimumHeight(150)  # 最小高度
+        self.log_text_browser.setMaximumHeight(300)  # 最大高度
+        
+        # 设置为只读
+        self.log_text_browser.setReadOnly(True)
+        
+        # 启用富文本
+        self.log_text_browser.setOpenExternalLinks(False)
+        
+        layout.addWidget(self.log_text_browser)
+        
+        # === 状态栏 ===
+        status_layout = QtWidgets.QHBoxLayout()
+        
+        # 状态标签
+        self.status_label = QtWidgets.QLabel("✅ 就绪")
+        self.status_label.setStyleSheet("color: #2ecc71; font-weight: bold;")
+        status_layout.addWidget(self.status_label)
+        
+        # 弹簧
+        status_layout.addStretch()
+        
+        # 日志级别显示
+        from utils.logger import logger
+        level_text = f"日志级别: {logger.level.name}"
+        self.level_label = QtWidgets.QLabel(level_text)
+        self.level_label.setStyleSheet("color: #95a5a6;")
+        status_layout.addWidget(self.level_label)
+        
+        layout.addLayout(status_layout)
+        
+        # === 集成QtLogHandler到Logger ===
+        qt_handler = QtLogHandler(self.log_text_browser)
+        logger.add_handler(qt_handler)
+        
+        # 保存handler引用，便于后续操作
+        self.qt_log_handler = qt_handler
+        
+        # 初始状态：展开
+        self.log_panel_expanded = True
+        
+        return panel
+    
+    def _toggle_log_panel(self):
+        """
+        切换日志面板的折叠/展开状态
+        """
+        if self.log_panel_expanded:
+            # 折叠
+            self.log_text_browser.setVisible(False)
+            self.toggle_log_btn.setText("▶ 展开")
+            self.log_panel_expanded = False
+        else:
+            # 展开
+            self.log_text_browser.setVisible(True)
+            self.toggle_log_btn.setText("▼ 折叠")
+            self.log_panel_expanded = True
+    
+    def _clear_logs(self):
+        """
+        清空日志
+        """
+        if hasattr(self, 'qt_log_handler'):
+            self.qt_log_handler.clear()
+            self.status_label.setText("✅ 日志已清空")
     
     def _connect_node_selection_signal(self):
         """
