@@ -58,5 +58,6 @@
     "factory_deployment": "适合工厂现场部署，低资源消耗",
     "office_workstation": "适合办公室工作站",
     "cloud_training": "不需要云端训练"
-  }
+  },
+  "source": "builtin"
 }

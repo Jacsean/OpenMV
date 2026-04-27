@@ -1,17 +1,17 @@
 {
-  "name": "recognition",
+  "name": "integration",
   "version": "1.0.0",
   "author": "OpenCV Team",
-  "description": "识别分类节点包（二维码、OCR、模板匹配）",
-  "category_group": "识别分类",
+  "description": "系统集成节点包（PLC、数采、机器人通信）",
+  "category_group": "系统集成",
   "nodes": [
     {
-      "class": "TemplateMatchNode",
-      "display_name": "模板匹配",
-      "category": "模板匹配",
+      "class": "DataOutputNode",
+      "display_name": "数据输出",
+      "category": "数采服务器",
       "color": [
-        200,
         100,
+        150,
         255
       ],
       "resource_level": "light",
@@ -37,5 +37,6 @@
     "factory_deployment": "适合工厂现场部署，低资源消耗",
     "office_workstation": "适合办公室工作站",
     "cloud_training": "不需要云端训练"
-  }
+  },
+  "source": "builtin"
 }

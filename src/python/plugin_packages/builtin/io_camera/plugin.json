@@ -4,6 +4,7 @@
   "author": "OpenCV Team",
   "description": "图像采集与IO操作节点包",
   "category_group": "图像相机",
+  "source": "builtin",
   "nodes": [
     {
       "class": "ImageLoadNode",
