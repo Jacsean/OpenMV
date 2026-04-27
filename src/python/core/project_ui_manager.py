@@ -64,11 +64,22 @@ class ProjectUIManager:
         
         # 加载插件节点（仅在第一个工作流时加载一次）
         if hasattr(self.main_window, '_pending_plugins') and self.main_window.tab_widget.count() == 0:
+            print(f"\n🔍 检测到首次创建工作流，开始加载插件...")
+            print(f"   _pending_plugins数量: {len(self.main_window._pending_plugins)}")
+            print(f"   tab_widget当前标签页数: {self.main_window.tab_widget.count()}")
+            
             from plugins.plugin_ui_manager import PluginUIManager
             plugin_ui = PluginUIManager(self.main_window.plugin_manager, self.main_window)
             
             # load_plugins_to_graph 已经处理了节点库Graph的加载
+            print(f"   调用 plugin_ui.load_plugins_to_graph(node_graph)")
             plugin_ui.load_plugins_to_graph(node_graph)
+            print(f"   ✅ 插件加载完成\n")
+        else:
+            if not hasattr(self.main_window, '_pending_plugins'):
+                print(f"⚠️ main_window没有_pending_plugins属性")
+            elif self.main_window.tab_widget.count() != 0:
+                print(f"⚠️ 不是第一个标签页 (当前有 {self.main_window.tab_widget.count()} 个标签页)，跳过插件加载")
         
         # 关联到工作流
         workflow.node_graph = node_graph

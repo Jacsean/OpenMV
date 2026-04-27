@@ -44,11 +44,19 @@ class PluginUIManager:
         Returns:
             set: 新增的分类名称集合
         """
+        print("\n" + "=" * 60)
+        print("🔧 PluginUIManager.load_plugins_to_graph 开始执行")
+        print("=" * 60)
+        
         if not hasattr(self.main_window, '_pending_plugins'):
+            print("⚠️ main_window没有_pending_plugins属性")
             return set()
         
         if not self.main_window._pending_plugins:
+            print("⚠️ _pending_plugins为空列表")
             return set()
+        
+        print(f"📦 待加载插件数: {len(self.main_window._pending_plugins)}")
         
         new_categories = set()
         # 构建标识符到显示名称的映射
@@ -63,48 +71,80 @@ class PluginUIManager:
                 if hasattr(plugin_info, 'category_group') and plugin_info.category_group:
                     identifier_to_display_name[plugin_info.name] = plugin_info.category_group
         
+        print(f"✅ 启用的插件数: {len(plugins_to_load)}")
+        
         if not plugins_to_load:
+            print("⚠️ 没有启用的插件需要加载")
             return set()
         
         # 先加载到节点库的Graph（用于UI显示）
+        print(f"\n📊 步骤1: 加载到节点库Graph")
+        print(f"   nodes_palette存在: {self.main_window.nodes_palette is not None}")
+        print(f"   temp_graph存在: {hasattr(self.main_window, 'temp_graph')}")
+        
         if self.main_window.nodes_palette and plugins_to_load:
             try:
                 # 使用保存的temp_graph引用，确保注册到正确的Graph
                 palette_graph = getattr(self.main_window, 'temp_graph', None)
+                print(f"   palette_graph获取结果: {palette_graph is not None}")
+                
                 if palette_graph is None:
                     palette_graph = self.main_window.nodes_palette.node_graph
+                    print(f"   回退到nodes_palette.node_graph: {palette_graph is not None}")
+                
+                print(f"   开始注册 {len(plugins_to_load)} 个插件到节点库Graph...")
                 
                 for plugin_info in plugins_to_load:
-                    self.plugin_manager.load_plugin_nodes(
+                    print(f"   📌 加载插件: {plugin_info.name} ({len(plugin_info.nodes)} 个节点)")
+                    success = self.plugin_manager.load_plugin_nodes(
                         plugin_info.name,
                         palette_graph
                     )
-                    for node_def in plugin_info.nodes:
-                        new_categories.add(node_def.category)
+                    if success:
+                        for node_def in plugin_info.nodes:
+                            new_categories.add(node_def.category)
+                            print(f"      ✅ 节点: {node_def.display_name} (category={node_def.category})")
+                    else:
+                        print(f"      ❌ 插件加载失败: {plugin_info.name}")
+                
+                print(f"   ✅ 节点库Graph加载完成，共 {len(new_categories)} 个分类")
                 
                 # 应用自定义标签页名称映射
                 if identifier_to_display_name:
+                    print(f"   🏷️ 应用自定义标签页名称映射 ({len(identifier_to_display_name)} 个)")
                     self._apply_custom_tab_names(identifier_to_display_name)
                 
                 # 应用自定义标签页顺序
+                print(f"   📋 应用自定义标签页顺序")
                 self._apply_custom_tab_order()
+                
             except Exception as e:
+                print(f"   ❌ 加载到节点库Graph时发生异常: {e}")
                 import traceback
                 traceback.print_exc()
+        else:
+            print(f"   ⚠️ 跳过节点库Graph加载 (nodes_palette={self.main_window.nodes_palette is not None}, plugins_to_load={len(plugins_to_load)})")
         
         # 再加载到工作流Graph（用于实际执行）
+        print(f"\n📊 步骤2: 加载到工作流Graph")
         for plugin_info in plugins_to_load:
+            print(f"   📌 加载插件到工作流: {plugin_info.name}")
             self.plugin_manager.load_plugin_nodes(
                 plugin_info.name,
                 node_graph
             )
         
         # 清除待加载标记，避免重复加载
+        print(f"\n🗑️ 清除_pending_plugins标记")
         delattr(self.main_window, '_pending_plugins')
         
         # 刷新节点库的事件过滤器（使新加载的插件标签页也能响应点击）
         if hasattr(self.main_window, 'refresh_node_info_event_filters'):
+            print(f"🔄 刷新节点库事件过滤器")
             self.main_window.refresh_node_info_event_filters()
+        
+        print(f"\n✅ load_plugins_to_graph执行完成")
+        print("=" * 60 + "\n")
         
         return new_categories
     
