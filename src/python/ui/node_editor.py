@@ -223,6 +223,16 @@ class NodeEditorDialog(QtWidgets.QDialog):
         
         toolbar.addSeparator()
         
+        # 重命名节点包（仅marketplace）
+        rename_action = toolbar.addAction("✏️ 重命名节点包")
+        rename_action.triggered.connect(self._on_rename_package)
+        
+        # 移动节点到其他包
+        move_node_action = toolbar.addAction("➡️ 移动节点")
+        move_node_action.triggered.connect(self._on_move_node)
+        
+        toolbar.addSeparator()
+        
         # 刷新
         refresh_action = toolbar.addAction("🔄 刷新")
         refresh_action.triggered.connect(self._refresh_packages)
