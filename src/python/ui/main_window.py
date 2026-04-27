@@ -58,7 +58,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
         
         # 设置窗口属性
-        self.setWindowTitle("图形化视觉处理系统 v4.1")
+        self.setWindowTitle("图形化视觉处理系统 v5.0")
         self.setGeometry(0, 0, 1600, 1024)
         
         # 初始化插件管理器
