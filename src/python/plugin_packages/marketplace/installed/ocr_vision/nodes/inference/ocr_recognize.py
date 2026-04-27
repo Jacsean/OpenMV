@@ -26,7 +26,7 @@ OCR 文字识别节点（轻量级）
     [输入图像] → [OCR 文字识别] → [识别结果文本] + [检测框坐标]
 """
 
-from ....base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 

@@ -940,6 +940,204 @@ class {class_name}(BaseNode):
         self._load_plugin_packages()
         self._populate_package_tree()
         self._show_empty_state()
+    
+    def _on_rename_package(self):
+        """重命名节点包（仅marketplace插件）"""
+        selected_items = self.package_tree.selectedItems()
+        if not selected_items:
+            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点包")
+            return
+        
+        item = selected_items[0]
+        pkg_name = item.data(0, QtCore.Qt.UserRole)
+        
+        if not pkg_name or pkg_name not in self.plugin_packages:
+            QtWidgets.QMessageBox.warning(self, "警告", "无效的节点包")
+            return
+        
+        pkg_info = self.plugin_packages[pkg_name]
+        data = pkg_info['data']
+        
+        # 检查是否为builtin插件
+        source = data.get('source', 'unknown')
+        if source == 'builtin':
+            QtWidgets.QMessageBox.warning(
+                self, 
+                "警告", 
+                "内置插件不可重命名\n\n只有市场插件（marketplace）可以重命名"
+            )
+            return
+        
+        # 弹出重命名对话框
+        new_name, ok = QtWidgets.QInputDialog.getText(
+            self,
+            "重命名节点包",
+            f"请输入新的节点包名称:\n\n当前名称: {pkg_name}",
+            text=pkg_name
+        )
+        
+        if ok and new_name:
+            if new_name == pkg_name:
+                QtWidgets.QMessageBox.information(self, "提示", "名称未改变")
+                return
+            
+            # 执行重命名
+            success, message = self._rename_package(pkg_name, new_name)
+            if success:
+                QtWidgets.QMessageBox.information(
+                    self, 
+                    "成功", 
+                    f"节点包已重命名\n\n{pkg_name} → {new_name}\n\n⚠️ 请重启应用以生效"
+                )
+                self._refresh_packages()
+            else:
+                QtWidgets.QMessageBox.critical(self, "错误", message)
+    
+    def _rename_package(self, old_name, new_name):
+        """执行节点包重命名"""
+        try:
+            pkg_info = self.plugin_packages[old_name]
+            old_path = pkg_info['path']
+            new_path = old_path.parent / new_name
+            
+            # 检查新名称是否已存在
+            if new_path.exists():
+                return False, f"节点包 '{new_name}' 已存在"
+            
+            # 重命名目录
+            old_path.rename(new_path)
+            
+            # 更新plugin.json
+            plugin_json_path = new_path / "plugin.json"
+            with open(plugin_json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            data['name'] = new_name
+            
+            with open(plugin_json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            # 更新内存中的信息
+            pkg_info['path'] = new_path
+            pkg_info['data'] = data
+            self.plugin_packages[new_name] = pkg_info
+            del self.plugin_packages[old_name]
+            
+            return True, "重命名成功"
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return False, f"重命名失败: {str(e)}"
+    
+    def _on_move_node(self):
+        """移动节点到其他包"""
+        # 获取当前选中的节点包和节点
+        selected_items = self.package_tree.selectedItems()
+        if not selected_items:
+            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点包")
+            return
+        
+        item = selected_items[0]
+        pkg_name = item.data(0, QtCore.Qt.UserRole)
+        
+        if not pkg_name or pkg_name not in self.plugin_packages:
+            QtWidgets.QMessageBox.warning(self, "警告", "无效的节点包")
+            return
+        
+        pkg_info = self.plugin_packages[pkg_name]
+        nodes = pkg_info['data'].get('nodes', [])
+        
+        if not nodes:
+            QtWidgets.QMessageBox.warning(self, "警告", "该节点包中没有节点")
+            return
+        
+        # 让用户选择要移动的节点
+        node_names = [node.get('display_name', node.get('class', '')) for node in nodes]
+        node_index, ok = QtWidgets.QInputDialog.getItem(
+            self,
+            "选择节点",
+            "选择要移动的节点:",
+            node_names,
+            0,
+            False
+        )
+        
+        if not ok:
+            return
+        
+        # 获取节点索引
+        selected_node_idx = node_names.index(node_index)
+        selected_node = nodes[selected_node_idx]
+        
+        # 显示目标包选择对话框（只能移动到marketplace包）
+        target_packages = [
+            (name, info) for name, info in self.plugin_packages.items()
+            if info['data'].get('source') == 'marketplace' and name != pkg_name
+        ]
+        
+        if not target_packages:
+            QtWidgets.QMessageBox.warning(
+                self, 
+                "警告", 
+                "没有其他市场插件可以移动节点到\n\n只能将节点移动到marketplace类型的插件"
+            )
+            return
+        
+        target_pkg_names = [name for name, _ in target_packages]
+        target_pkg, ok = QtWidgets.QInputDialog.getItem(
+            self,
+            "选择目标包",
+            f"将节点 '{selected_node.get('display_name')}' 移动到:",
+            target_pkg_names,
+            0,
+            False
+        )
+        
+        if ok and target_pkg:
+            success, message = self._move_node_to_package(
+                pkg_name, 
+                selected_node_idx, 
+                target_pkg
+            )
+            if success:
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "成功",
+                    f"节点已移动\n\n从: {pkg_name}\n到: {target_pkg}\n\n⚠️ 请重启应用以生效"
+                )
+                self._refresh_packages()
+            else:
+                QtWidgets.QMessageBox.critical(self, "错误", message)
+    
+    def _move_node_to_package(self, source_pkg, node_index, target_pkg):
+        """执行节点移动"""
+        try:
+            source_info = self.plugin_packages[source_pkg]
+            target_info = self.plugin_packages[target_pkg]
+            
+            # 从源包移除节点定义
+            node_data = source_info['data']['nodes'].pop(node_index)
+            
+            # 添加到目标包
+            target_info['data']['nodes'].append(node_data)
+            
+            # 保存两个包的plugin.json
+            self._save_plugin_json(source_info)
+            self._save_plugin_json(target_info)
+            
+            return True, "移动成功"
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return False, f"移动失败: {str(e)}"
+    
+    def _save_plugin_json(self, pkg_info):
+        """保存plugin.json文件"""
+        plugin_json_path = pkg_info['path'] / "plugin.json"
+        with open(plugin_json_path, 'w', encoding='utf-8') as f:
+            json.dump(pkg_info['data'], f, indent=2, ensure_ascii=False)
 
 
 # ============================================================================
