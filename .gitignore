@@ -64,3 +64,10 @@ test_images/
 # 输出文件
 output.*
 result.*
+
+# 插件系统
+# 市场插件缓存（ZIP格式的待安装插件）
+src/python/plugin_packages/marketplace/cache/
+
+# 用户实验性插件（可选，避免误提交未完成的插件）
+# src/python/plugin_packages/marketplace/installed/my_*
