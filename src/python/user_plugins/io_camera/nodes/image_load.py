@@ -2,7 +2,7 @@
 加载图像节点 - 从本地文件加载图像
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

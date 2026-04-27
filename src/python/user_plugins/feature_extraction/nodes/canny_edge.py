@@ -2,7 +2,7 @@
 Canny边缘检测节点 - 使用Canny算法检测图像边缘
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

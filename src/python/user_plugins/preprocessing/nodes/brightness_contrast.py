@@ -2,7 +2,7 @@
 亮度对比度调整节点 - 调整图像的亮度和对比度
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

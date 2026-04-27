@@ -2,7 +2,7 @@
 图像旋转节点 - 按指定角度旋转图像
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

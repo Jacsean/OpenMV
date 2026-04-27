@@ -2,7 +2,7 @@
 双边滤波节点 - 保边去噪滤波器
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

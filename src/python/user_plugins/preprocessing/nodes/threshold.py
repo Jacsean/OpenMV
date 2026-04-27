@@ -2,7 +2,7 @@
 阈值二值化节点 - 将图像转换为二值图像
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

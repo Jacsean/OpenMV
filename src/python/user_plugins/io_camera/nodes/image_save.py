@@ -2,7 +2,7 @@
 保存图像节点 - 将图像保存到本地文件
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

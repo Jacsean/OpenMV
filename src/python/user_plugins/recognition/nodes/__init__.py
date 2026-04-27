@@ -1,8 +1,8 @@
 """
-识别分类节点包 - 二维码、OCR、模板匹配
+识别节点包 - 颜色与形状识别
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

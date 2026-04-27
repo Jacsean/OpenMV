@@ -1,8 +1,8 @@
 """
-匹配定位节点包 - 灰度匹配、相关性匹配、形状匹配
+匹配定位节点包 - 模板匹配与特征点匹配
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

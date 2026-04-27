@@ -2,7 +2,7 @@
 中值滤波节点 - 使用中值滤波器去除噪声
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

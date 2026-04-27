@@ -2,7 +2,7 @@
 Sobel边缘检测节点 - 使用Sobel算子计算图像梯度
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

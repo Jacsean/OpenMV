@@ -2,7 +2,7 @@
 Laplacian边缘检测、Harris角点检测、Hough直线检测、Hough圆检测节点
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

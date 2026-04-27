@@ -1,8 +1,8 @@
 """
-测量分析节点包 - 尺寸、位置角度、轮廓分析
+测量节点包 - 轮廓分析与尺寸测量
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

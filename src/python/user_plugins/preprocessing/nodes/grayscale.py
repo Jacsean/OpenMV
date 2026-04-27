@@ -2,7 +2,7 @@
 灰度化节点 - 将彩色图像转换为灰度图像
 """
 
-from ....base_nodes import AIBaseNode
+from ...base_nodes import AIBaseNode
 import cv2
 import numpy as np
 

@@ -216,11 +216,46 @@ class PluginManager:
             print(f"✅ 安全检查通过: {plugin_name}")
             
             # 4. 动态导入模块
+            # 关键修复：正确设置包层次结构以支持相对导入
+            if is_new_structure:
+                # 新体系：需要将 user_plugins 作为包根
+                user_plugins_path = plugin_path.parent
+                
+                # 确保 user_plugins 在 sys.path 中
+                if str(user_plugins_path) not in sys.path:
+                    sys.path.insert(0, str(user_plugins_path))
+                
+                # 使用完整的模块名（包含包路径）
+                module_name = f"user_plugins.{plugin_name}.nodes"
+            
             spec = importlib.util.spec_from_file_location(module_name, module_path)
             module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = module
-            spec.loader.exec_module(module)
             
+            # 如果是新体系，还需要注册父包到 sys.modules
+            if is_new_structure:
+                # 注册 user_plugins 包
+                if 'user_plugins' not in sys.modules:
+                    user_plugins_spec = importlib.util.spec_from_file_location(
+                        'user_plugins',
+                        user_plugins_path / '__init__.py' if (user_plugins_path / '__init__.py').exists() else None
+                    )
+                    if user_plugins_spec:
+                        user_plugins_module = importlib.util.module_from_spec(user_plugins_spec)
+                        sys.modules['user_plugins'] = user_plugins_module
+                
+                # 注册插件包
+                plugin_package_name = f"user_plugins.{plugin_name}"
+                if plugin_package_name not in sys.modules:
+                    plugin_package_spec = importlib.util.spec_from_file_location(
+                        plugin_package_name,
+                        plugin_path / '__init__.py'
+                    )
+                    plugin_package_module = importlib.util.module_from_spec(plugin_package_spec)
+                    sys.modules[plugin_package_name] = plugin_package_module
+            
+            spec.loader.exec_module(module)
+
             print(f"✅ 模块加载成功: {plugin_name}")
             
             # 5. 提取节点类并注册
