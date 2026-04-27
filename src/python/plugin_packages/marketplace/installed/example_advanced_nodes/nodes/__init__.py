@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 
-class MultiInputBlendNode(AIBaseNode):
+class MultiInputBlendNode(BaseNode):
     """多图像混合节点"""
     
     __identifier__ = 'example_advanced_nodes'
@@ -62,7 +62,7 @@ class MultiInputBlendNode(AIBaseNode):
             return {'混合结果': None}
 
 
-class AdaptiveThresholdNode(AIBaseNode):
+class AdaptiveThresholdNode(BaseNode):
     """自适应阈值节点"""
     
     __identifier__ = 'example_advanced_nodes'
@@ -102,7 +102,7 @@ class AdaptiveThresholdNode(AIBaseNode):
             return {'输出图像': None}
 
 
-class HistogramEqualizationNode(AIBaseNode):
+class HistogramEqualizationNode(BaseNode):
     """直方图均衡化节点"""
     
     __identifier__ = 'example_advanced_nodes'

@@ -28,10 +28,10 @@ YOLO 模型量化节点（重量级）
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
-from user_plugins.base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 
 
-class YOLOQuantizerNode(AIBaseNode):
+class YOLOQuantizerNode(BaseNode):
     """
     YOLO 模型量化节点
     

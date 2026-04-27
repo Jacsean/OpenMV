@@ -34,7 +34,7 @@ import cv2
 import numpy as np
 
 
-class OCRTableRecognitionNode(AIBaseNode):
+class OCRTableRecognitionNode(BaseNode):
     """
     OCR 表格识别节点
     

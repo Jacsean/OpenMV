@@ -31,7 +31,7 @@ import cv2
 import numpy as np
 
 
-class OCRTextRecognitionNode(AIBaseNode):
+class OCRTextRecognitionNode(BaseNode):
     """
     OCR 文字识别节点
     

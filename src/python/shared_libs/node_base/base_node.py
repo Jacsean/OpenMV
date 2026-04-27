@@ -1,7 +1,7 @@
 """
-AI 节点基类模块
+通用节点基类模块
 
-提供统一的 AI 功能节点基础框架，包括：
+提供统一的节点基础框架，适用于所有类型节点，包括：
 - 依赖检查与硬件检测
 - 模型缓存管理
 - 异步推理支持
@@ -21,15 +21,15 @@ from NodeGraphQt import BaseNode
 
 # 导入性能监控工具
 try:
-    from user_plugins.performance_monitor import PerformanceMonitor, ResultCache, ResourceOptimizer
+    from .performance_monitor import PerformanceMonitor, ResultCache, ResourceOptimizer
     HAS_PERFORMANCE_TOOLS = True
 except ImportError:
     HAS_PERFORMANCE_TOOLS = False
 
 
-class AIBaseNode(BaseNode):
+class BaseNode(BaseNode):
     """
-    AI 节点基类
+    通用节点基类
     
     提供所有 AI 节点的通用功能：
     - 依赖检查（运行时验证）
@@ -41,7 +41,7 @@ class AIBaseNode(BaseNode):
     - 结果缓存（避免重复计算）
     
     使用示例：
-        class YOLODetectNode(AIBaseNode):
+        class YOLODetectNode(BaseNode):
             __identifier__ = 'yolo_vision'
             NODE_NAME = 'YOLO 目标检测'
             
@@ -342,7 +342,7 @@ class AIBaseNode(BaseNode):
 
 class AsyncAINode(AIBaseNode):
     """
-    异步 AI 节点基类
+    异步 通用节点基类
     
     在 AIBaseNode 基础上增加异步推理支持，避免阻塞 UI。
     

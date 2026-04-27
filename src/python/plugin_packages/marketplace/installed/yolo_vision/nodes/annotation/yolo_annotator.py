@@ -30,10 +30,10 @@ import os
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-from user_plugins.base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 
 
-class YOLOAnnotatorNode(AIBaseNode):
+class YOLOAnnotatorNode(BaseNode):
     """
     YOLO 标注辅助节点
     

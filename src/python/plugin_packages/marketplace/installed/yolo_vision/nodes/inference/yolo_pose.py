@@ -18,10 +18,10 @@ YOLO 姿态估计节点（轻量级）
 
 import os
 from typing import Dict, Any, Optional
-from user_plugins.base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 
 
-class YOLOPoseNode(AIBaseNode):
+class YOLOPoseNode(BaseNode):
     """
     YOLO 姿态估计节点
     

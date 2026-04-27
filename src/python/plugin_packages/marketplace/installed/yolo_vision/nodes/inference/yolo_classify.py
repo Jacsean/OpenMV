@@ -18,10 +18,10 @@ YOLO 图像分类节点（轻量级）
 
 import os
 from typing import Dict, Any, Optional
-from user_plugins.base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 
 
-class YOLOClassifyNode(AIBaseNode):
+class YOLOClassifyNode(BaseNode):
     """
     YOLO 图像分类节点
     

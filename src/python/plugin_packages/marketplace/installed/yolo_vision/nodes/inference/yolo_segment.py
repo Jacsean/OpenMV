@@ -18,10 +18,10 @@ YOLO 实例分割节点（轻量级）
 
 import os
 from typing import Dict, Any, Optional
-from user_plugins.base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 
 
-class YOLOSegmentNode(AIBaseNode):
+class YOLOSegmentNode(BaseNode):
     """
     YOLO 实例分割节点
     

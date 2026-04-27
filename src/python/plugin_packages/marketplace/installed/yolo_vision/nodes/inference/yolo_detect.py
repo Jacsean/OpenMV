@@ -19,10 +19,10 @@ YOLO 目标检测节点（轻量级）
 
 import os
 from typing import Dict, Any, Optional
-from user_plugins.base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 
 
-class YOLODetectNode(AIBaseNode):
+class YOLODetectNode(BaseNode):
     """
     YOLO 目标检测节点
     

@@ -34,7 +34,7 @@ import cv2
 import numpy as np
 
 
-class OCRLanguageLayoutNode(AIBaseNode):
+class OCRLanguageLayoutNode(BaseNode):
     """
     OCR 版面分析节点
     
