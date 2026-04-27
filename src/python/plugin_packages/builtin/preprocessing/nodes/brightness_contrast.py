@@ -2,12 +2,12 @@
 亮度对比度调整节点 - 调整图像的亮度和对比度
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class BrightnessContrastNode(AIBaseNode):
+class BrightnessContrastNode(BaseNode):
     """
     亮度对比度调整节点
     

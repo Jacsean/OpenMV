@@ -2,12 +2,12 @@
 图像缩放节点 - 调整图像尺寸
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class ResizeNode(AIBaseNode):
+class ResizeNode(BaseNode):
     """
     图像缩放节点
     

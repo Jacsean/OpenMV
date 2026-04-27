@@ -2,12 +2,12 @@
 图像显示节点 - 用于显示图像，支持双击打开预览窗口
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class ImageViewNode(AIBaseNode):
+class ImageViewNode(BaseNode):
     """
     图像显示节点
     

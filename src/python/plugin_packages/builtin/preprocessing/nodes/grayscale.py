@@ -2,12 +2,12 @@
 灰度化节点 - 将彩色图像转换为灰度图像
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class GrayscaleNode(AIBaseNode):
+class GrayscaleNode(BaseNode):
     """
     灰度化节点
     

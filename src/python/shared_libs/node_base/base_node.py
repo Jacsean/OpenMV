@@ -340,11 +340,11 @@ class BaseNode(BaseNode):
             self.result_cache.set(result, **kwargs)
 
 
-class AsyncAINode(AIBaseNode):
+class AsyncAINode(BaseNode):
     """
     异步 通用节点基类
     
-    在 AIBaseNode 基础上增加异步推理支持，避免阻塞 UI。
+    在 BaseNode 基础上增加异步推理支持，避免阻塞 UI。
     
     使用示例：
         class AsyncYOLONode(AsyncAINode):
@@ -434,4 +434,4 @@ class AsyncAINode(AIBaseNode):
 
 
 # 导出基类
-__all__ = ['AIBaseNode', 'AsyncAINode']
+__all__ = ['BaseNode', 'AsyncAINode']

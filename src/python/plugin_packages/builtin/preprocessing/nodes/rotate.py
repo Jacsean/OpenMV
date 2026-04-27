@@ -2,12 +2,12 @@
 图像旋转节点 - 按指定角度旋转图像
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class RotateNode(AIBaseNode):
+class RotateNode(BaseNode):
     """
     图像旋转节点
     

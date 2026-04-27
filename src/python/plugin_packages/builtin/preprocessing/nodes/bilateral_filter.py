@@ -2,12 +2,12 @@
 双边滤波节点 - 保边去噪滤波器
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class BilateralFilterNode(AIBaseNode):
+class BilateralFilterNode(BaseNode):
     """
     双边滤波节点
     

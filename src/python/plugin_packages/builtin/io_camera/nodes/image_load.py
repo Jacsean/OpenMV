@@ -2,12 +2,12 @@
 加载图像节点 - 从本地文件加载图像
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class ImageLoadNode(AIBaseNode):
+class ImageLoadNode(BaseNode):
     """
     加载图像节点
     

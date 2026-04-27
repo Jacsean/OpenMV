@@ -2,12 +2,12 @@
 Canny边缘检测节点 - 使用Canny算法检测图像边缘
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class CannyEdgeNode(AIBaseNode):
+class CannyEdgeNode(BaseNode):
     """Canny边缘检测节点"""
     
     __identifier__ = 'feature_extraction'

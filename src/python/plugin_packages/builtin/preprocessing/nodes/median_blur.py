@@ -2,12 +2,12 @@
 中值滤波节点 - 使用中值滤波器去除噪声
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class MedianBlurNode(AIBaseNode):
+class MedianBlurNode(BaseNode):
     """
     中值滤波节点
     

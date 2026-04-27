@@ -2,12 +2,12 @@
 高斯模糊节点 - 对图像进行高斯模糊处理
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class GaussianBlurNode(AIBaseNode):
+class GaussianBlurNode(BaseNode):
     """
     高斯模糊节点
     

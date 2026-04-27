@@ -2,12 +2,12 @@
 测量节点包 - 轮廓分析与尺寸测量
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class ContourAnalysisNode(AIBaseNode):
+class ContourAnalysisNode(BaseNode):
     """轮廓分析节点"""
     
     __identifier__ = 'measurement'
@@ -45,7 +45,7 @@ class ContourAnalysisNode(AIBaseNode):
             return {'输出图像': None, '轮廓数据': '错误'}
 
 
-class BoundingBoxNode(AIBaseNode):
+class BoundingBoxNode(BaseNode):
     """边界框检测节点"""
     
     __identifier__ = 'measurement'

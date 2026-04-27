@@ -2,12 +2,12 @@
 匹配定位节点包 - 模板匹配与特征点匹配
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class ContourAnalysisNode(AIBaseNode):
+class ContourAnalysisNode(BaseNode):
     """灰度匹配节点（基于轮廓）"""
     
     __identifier__ = 'match_location'
@@ -43,7 +43,7 @@ class ContourAnalysisNode(AIBaseNode):
             return {'输出图像': None}
 
 
-class BoundingBoxNode(AIBaseNode):
+class BoundingBoxNode(BaseNode):
     """相关性匹配节点（基于模板匹配）"""
     
     __identifier__ = 'match_location'
@@ -95,7 +95,7 @@ class BoundingBoxNode(AIBaseNode):
             return {'输出图像': None}
 
 
-class ShapeMatchNode(AIBaseNode):
+class ShapeMatchNode(BaseNode):
     """形状匹配节点（基于Hu矩）"""
     
     __identifier__ = 'match_location'

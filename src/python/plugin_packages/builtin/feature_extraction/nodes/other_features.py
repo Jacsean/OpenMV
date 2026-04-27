@@ -2,12 +2,12 @@
 Laplacian边缘检测、Harris角点检测、Hough直线检测、Hough圆检测节点
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class LaplacianNode(AIBaseNode):
+class LaplacianNode(BaseNode):
     """Laplacian边缘检测节点"""
     
     __identifier__ = 'feature_extraction'
@@ -44,7 +44,7 @@ class LaplacianNode(AIBaseNode):
             return {'输出图像': None}
 
 
-class HarrisCornerNode(AIBaseNode):
+class HarrisCornerNode(BaseNode):
     """Harris角点检测节点"""
     
     __identifier__ = 'feature_extraction'
@@ -89,7 +89,7 @@ class HarrisCornerNode(AIBaseNode):
             return {'输出图像': None}
 
 
-class HoughLinesNode(AIBaseNode):
+class HoughLinesNode(BaseNode):
     """Hough直线检测节点"""
     
     __identifier__ = 'feature_extraction'
@@ -142,7 +142,7 @@ class HoughLinesNode(AIBaseNode):
             return {'输出图像': None}
 
 
-class HoughCirclesNode(AIBaseNode):
+class HoughCirclesNode(BaseNode):
     """Hough圆检测节点"""
     
     __identifier__ = 'feature_extraction'

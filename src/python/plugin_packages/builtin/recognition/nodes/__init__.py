@@ -2,12 +2,12 @@
 识别节点包 - 颜色与形状识别
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 
 
-class TemplateMatchNode(AIBaseNode):
+class TemplateMatchNode(BaseNode):
     """模板匹配节点"""
     
     __identifier__ = 'recognition'
