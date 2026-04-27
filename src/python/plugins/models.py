@@ -46,6 +46,8 @@ class PluginInfo:
     path: str = ""            # 插件路径
     enabled: bool = True
     installed_at: Optional[datetime] = None
+    source: str = "builtin"   # 插件来源: 'builtin' 或 'marketplace'
+    priority: int = 1         # 加载优先级（数字越小优先级越高）
     
     # AI 插件扩展字段
     resource_level: str = "light"  # 资源等级: light/medium/heavy

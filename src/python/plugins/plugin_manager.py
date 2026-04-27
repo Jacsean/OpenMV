@@ -34,8 +34,15 @@ class PluginManager:
         
         self.plugins: Dict[str, PluginInfo] = {}
         self.loaded_nodes: Dict[str, Type] = {}  # 已加载的节点类
-        self.plugins_dir = Path(__file__).parent.parent / "user_plugins"
-        self.plugins_dir.mkdir(exist_ok=True)
+        
+        # 两层插件目录结构
+        self.plugins_dir = Path(__file__).parent.parent / "plugin_packages"
+        self.builtin_dir = self.plugins_dir / "builtin"
+        self.marketplace_dir = self.plugins_dir / "marketplace" / "installed"
+        
+        # 确保目录存在
+        self.builtin_dir.mkdir(parents=True, exist_ok=True)
+        self.marketplace_dir.mkdir(parents=True, exist_ok=True)
         
         # 初始化沙箱环境
         self.sandbox = PluginSandbox()
@@ -55,19 +62,49 @@ class PluginManager:
         """
         plugins = []
         
-        if not self.plugins_dir.exists():
+        # 扫描builtin目录（优先级最高）
+        if self.builtin_dir.exists():
+            print("\n📦 扫描内置插件 (builtin)...")
+            builtin_plugins = self._scan_directory(self.builtin_dir, source='builtin', priority=1)
+            plugins.extend(builtin_plugins)
+        
+        # 扫描marketplace目录（优先级中等）
+        if self.marketplace_dir.exists():
+            print("\n📦 扫描市场插件 (marketplace)...")
+            marketplace_plugins = self._scan_directory(self.marketplace_dir, source='marketplace', priority=2)
+            plugins.extend(marketplace_plugins)
+        
+        print(f"\n✅ 共扫描到 {len(plugins)} 个插件")
+        return plugins
+    
+    def _scan_directory(self, directory: Path, source='builtin', priority=1) -> List[PluginInfo]:
+        """
+        扫描指定目录下的插件
+        
+        Args:
+            directory: 插件目录路径
+            source: 插件来源 ('builtin' 或 'marketplace')
+            priority: 加载优先级
+            
+        Returns:
+            List[PluginInfo]: 插件信息列表
+        """
+        plugins = []
+        
+        if not directory.exists():
             return plugins
         
-        for item in self.plugins_dir.iterdir():
+        for item in sorted(directory.iterdir()):
             if item.is_dir():
-                plugin_info = self._load_plugin_metadata(item)
+                plugin_info = self._load_plugin_metadata(item, source=source, priority=priority)
                 if plugin_info:
                     plugins.append(plugin_info)
                     self.plugins[plugin_info.name] = plugin_info
+                    print(f"   ✅ {item.name} (source: {source})")
         
         return plugins
     
-    def _load_plugin_metadata(self, plugin_path: Path) -> Optional[PluginInfo]:
+    def _load_plugin_metadata(self, plugin_path: Path, source='builtin', priority=1) -> Optional[PluginInfo]:
         """
         加载插件元数据
         
@@ -133,6 +170,8 @@ class PluginManager:
                 dependencies=data.get('dependencies', []),
                 min_app_version=data.get('min_app_version', '3.1.0'),
                 path=str(plugin_path),
+                source=data.get('source', source),  # 从plugin.json读取或使用默认值
+                priority=priority,  # 加载优先级
                 # AI 插件扩展字段
                 resource_level=data.get('resource_level', 'light'),
                 installation_guide=data.get('installation_guide', {}),
@@ -232,18 +271,43 @@ class PluginManager:
             
             # 如果是新体系，还需要注册父包到 sys.modules
             if is_new_structure:
-                # 注册 user_plugins 包
-                if 'user_plugins' not in sys.modules:
-                    user_plugins_spec = importlib.util.spec_from_file_location(
-                        'user_plugins',
-                        user_plugins_path / '__init__.py' if (user_plugins_path / '__init__.py').exists() else None
+                # 确定插件所在的根目录（plugin_packages）
+                plugin_packages_path = plugin_path.parent.parent  # plugin_packages
+                
+                # 确保 plugin_packages 在 sys.path 中
+                if str(plugin_packages_path) not in sys.path:
+                    sys.path.insert(0, str(plugin_packages_path))
+                
+                # 确定模块名前缀（builtin 或 marketplace.installed）
+                relative_path = plugin_path.relative_to(plugin_packages_path)
+                package_prefix = str(relative_path.parent).replace(os.sep, '.')
+                
+                # 使用完整的模块名（包含包路径）
+                module_name = f"{package_prefix}.{plugin_name}.nodes"
+                
+                # 注册 plugin_packages 包
+                if 'plugin_packages' not in sys.modules:
+                    plugin_packages_spec = importlib.util.spec_from_file_location(
+                        'plugin_packages',
+                        plugin_packages_path / '__init__.py' if (plugin_packages_path / '__init__.py').exists() else None
                     )
-                    if user_plugins_spec:
-                        user_plugins_module = importlib.util.module_from_spec(user_plugins_spec)
-                        sys.modules['user_plugins'] = user_plugins_module
+                    if plugin_packages_spec:
+                        plugin_packages_module = importlib.util.module_from_spec(plugin_packages_spec)
+                        sys.modules['plugin_packages'] = plugin_packages_module
+                
+                # 注册子包（builtin 或 marketplace）
+                if package_prefix not in sys.modules:
+                    sub_package_path = plugin_packages_path / relative_path.parent
+                    sub_package_spec = importlib.util.spec_from_file_location(
+                        package_prefix,
+                        sub_package_path / '__init__.py' if (sub_package_path / '__init__.py').exists() else None
+                    )
+                    if sub_package_spec:
+                        sub_package_module = importlib.util.module_from_spec(sub_package_spec)
+                        sys.modules[package_prefix] = sub_package_module
                 
                 # 注册插件包
-                plugin_package_name = f"user_plugins.{plugin_name}"
+                plugin_package_name = f"{package_prefix}.{plugin_name}"
                 if plugin_package_name not in sys.modules:
                     plugin_package_spec = importlib.util.spec_from_file_location(
                         plugin_package_name,
@@ -364,7 +428,7 @@ class PluginManager:
         print(f"✅ 插件 {plugin_name} 元数据已更新")
         print(f"💡 提示：请刷新NodeGraph以应用更改")
     
-    def unload_plugin_nodes(self, plugin_name: str, node_graph=None) -> bool:
+    def unload_plugin_nodes(self, plugin_name: str) -> bool:
         """
         卸载插件节点
         
@@ -483,6 +547,32 @@ class PluginManager:
         Returns:
             (success, message)
         """
+        if plugin_name not in self.plugins:
+            return False, f"插件不存在: {plugin_name}"
+        
+        plugin_info = self.plugins[plugin_name]
+        
+        # builtin中的插件不可卸载
+        if hasattr(plugin_info, 'source') and plugin_info.source == 'builtin':
+            return False, "内置插件不可卸载"
+        
+        # marketplace中的插件可卸载
+        if hasattr(plugin_info, 'source') and plugin_info.source == 'marketplace':
+            # 先卸载节点
+            if plugin_name in self.loaded_nodes:
+                self.unload_plugin_nodes(plugin_name)
+            
+            # 再卸载文件
+            success, message = self.installer.uninstall_plugin(plugin_name)
+            
+            if success:
+                # 从注册表中移除
+                if plugin_name in self.plugins:
+                    del self.plugins[plugin_name]
+            
+            return success, message
+        
+        # 兼容旧版本（没有source字段）
         # 先卸载节点
         if plugin_name in self.loaded_nodes:
             self.unload_plugin_nodes(plugin_name)
