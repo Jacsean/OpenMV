@@ -2,7 +2,7 @@
 高级节点示例包 - 多输入多输出、复杂参数处理
 """
 
-from ...base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 

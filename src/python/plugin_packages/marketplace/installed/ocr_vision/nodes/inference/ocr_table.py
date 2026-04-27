@@ -29,7 +29,7 @@ OCR 表格识别节点（中量级）
     [输入图像] → [OCR 表格识别] → [Excel 文件路径] + [JSON 数据]
 """
 
-from ....base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 

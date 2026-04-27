@@ -29,7 +29,7 @@ OCR 版面分析节点（中量级）
     [输入图像] → [OCR 版面分析] → [布局 JSON] + [可视化图像]
 """
 
-from ....base_nodes import AIBaseNode
+from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
 

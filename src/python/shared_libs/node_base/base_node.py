@@ -64,7 +64,7 @@ class BaseNode(BaseNode):
     _model_cache: Dict[str, Any] = {}
     
     def __init__(self):
-        super(AIBaseNode, self).__init__()
+        super(BaseNode, self).__init__()
         
         # 资源等级（子类应覆盖）
         self.resource_level = "light"  # light / medium / heavy
