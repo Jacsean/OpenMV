@@ -481,11 +481,11 @@ class ProjectUIManager:
             except:
                 print(f"✅ 工程已保存: {project.file_path}")
             
-            QtWidgets.QMessageBox.information(
-                self.main_window,
-                "成功",
-                f"工程已保存为单文件:\n{project.file_path}"
-            )
+            # QtWidgets.QMessageBox.information(
+            #     self.main_window,
+            #     "成功",
+            #     f"工程已保存为单文件:\n{project.file_path}"
+            # )
             return True
         else:
             QtWidgets.QMessageBox.critical(

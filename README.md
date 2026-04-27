@@ -534,6 +534,61 @@ user_plugins/
 
 ---
 
+## 🏗️ 统一插件体系架构
+
+本项目采用三层插件架构设计，支持多种插件类型和可视化管理。
+
+### 架构总览
+```
+StduyOpenCV/
+├── src/python/
+│   ├── plugins/                    ← 插件系统核心（已存在）
+│   │   ├── plugin_manager.py       ← 插件管理器
+│   │   ├── hot_reloader.py         ← 热重载
+│   │   └── sandbox.py              ← 安全沙箱
+│   │
+│   ├── plugin_packages/            ← 🆕 统一插件目录
+│   │   ├── builtin/                ← 预置节点（需编译）
+│   │   │   ├── io_camera/
+│   │   │   ├── preprocessing/
+│   │   │   └── ...
+│   │   │
+│   │   ├── marketplace/            ← 市场插件（动态加载）
+│   │   │   ├── yolo_vision_v1.2.zip
+│   │   │   ├── ocr_pro_v2.0.dll    ← Windows DLL插件
+│   │   │   └── feature_pack.so     ← Linux SO插件
+│   │   │
+│   │   └── user_custom/            ← 用户自定义
+│   │       └── my_nodes/
+│   │
+│   ├── shared_libs/                ← 🆕 共享库
+│   │   ├── ai_base/                ← AI节点基类
+│   │   ├── common_utils/           ← 通用工具
+│   │   └── cpp_wrappers/           ← C++封装层
+│   │
+│   └── ui/
+│       ├── node_editor.py          ← 节点编辑器（增强版）
+│       └── plugin_marketplace.py   ← 🆕 插件市场UI
+│
+└── docs/
+    └── plugins/
+        └── PLUGIN_ARCHITECTURE.md  ← 🆕 架构文档
+```
+
+### 插件类型支持
+- **Python源码**: 动态import，适用于预置节点和用户自定义
+- **ZIP打包**: 解压后按Python加载，适用于市场分发
+- **二进制DLL/SO**: ctypes/cffi加载，适用于高性能算法和商业插件
+
+### UI管理功能
+- 节点操作：增加、编辑、删除、移动到指定节点包
+- 节点包操作：重新排序、更名、导出、删除
+- 修改后需提示用户重启应用生效
+
+**详细架构说明**: [PLUGIN_ARCHITECTURE.md](docs/plugins/PLUGIN_ARCHITECTURE.md)
+
+---
+
 ## 🤝 参与贡献
 
 欢迎提交Issue和Pull Request! 详见 [CONTRIBUTING.md](CONTRIBUTING.md)

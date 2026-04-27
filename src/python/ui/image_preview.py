@@ -688,11 +688,11 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         if file_path:
             try:
                 cv2.imwrite(file_path, self.image)
-                QtWidgets.QMessageBox.information(
-                    self,
-                    "成功",
-                    f"图像已保存到:\n{file_path}"
-                )
+                # QtWidgets.QMessageBox.information(
+                #     self,
+                #     "成功",
+                #     f"图像已保存到:\n{file_path}"
+                # )
             except Exception as e:
                 QtWidgets.QMessageBox.critical(
                     self,

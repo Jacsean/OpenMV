@@ -764,11 +764,11 @@ class MainWindow(QtWidgets.QMainWindow):
             node.set_property('file_path', file_path)
             print(f"已选择图像: {file_path}")
             # 可选：显示提示信息
-            QtWidgets.QMessageBox.information(
-                self,
-                "文件已选择",
-                f"已选择:\n{file_path}"
-            )
+            # QtWidgets.QMessageBox.information(
+            #     self,
+            #     "文件已选择",
+            #     f"已选择:\n{file_path}"
+            # )
     
     def _on_select_save_path(self, node):
         """
@@ -786,11 +786,11 @@ class MainWindow(QtWidgets.QMainWindow):
             node.set_property('save_path', file_path)
             print(f"保存路径: {file_path}")
             # 可选：显示提示信息
-            QtWidgets.QMessageBox.information(
-                self,
-                "路径已选择",
-                f"保存路径:\n{file_path}"
-            )
+            # QtWidgets.QMessageBox.information(
+            #     self,
+            #     "路径已选择",
+            #     f"保存路径:\n{file_path}"
+            # )
     
     def _on_node_double_clicked(self, node, workflow=None):
         """
