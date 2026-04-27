@@ -138,9 +138,21 @@
       "display_name": "YOLO 模型量化",
       "category": "模型优化",
       "resource_level": "heavy",
-      "color": [255, 200, 100],
-      "hardware_requirements": {"cpu_cores": 8, "memory_gb": 16, "gpu_required": true, "gpu_memory_gb": 8},
-      "dependencies": ["ultralytics>=8.0.0", "torch>=2.0.0"]
+      "color": [
+        255,
+        200,
+        100
+      ],
+      "hardware_requirements": {
+        "cpu_cores": 8,
+        "memory_gb": 16,
+        "gpu_required": true,
+        "gpu_memory_gb": 8
+      },
+      "dependencies": [
+        "ultralytics>=8.0.0",
+        "torch>=2.0.0"
+      ]
     }
   ],
   "min_app_version": "4.0.0",
@@ -177,5 +189,6 @@
       ]
     }
   },
-  "resource_level": "medium"
+  "resource_level": "medium",
+  "source": "marketplace"
 }

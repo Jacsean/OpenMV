@@ -9,7 +9,12 @@
       "class": "OCRTextRecognitionNode",
       "display_name": "OCR 文字识别",
       "category": "文字识别",
-      "color": [100, 200, 255, 255],
+      "color": [
+        100,
+        200,
+        255,
+        255
+      ],
       "icon": "📝",
       "width": 220,
       "height": 120,
@@ -21,16 +26,26 @@
         "gpu_required": false,
         "gpu_memory_gb": 0
       },
-      "dependencies": ["paddlepaddle>=2.4.0", "paddleocr>=2.6.0"],
+      "dependencies": [
+        "paddlepaddle>=2.4.0",
+        "paddleocr>=2.6.0"
+      ],
       "optional_dependencies": {
-        "gpu_support": ["paddlepaddle-gpu>=2.4.0"]
+        "gpu_support": [
+          "paddlepaddle-gpu>=2.4.0"
+        ]
       }
     },
     {
       "class": "OCRTableRecognitionNode",
       "display_name": "OCR 表格识别",
       "category": "表格识别",
-      "color": [100, 200, 255, 255],
+      "color": [
+        100,
+        200,
+        255,
+        255
+      ],
       "icon": "📊",
       "width": 220,
       "height": 120,
@@ -42,16 +57,27 @@
         "gpu_required": false,
         "gpu_memory_gb": 0
       },
-      "dependencies": ["paddlepaddle>=2.4.0", "paddleocr>=2.6.0", "openpyxl"],
+      "dependencies": [
+        "paddlepaddle>=2.4.0",
+        "paddleocr>=2.6.0",
+        "openpyxl"
+      ],
       "optional_dependencies": {
-        "gpu_support": ["paddlepaddle-gpu>=2.4.0"]
+        "gpu_support": [
+          "paddlepaddle-gpu>=2.4.0"
+        ]
       }
     },
     {
       "class": "OCRLanguageLayoutNode",
       "display_name": "OCR 版面分析",
       "category": "版面分析",
-      "color": [100, 200, 255, 255],
+      "color": [
+        100,
+        200,
+        255,
+        255
+      ],
       "icon": "📄",
       "width": 220,
       "height": 120,
@@ -63,13 +89,21 @@
         "gpu_required": false,
         "gpu_memory_gb": 0
       },
-      "dependencies": ["paddlepaddle>=2.4.0", "paddleocr>=2.6.0"],
+      "dependencies": [
+        "paddlepaddle>=2.4.0",
+        "paddleocr>=2.6.0"
+      ],
       "optional_dependencies": {
-        "gpu_support": ["paddlepaddle-gpu>=2.4.0"]
+        "gpu_support": [
+          "paddlepaddle-gpu>=2.4.0"
+        ]
       }
     }
   ],
-  "dependencies": ["paddlepaddle>=2.4.0", "paddleocr>=2.6.0"],
+  "dependencies": [
+    "paddlepaddle>=2.4.0",
+    "paddleocr>=2.6.0"
+  ],
   "min_app_version": "4.0.0",
   "resource_level": "light",
   "installation_guide": {
@@ -113,5 +147,6 @@
       "install_mode": "full_suite",
       "recommended_nodes": []
     }
-  }
+  },
+  "source": "marketplace"
 }
