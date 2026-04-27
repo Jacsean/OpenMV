@@ -8,10 +8,12 @@
 - 鼠标拖拽平移
 - 滚轮缩放快捷键
 - 与ImageViewNode关联，支持实时刷新
+- ✨ 交互式标注功能（矩形、圆形、文字等）
 """
 
 import cv2
 from PySide2 import QtWidgets, QtCore, QtGui
+from .image_annotation import Annotation, AnnotationLayer
 
 
 class ImagePreviewDialog(QtWidgets.QDialog):
@@ -27,6 +29,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     - ✨ 滚动条支持超大图像
     - ✨ 鼠标拖拽平移
     - ✨ 滚轮缩放快捷键
+    - ✨ 交互式标注工具（矩形、圆形、文字）
     """
     
     def __init__(self, image, node=None, title="图像预览", parent=None):
@@ -40,6 +43,14 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.min_zoom = 0.1   # 最小10%
         self.max_zoom = 5.0   # 最大500%
         self.zoom_step = 1.2  # 缩放步长
+        
+        # === 标注系统初始化 BEGIN ===
+        self.annotation_layer = AnnotationLayer()
+        self.current_tool = None  # 当前激活的工具: 'rect', 'circle', 'text', None
+        self.drawing_start_pos = None  # 绘制起始位置（Qt坐标）
+        self.current_drawing_rect = None  # 当前正在绘制的形状（用于实时预览）
+        self.temp_text_dialog = None  # 文本输入对话框
+        # === 标注系统初始化 END ===
         
         # 设置窗口属性
         self.setMinimumSize(1024, 768)
@@ -66,6 +77,42 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         toolbar_layout.addWidget(self.fit_btn)
         
         toolbar_layout.addStretch()
+        
+        # === 标注工具栏 BEGIN ===
+        annotation_toolbar = QtWidgets.QHBoxLayout()
+        
+        # 矩形工具
+        self.rect_tool_btn = QtWidgets.QPushButton("▭ 矩形")
+        self.rect_tool_btn.setCheckable(True)
+        self.rect_tool_btn.clicked.connect(lambda: self.activate_tool('rect'))
+        self.rect_tool_btn.setToolTip("绘制矩形标注")
+        annotation_toolbar.addWidget(self.rect_tool_btn)
+        
+        # 圆形工具
+        self.circle_tool_btn = QtWidgets.QPushButton("○ 圆形")
+        self.circle_tool_btn.setCheckable(True)
+        self.circle_tool_btn.clicked.connect(lambda: self.activate_tool('circle'))
+        self.circle_tool_btn.setToolTip("绘制圆形标注")
+        annotation_toolbar.addWidget(self.circle_tool_btn)
+        
+        # 文字工具
+        self.text_tool_btn = QtWidgets.QPushButton("T 文字")
+        self.text_tool_btn.setCheckable(True)
+        self.text_tool_btn.clicked.connect(lambda: self.activate_tool('text'))
+        self.text_tool_btn.setToolTip("添加文字标注")
+        annotation_toolbar.addWidget(self.text_tool_btn)
+        
+        annotation_toolbar.addStretch()
+        
+        # 清除所有标注按钮
+        self.clear_annotations_btn = QtWidgets.QPushButton("🗑 清除标注")
+        self.clear_annotations_btn.clicked.connect(self.clear_all_annotations)
+        self.clear_annotations_btn.setToolTip("清除所有标注")
+        self.clear_annotations_btn.setStyleSheet("color: #f44336;")
+        annotation_toolbar.addWidget(self.clear_annotations_btn)
+        
+        main_layout.addLayout(annotation_toolbar)
+        # === 标注工具栏 END ===
         
         # 缩小按钮
         self.zoom_out_btn = QtWidgets.QPushButton("➖ 缩小")
@@ -292,6 +339,269 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 "此预览窗口未关联节点\n无法自动刷新"
             )
     
+    # === 标注功能方法 BEGIN ===
+    
+    def activate_tool(self, tool_name: str):
+        """
+        激活标注工具
+        
+        Args:
+            tool_name: 工具名称 ('rect', 'circle', 'text')
+        """
+        # 如果点击已激活的工具，则取消激活
+        if self.current_tool == tool_name:
+            self.current_tool = None
+            self.rect_tool_btn.setChecked(False)
+            self.circle_tool_btn.setChecked(False)
+            self.text_tool_btn.setChecked(False)
+            # 恢复拖拽模式
+            self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
+            print(f"✅ 标注工具已关闭")
+        else:
+            # 激活新工具
+            self.current_tool = tool_name
+            self.rect_tool_btn.setChecked(tool_name == 'rect')
+            self.circle_tool_btn.setChecked(tool_name == 'circle')
+            self.text_tool_btn.setChecked(tool_name == 'text')
+            # 禁用拖拽模式，允许绘制
+            self.graphics_view.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+            print(f"✅ 已激活工具: {tool_name}")
+    
+    def clear_all_annotations(self):
+        """清除所有标注"""
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            "确认",
+            "确定要清除所有标注吗？",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No
+        )
+        
+        if reply == QtWidgets.QMessageBox.Yes:
+            self.annotation_layer.clear_all()
+            self.redraw_annotations()
+            print("✅ 已清除所有标注")
+    
+    def redraw_annotations(self):
+        """重绘所有标注（在场景上）"""
+        # 移除旧的标注图形项
+        for item in self.scene.items():
+            if hasattr(item, 'is_annotation'):
+                self.scene.removeItem(item)
+        
+        # 绘制所有可见标注
+        for ann in self.annotation_layer.get_visible_annotations():
+            self.draw_annotation_on_scene(ann)
+    
+    def draw_annotation_on_scene(self, annotation: Annotation):
+        """
+        在场景上绘制单个标注
+        
+        Args:
+            annotation: 标注对象
+        """
+        color = QtGui.QColor(*annotation.properties['color'][::-1])  # BGR -> RGB
+        thickness = annotation.properties['thickness']
+        
+        if annotation.type == 'rect' and len(annotation.points) >= 2:
+            # 绘制矩形
+            start_pos = QtCore.QPointF(*annotation.points[0])
+            end_pos = QtCore.QPointF(*annotation.points[1])
+            rect = QtCore.QRectF(start_pos, end_pos).normalized()
+            
+            pen = QtGui.QPen(color, thickness)
+            pen.setStyle(QtCore.Qt.SolidLine)
+            
+            rect_item = self.scene.addRect(rect, pen)
+            rect_item.is_annotation = True
+            rect_item.annotation_id = annotation.id
+            
+        elif annotation.type == 'circle' and len(annotation.points) >= 2:
+            # 绘制圆形（使用椭圆近似）
+            start_pos = QtCore.QPointF(*annotation.points[0])
+            end_pos = QtCore.QPointF(*annotation.points[1])
+            
+            # 计算半径
+            radius = ((end_pos.x() - start_pos.x())**2 + (end_pos.y() - start_pos.y())**2)**0.5
+            
+            pen = QtGui.QPen(color, thickness)
+            pen.setStyle(QtCore.Qt.SolidLine)
+            
+            # 创建椭圆项（中心点 + 半径）
+            circle_rect = QtCore.QRectF(
+                start_pos.x() - radius,
+                start_pos.y() - radius,
+                radius * 2,
+                radius * 2
+            )
+            circle_item = self.scene.addEllipse(circle_rect, pen)
+            circle_item.is_annotation = True
+            circle_item.annotation_id = annotation.id
+            
+        elif annotation.type == 'text' and len(annotation.points) >= 1:
+            # 绘制文字
+            pos = QtCore.QPointF(*annotation.points[0])
+            text = annotation.properties.get('text', '')
+            font_size = annotation.properties.get('font_size', 16)
+            
+            text_item = self.scene.addText(text)
+            text_item.setPos(pos)
+            text_item.setDefaultTextColor(color)
+            
+            font = QtGui.QFont()
+            font.setPointSize(font_size)
+            text_item.setFont(font)
+            
+            text_item.is_annotation = True
+            text_item.annotation_id = annotation.id
+    
+    def mousePressEvent(self, event):
+        """
+        鼠标按下事件：开始绘制或选择标注
+        """
+        # 检查是否点击了graphics_view内部
+        if self.graphics_view.underMouse():
+            # 获取相对于graphics_view的位置
+            view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+            
+            if self.current_tool in ['rect', 'circle']:
+                # 开始绘制形状
+                self.drawing_start_pos = view_pos
+                event.accept()
+                return
+                
+            elif self.current_tool == 'text':
+                # 弹出文本输入对话框
+                self.show_text_input_dialog(view_pos)
+                event.accept()
+                return
+        
+        super(ImagePreviewDialog, self).mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """
+        鼠标移动事件：实时预览绘制形状
+        """
+        if self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
+            # 获取当前位置
+            view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+            
+            # 移除旧的临时预览
+            for item in self.scene.items():
+                if hasattr(item, 'is_temp_preview'):
+                    self.scene.removeItem(item)
+            
+            # 绘制临时预览（虚线）
+            color = QtGui.QColor(0, 255, 0)  # 绿色
+            pen = QtGui.QPen(color, 2)
+            pen.setStyle(QtCore.Qt.DashLine)
+            
+            if self.current_tool == 'rect':
+                # 绘制矩形预览
+                rect = QtCore.QRectF(self.drawing_start_pos, view_pos).normalized()
+                temp_item = self.scene.addRect(rect, pen)
+                temp_item.is_temp_preview = True
+                
+            elif self.current_tool == 'circle':
+                # 绘制圆形预览
+                radius = ((view_pos.x() - self.drawing_start_pos.x())**2 + 
+                         (view_pos.y() - self.drawing_start_pos.y())**2)**0.5
+                circle_rect = QtCore.QRectF(
+                    self.drawing_start_pos.x() - radius,
+                    self.drawing_start_pos.y() - radius,
+                    radius * 2,
+                    radius * 2
+                )
+                temp_item = self.scene.addEllipse(circle_rect, pen)
+                temp_item.is_temp_preview = True
+        
+        super(ImagePreviewDialog, self).mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """
+        鼠标释放事件：完成绘制
+        """
+        if self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
+            # 获取结束位置
+            view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+            
+            # 转换为场景坐标
+            start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
+            end_scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
+            
+            # 创建标注对象
+            annotation = Annotation(
+                type=self.current_tool,
+                points=[
+                    (int(start_scene_pos.x()), int(start_scene_pos.y())),
+                    (int(end_scene_pos.x()), int(end_scene_pos.y()))
+                ],
+                properties={
+                    'color': (0, 255, 0),  # 绿色 BGR
+                    'thickness': 2
+                }
+            )
+            
+            # 添加到标注层
+            self.annotation_layer.add_annotation(annotation)
+            
+            # 清除临时预览
+            for item in self.scene.items():
+                if hasattr(item, 'is_temp_preview'):
+                    self.scene.removeItem(item)
+            
+            # 重绘所有标注
+            self.redraw_annotations()
+            
+            # 重置状态
+            self.drawing_start_pos = None
+            
+            print(f"✅ 已创建{self.current_tool}标注")
+            event.accept()
+            return
+        
+        super(ImagePreviewDialog, self).mouseReleaseEvent(event)
+    
+    def show_text_input_dialog(self, view_pos):
+        """
+        显示文本输入对话框
+        
+        Args:
+            view_pos: 视图坐标位置
+        """
+        # 转换为场景坐标
+        scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
+        
+        # 创建输入对话框
+        text, ok = QtWidgets.QInputDialog.getText(
+            self,
+            "添加文字标注",
+            "请输入文字内容:",
+            QtWidgets.QLineEdit.Normal,
+            "标注文字"
+        )
+        
+        if ok and text:
+            # 创建文字标注
+            annotation = Annotation(
+                type='text',
+                points=[(int(scene_pos.x()), int(scene_pos.y()))],
+                properties={
+                    'color': (0, 255, 0),  # 绿色 BGR
+                    'thickness': 2,
+                    'text': text,
+                    'font_size': 16
+                }
+            )
+            
+            # 添加到标注层
+            self.annotation_layer.add_annotation(annotation)
+            
+            # 重绘所有标注
+            self.redraw_annotations()
+            
+            print(f"✅ 已创建文字标注: {text}")
+    
     def display_image(self):
         """
         显示图像（使用QGraphicsView）
@@ -354,7 +664,12 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         # 适应窗口显示
         self.fit_to_window()
+        
+        # 重绘标注（如果有）
+        self.redraw_annotations()
     
+    # === 标注功能方法 END ===
+
     def save_image(self):
         """
         保存图像
