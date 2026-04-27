@@ -181,7 +181,6 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 创建临时NodeGraph用于初始化共享组件
         temp_graph = NodeGraph()
-        self._register_nodes(temp_graph)
         
         # 保存临时Graph引用，用于后续插件节点注册
         self.temp_graph = temp_graph
@@ -217,7 +216,7 @@ class MainWindow(QtWidgets.QMainWindow):
         left_layout.addWidget(self.node_info_panel)
         
         # 将整个左侧容器作为一个DockWidget
-        dock_left = QtWidgets.QDockWidget("左侧面板", self)
+        dock_left = QtWidgets.QDockWidget("节点库", self)
         dock_left.setWidget(left_container)
         dock_left.setFeatures(QtWidgets.QDockWidget.NoDockWidgetFeatures)  # 禁用浮动和关闭
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_left)

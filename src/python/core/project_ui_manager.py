@@ -66,6 +66,8 @@ class ProjectUIManager:
         if hasattr(self.main_window, '_pending_plugins') and self.main_window.tab_widget.count() == 0:
             from plugins.plugin_ui_manager import PluginUIManager
             plugin_ui = PluginUIManager(self.main_window.plugin_manager, self.main_window)
+            
+            # load_plugins_to_graph 已经处理了节点库Graph的加载
             plugin_ui.load_plugins_to_graph(node_graph)
         
         # 关联到工作流
