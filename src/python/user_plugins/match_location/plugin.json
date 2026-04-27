@@ -2,70 +2,37 @@
   "name": "match_location",
   "version": "1.0.0",
   "author": "",
-  "description": "",
+  "description": "匹配定位节点包 - 灰度匹配、相关性匹配、形状匹配",
   "category_group": "匹配定位",
   "nodes": [
     {
       "class": "ContourAnalysisNode",
       "display_name": "灰度匹配",
       "category": "匹配定位",
-      "color": [
-        255,
-        150,
-        100
-      ],
+      "color": [255, 150, 100],
       "resource_level": "light",
-      "hardware_requirements": {
-        "cpu_cores": 1,
-        "memory_gb": 1,
-        "gpu_required": false,
-        "gpu_memory_gb": 0
-      },
-      "dependencies": [
-        "opencv-python>=4.5.0"
-      ],
+      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 1, "gpu_required": false, "gpu_memory_gb": 0},
+      "dependencies": ["opencv-python>=4.5.0"],
       "optional_dependencies": {}
     },
     {
       "class": "BoundingBoxNode",
       "display_name": "相关性匹配",
       "category": "匹配定位",
-      "color": [
-        255,
-        150,
-        100
-      ],
+      "color": [255, 150, 100],
       "resource_level": "light",
-      "hardware_requirements": {
-        "cpu_cores": 1,
-        "memory_gb": 1,
-        "gpu_required": false,
-        "gpu_memory_gb": 0
-      },
-      "dependencies": [
-        "opencv-python>=4.5.0"
-      ],
+      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 1, "gpu_required": false, "gpu_memory_gb": 0},
+      "dependencies": ["opencv-python>=4.5.0"],
       "optional_dependencies": {}
     },
     {
-      "class": "BoundingBoxNode",
+      "class": "ShapeMatchNode",
       "display_name": "形状匹配",
       "category": "匹配定位",
-      "color": [
-        255,
-        150,
-        100
-      ],
+      "color": [255, 150, 100],
       "resource_level": "light",
-      "hardware_requirements": {
-        "cpu_cores": 1,
-        "memory_gb": 1,
-        "gpu_required": false,
-        "gpu_memory_gb": 0
-      },
-      "dependencies": [
-        "opencv-python>=4.5.0"
-      ],
+      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 1, "gpu_required": false, "gpu_memory_gb": 0},
+      "dependencies": ["opencv-python>=4.5.0"],
       "optional_dependencies": {}
     }
   ],
