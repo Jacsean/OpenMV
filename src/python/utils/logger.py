@@ -24,6 +24,7 @@ import os
 import sys
 from enum import Enum
 from datetime import datetime
+from typing import List, Callable
 
 
 class LogLevel(Enum):
@@ -32,13 +33,62 @@ class LogLevel(Enum):
     DEBUG = 2   # 调试模式：输出所有信息
 
 
+class LogHandler:
+    """
+    日志处理器基类
+    
+    子类需要实现 handle() 方法来处理日志消息
+    """
+    def handle(self, level: str, message: str, formatted: str):
+        """
+        处理日志消息
+        
+        Args:
+            level: 日志级别字符串 (INFO/WARNING/ERROR/DEBUG)
+            message: 原始消息内容
+            formatted: 格式化后的完整消息（包含时间戳等）
+        """
+        raise NotImplementedError
+
+
+class ConsoleHandler(LogHandler):
+    """
+    控制台日志处理器
+    
+    将日志输出到标准输出（终端）
+    """
+    def __init__(self, use_color=True):
+        """
+        初始化控制台处理器
+        
+        Args:
+            use_color: 是否启用彩色输出
+        """
+        self.use_color = use_color
+        self.colors = {
+            'INFO': '\033[92m',     # 绿色
+            'WARNING': '\033[93m',  # 黄色
+            'ERROR': '\033[91m',    # 红色
+            'DEBUG': '\033[36m',    # 青色
+            'RESET': '\033[0m'      # 重置
+        }
+    
+    def handle(self, level: str, message: str, formatted: str):
+        """输出到控制台"""
+        if self.use_color and level in self.colors:
+            colored = f"{self.colors[level]}{formatted}{self.colors['RESET']}"
+            print(colored)
+        else:
+            print(formatted)
+
+
 class Logger:
     """
     统一日志管理器
     
     特性：
     - 通过环境变量 LOG_LEVEL 控制输出级别
-    - 支持彩色终端输出（Windows/Linux/macOS）
+    - 支持多Handler（控制台、UI面板等）
     - 自动添加时间戳和级别标识
     - 调试日志可携带额外上下文信息
     """
@@ -57,18 +107,21 @@ class Logger:
         else:
             self.level = level
         
-        # ANSI颜色代码（Windows 10+ 和 Unix系统支持）
-        self.colors = {
-            'INFO': '\033[92m',     # 绿色
-            'WARNING': '\033[93m',  # 黄色
-            'ERROR': '\033[91m',    # 红色
-            'DEBUG': '\033[36m',    # 青色
-            'RESET': '\033[0m'      # 重置
-        }
+        # Handler列表
+        self.handlers: List[LogHandler] = []
         
-        # 检测是否支持彩色输出
-        self.use_color = sys.platform != 'win32' or os.getenv('TERM')
-    
+        # 默认添加控制台Handler
+        self.add_handler(ConsoleHandler())
+
+    def add_handler(self, handler: LogHandler):
+        """
+        添加日志处理器
+        
+        Args:
+            handler: LogHandler实例
+        """
+        self.handlers.append(handler)
+
     def _format_message(self, level, message, **kwargs):
         """
         格式化日志消息
@@ -91,12 +144,24 @@ class Logger:
             context = ', '.join([f"{k}={v}" for k, v in kwargs.items()])
             formatted += f" | {context}"
         
-        # 添加颜色
-        if self.use_color and level in self.colors:
-            formatted = f"{self.colors[level]}{formatted}{self.colors['RESET']}"
-        
         return formatted
-    
+
+    def _log(self, level, message, **kwargs):
+        """
+        内部日志分发方法
+        
+        Args:
+            level: 日志级别
+            message: 消息内容
+            **kwargs: 额外参数
+        """
+        formatted = self._format_message(level, message, **kwargs)
+        for handler in self.handlers:
+            try:
+                handler.handle(level, message, formatted)
+            except Exception:
+                pass
+
     def info(self, message):
         """
         输出正常信息（始终显示）
@@ -104,7 +169,7 @@ class Logger:
         Args:
             message: 信息内容
         """
-        print(self._format_message('INFO', message))
+        self._log('INFO', message)
     
     def warning(self, message):
         """
@@ -113,7 +178,7 @@ class Logger:
         Args:
             message: 警告内容
         """
-        print(self._format_message('WARNING', message))
+        self._log('WARNING', message)
     
     def error(self, message):
         """
@@ -122,7 +187,7 @@ class Logger:
         Args:
             message: 错误内容
         """
-        print(self._format_message('ERROR', message))
+        self._log('ERROR', message)
     
     def success(self, message):
         """
@@ -131,7 +196,7 @@ class Logger:
         Args:
             message: 成功内容
         """
-        print(self._format_message('INFO', f"✅ {message}"))
+        self._log('INFO', f"✅ {message}")
     
     def debug(self, message, **kwargs):
         """
@@ -142,7 +207,7 @@ class Logger:
             **kwargs: 额外的上下文信息
         """
         if self.level == LogLevel.DEBUG:
-            print(self._format_message('DEBUG', message, **kwargs))
+            self._log('DEBUG', message, **kwargs)
     
     def debug_trace(self, message, **kwargs):
         """
@@ -153,7 +218,7 @@ class Logger:
             **kwargs: 详细的上下文数据
         """
         if self.level == LogLevel.DEBUG:
-            print(self._format_message('DEBUG', f"🔍 {message}", **kwargs))
+            self._log('DEBUG', f"🔍 {message}", **kwargs)
     
     def separator(self, char='=', length=60):
         """
@@ -163,6 +228,12 @@ class Logger:
             char: 分隔字符
             length: 长度
         """
+        # 分隔线通常只用于控制台展示，这里为了兼容性保留直接print，
+        # 或者可以通过特定的Handler处理。为保持简单且向后兼容，
+        # 如果只有ConsoleHandler，直接print是安全的。
+        # 更严谨的做法是创建一个专门的格式或通过handler，但separator通常是视觉辅助。
+        # 这里我们假设separator主要用于控制台，直接调用第一个handler或print
+        # 为了简单起见，保持原样直接print，或者遍历handlers如果它们支持纯文本
         print(char * length)
     
     def section(self, title):
