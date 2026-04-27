@@ -44,7 +44,6 @@ class HotReloader:
             on_reload: 重载回调函数，接收插件名称作为参数
         """
         if plugin_name in self.watchers:
-            print(f"⚠️ 插件 {plugin_name} 已在监听中")
             return
         
         watcher_info = {
@@ -55,7 +54,6 @@ class HotReloader:
         }
         
         self.watchers[plugin_name] = watcher_info
-        print(f"✅ 开始监听插件: {plugin_name}")
         
         # 启动监听线程（如果尚未启动）
         if not self._running:
@@ -70,7 +68,6 @@ class HotReloader:
         """
         if plugin_name in self.watchers:
             del self.watchers[plugin_name]
-            print(f"🛑 停止监听插件: {plugin_name}")
     
     def stop_all(self):
         """停止所有监听"""
@@ -78,7 +75,6 @@ class HotReloader:
         self.watchers.clear()
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=2)
-        print("🛑 停止所有插件监听")
     
     def _start_listener_thread(self):
         """启动监听线程"""
@@ -87,7 +83,6 @@ class HotReloader:
         self._running = True
         self._thread = threading.Thread(target=self._listener_loop, daemon=True)
         self._thread.start()
-        print("✅ 热重载监听线程已启动")
     
     def _listener_loop(self):
         """监听循环（在后台线程中运行）"""
@@ -116,8 +111,6 @@ class HotReloader:
                 if latest_mtime > watcher['last_modified']:
                     # 防抖检查
                     if current_time - watcher['last_trigger'] >= self.debounce_time:
-                        print(f"\n🔄 检测到插件变化: {plugin_name}")
-                        
                         # 触发重载回调
                         try:
                             watcher['on_reload'](plugin_name)

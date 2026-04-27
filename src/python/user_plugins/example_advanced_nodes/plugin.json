@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "author": "OpenCV Team",
   "description": "高级节点示例包（多输入输出、复杂处理、最佳实践演示）",
-  "category_group": "预处理",
+  "category_group": "高级处理",
   "nodes": [
     {
       "class": "MultiInputBlendNode",

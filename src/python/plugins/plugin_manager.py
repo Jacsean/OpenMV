@@ -213,8 +213,6 @@ class PluginManager:
                     print(f"   - {v}")
                 return False
             
-            print(f"✅ 安全检查通过: {plugin_name}")
-            
             # 4. 动态导入模块
             # 关键修复：正确设置包层次结构以支持相对导入
             if is_new_structure:
@@ -255,8 +253,6 @@ class PluginManager:
                     sys.modules[plugin_package_name] = plugin_package_module
             
             spec.loader.exec_module(module)
-
-            print(f"✅ 模块加载成功: {plugin_name}")
             
             # 5. 提取节点类并注册
             registered_count = 0
@@ -317,7 +313,6 @@ class PluginManager:
                 icon = node_def.icon
                 # NodeGraphQt 可能不支持直接设置图标，这里预留接口
                 # node_class.set_icon(icon)
-                print(f"   📌 节点图标: {icon}")
             
             # 设置节点尺寸（如果支持）
             if node_def.width is not None or node_def.height is not None:
@@ -330,19 +325,16 @@ class PluginManager:
                     node_class._style_config['height'] = height
                 else:
                     node_class._style_config = {'width': width, 'height': height}
-                print(f"   📐 节点尺寸: {width}x{height}")
             
             # 存储描述信息用于说明面板
             if node_def.description:
                 description = node_def.description
                 if not hasattr(node_class, '_node_description'):
                     node_class._node_description = description
-                print(f"   📝 节点描述已加载 ({len(description)} 字符)")
                 
             # 设置节点颜色（如果支持）
             if node_def.color:
                 color = node_def.color
-                print(f"   🎨 节点颜色: RGB{tuple(color)}")
                 
         except Exception as e:
             print(f"   ⚠️ 应用节点样式失败: {e}")

@@ -210,6 +210,10 @@ class ProjectUIManager:
         """
         打开工程（支持单文件.proj格式）（UI触发）
         """
+        print(f"\n{'='*60}")
+        print(f"📂 UI: 开始打开工程流程")
+        print(f"{'='*60}\n")
+        
         # 检查当前工程是否有未保存修改
         if self.project_manager.has_unsaved_changes():
             reply = QtWidgets.QMessageBox.question(
@@ -222,6 +226,7 @@ class ProjectUIManager:
             if reply == QtWidgets.QMessageBox.Save:
                 self.save_project_from_ui()
             elif reply == QtWidgets.QMessageBox.Cancel:
+                print("⚠️ 用户取消打开工程")
                 return
         
         # 选择工程文件（.proj单文件）
@@ -233,58 +238,151 @@ class ProjectUIManager:
         )
         
         if not file_path:
+            print("⚠️ 用户取消选择文件")
             return
         
+        print(f"📄 用户选择文件: {file_path}")
+        
         # 关闭当前工程
+        print(f"\n🗑️ 关闭当前工程...")
         self.project_manager.close_project()
         
         # 清空标签页
+        tab_count_before = self.main_window.tab_widget.count()
         self.main_window.tab_widget.clear()
+        print(f"   🧹 清空标签页 (之前有 {tab_count_before} 个)")
         
-        print(f"📂 开始打开工程: {file_path}")
+        print(f"\n📂 开始打开工程: {file_path}")
         
         # 使用ProjectManager的import_project方法从单文件加载
         project = self.project_manager.import_project(file_path)
         
         if project:
-            print(f"✅ 工程已打开: {project.name}")
+            print(f"\n✅ 工程数据加载成功: {project.name}")
             print(f"   工作流数量: {len(project.workflows)}")
             
             # 获取预加载的节点图数据（如果有）
             workflows_session_data = getattr(project, '_workflows_session_data', {})
+            print(f"   预加载的工作流数据: {len(workflows_session_data)} 个")
             
             # 为每个工作流创建标签页
+            print(f"\n🏗️  开始创建工作流标签页...")
             for i, workflow in enumerate(project.workflows):
+                print(f"\n--- 处理工作流 {i+1}/{len(project.workflows)}: {workflow.name} ---")
+                
                 # 检查工作流是否已有NodeGraph（从缓存中）
                 if workflow.node_graph is None:
+                    print(f"   🔨 创建新的 NodeGraph 实例")
                     # 创建工作流的NodeGraph
+                    from NodeGraphQt import NodeGraph
                     node_graph = NodeGraph()
+                    
+                    # 🔑 关键修复：先注册所有插件节点，再反序列化
+                    print(f"   🔌 注册插件节点到 NodeGraph...")
+                    if hasattr(self.main_window, 'plugin_manager'):
+                        try:
+                            # 获取所有已加载的插件
+                            loaded_plugins = self.main_window.plugin_manager.get_loaded_plugins()
+                            print(f"      📦 已加载插件数量: {len(loaded_plugins)}")
+                            
+                            # 将每个插件的节点注册到当前 NodeGraph
+                            registered_node_count = 0
+                            for plugin_info in loaded_plugins:
+                                if plugin_info.enabled:
+                                    self.main_window.plugin_manager.load_plugin_nodes(
+                                        plugin_info.name,
+                                        node_graph
+                                    )
+                                    registered_node_count += len(plugin_info.nodes)
+                            
+                            print(f"      ✅ 共注册 {registered_node_count} 个节点类型")
+                        except Exception as e:
+                            print(f"      ❌ 注册插件节点失败: {e}")
+                            import traceback
+                            traceback.print_exc()
+                    else:
+                        print(f"      ⚠️ 未找到 plugin_manager，跳过节点注册")
+                    
                     workflow.node_graph = node_graph
                     
-                    # 加载节点图数据
+                    # 加载节点图数据（在节点注册之后）
                     session_data = workflows_session_data.get(i)
                     if session_data:
+                        print(f"   📥 尝试反序列化节点图数据...")
+                        print(f"      数据类型: {type(session_data)}")
+                        print(f"      数据键: {session_data.keys() if isinstance(session_data, dict) else 'N/A'}")
+                        
+                        # 检查 nodes 字段
+                        if isinstance(session_data, dict) and 'nodes' in session_data:
+                            node_count_in_data = len(session_data['nodes'])
+                            print(f"      📊 JSON 中的节点数量: {node_count_in_data}")
+                            if node_count_in_data > 0:
+                                print(f"      📋 节点列表:")
+                                for node_id, node_info in session_data['nodes'].items():
+                                    node_type = node_info.get('type_', 'Unknown')
+                                    node_name = node_info.get('name', 'Unnamed')
+                                    print(f"         - {node_name} ({node_type})")
+                        
                         try:
-                            node_graph.deserialize_session(session_data)
-                            print(f"✅ 加载工作流: {workflow.name} ({len(node_graph.all_nodes())} 个节点)")
+                            # 反序列化前记录当前节点数
+                            before_count = len(node_graph.all_nodes())
+                            print(f"      🔢 反序列化前节点数: {before_count}")
+                            
+                            # 执行反序列化
+                            result = node_graph.deserialize_session(session_data)
+                            print(f"      🔄 deserialize_session 返回值: {result}")
+                            
+                            # 反序列化后记录节点数
+                            after_count = len(node_graph.all_nodes())
+                            print(f"      🔢 反序列化后节点数: {after_count}")
+                            
+                            if after_count == 0 and node_count_in_data > 0:
+                                print(f"      ⚠️  警告: 数据中有 {node_count_in_data} 个节点，但反序列化后为 0")
+                                print(f"      💡 可能原因:")
+                                print(f"         1. 节点类型未注册（插件未加载）")
+                                print(f"         2. JSON 格式不兼容")
+                                print(f"         3. NodeGraphQt 版本问题")
+                                
+                                # 尝试手动调试
+                                print(f"\n      🔍 调试信息:")
+                                print(f"         session_data 类型: {type(session_data)}")
+                                if isinstance(session_data, dict):
+                                    print(f"         session_data 顶层键: {list(session_data.keys())}")
+                                    if 'graph' in session_data:
+                                        print(f"         graph 配置: {session_data['graph']}")
+                            
+                            print(f"   ✅ 加载工作流: {workflow.name} ({after_count} 个节点)")
+                            
+                            # 列出所有节点
+                            if after_count > 0:
+                                print(f"   📋 节点列表:")
+                                for node in node_graph.all_nodes():
+                                    print(f"      - {node.name()} ({node.type_})")
                         except Exception as e:
-                            print(f"❌ 加载工作流失败: {e}")
+                            print(f"   ❌ 加载工作流失败: {e}")
                             import traceback
                             traceback.print_exc()
                     elif workflow.file_path:
                         # 备用方案：从文件路径加载（兼容旧格式）
-                        wf_full_path = os.path.join(os.path.dirname(proj_file), workflow.file_path)
+                        print(f"   📁 尝试从文件路径加载...")
+                        wf_full_path = os.path.join(os.path.dirname(file_path), workflow.file_path)
                         if os.path.exists(wf_full_path):
                             try:
                                 node_graph.deserialize_session(wf_full_path)
-                                print(f"✅ 从文件加载工作流: {workflow.name}")
+                                print(f"   ✅ 从文件加载工作流: {workflow.name}")
                             except Exception as e:
-                                print(f"❌ 从文件加载工作流失败: {e}")
+                                print(f"   ❌ 从文件加载工作流失败: {e}")
+                        else:
+                            print(f"   ⚠️ 文件不存在: {wf_full_path}")
+                    else:
+                        print(f"   ⚠️ 没有节点图数据，创建空工作流")
                     
                     # 连接信号（新创建的NodeGraph，无需断开）
+                    print(f"   🔗 连接信号...")
                     node_graph.node_created.connect(lambda n, wf=workflow: self.main_window._on_node_created(n, wf))
                     node_graph.node_double_clicked.connect(lambda n, wf=workflow: self.main_window._on_node_double_clicked(n, wf))
                 else:
+                    print(f"   ♻️  使用已存在的 NodeGraph")
                     # 已存在的NodeGraph，需要先断开旧信号再重新连接
                     try:
                         workflow.node_graph.node_created.disconnect()
@@ -297,16 +395,26 @@ class ProjectUIManager:
                     workflow.node_graph.node_double_clicked.connect(lambda n, wf=workflow: self.main_window._on_node_double_clicked(n, wf))
                 
                 # 添加到标签页
+                print(f"   📑 添加标签页到UI...")
                 self.add_workflow_tab_to_ui(workflow)
+                print(f"   ✅ 标签页添加完成")
             
             # 激活第一个工作流
             if project.workflows:
+                print(f"\n🎯 激活第一个工作流...")
                 self.main_window.tab_widget.setCurrentIndex(0)
                 self.on_tab_changed(0)
+                print(f"   ✅ 激活完成")
             
             # 添加到最近工程列表
+            print(f"\n📋 添加到最近工程列表...")
             self.add_to_recent_projects(os.path.dirname(os.path.abspath(file_path)))
+            
+            print(f"\n{'='*60}")
+            print(f"✅ 工程打开流程完成!")
+            print(f"{'='*60}\n")
         else:
+            print(f"\n❌ 工程数据加载失败")
             QtWidgets.QMessageBox.critical(
                 self.main_window,
                 "错误",
@@ -682,7 +790,58 @@ class ProjectUIManager:
         Args:
             workflow: Workflow对象
         """
+        print(f"   📊 add_workflow_tab_to_ui 被调用")
+        print(f"      工作流名称: {workflow.name}")
+        print(f"      NodeGraph 是否存在: {workflow.node_graph is not None}")
+        
+        # 如果工作流还没有NodeGraph，创建一个新的
+        if workflow.node_graph is None:
+            print(f"      ⚠️ NodeGraph 不存在，创建新的...")
+            from NodeGraphQt import NodeGraph
+            node_graph = NodeGraph()
+            
+            # 🔑 关键修复：注册所有插件节点到新的 NodeGraph
+            # 检查是否已经注册过（避免重复注册）
+            if not hasattr(node_graph, '_plugins_registered'):
+                print(f"      🔌 注册插件节点到 NodeGraph...")
+                if hasattr(self.main_window, 'plugin_manager'):
+                    try:
+                        # 获取所有已加载的插件
+                        loaded_plugins = self.main_window.plugin_manager.get_loaded_plugins()
+                        print(f"      📦 已加载插件数量: {len(loaded_plugins)}")
+                        
+                        # 将每个插件的节点注册到当前 NodeGraph
+                        registered_node_count = 0
+                        for plugin_info in loaded_plugins:
+                            if plugin_info.enabled:
+                                self.main_window.plugin_manager.load_plugin_nodes(
+                                    plugin_info.name,
+                                    node_graph
+                                )
+                                registered_node_count += len(plugin_info.nodes)
+                        
+                        print(f"      ✅ 共注册 {registered_node_count} 个节点类型")
+                        
+                        # 标记为已注册
+                        node_graph._plugins_registered = True
+                    except Exception as e:
+                        print(f"      ❌ 注册插件节点失败: {e}")
+                        import traceback
+                        traceback.print_exc()
+                else:
+                    print(f"      ⚠️ 未找到 plugin_manager，跳过节点注册")
+            else:
+                print(f"      ℹ️  插件节点已注册，跳过")
+            
+            workflow.node_graph = node_graph
+            
+            # 连接信号
+            print(f"      🔗 连接信号...")
+            node_graph.node_created.connect(lambda n, wf=workflow: self.main_window._on_node_created(n, wf))
+            node_graph.node_double_clicked.connect(lambda n, wf=workflow: self.main_window._on_node_double_clicked(n, wf))
+        
         graph_widget = workflow.node_graph.widget
+        print(f"      🖼️  获取 Graph Widget: {graph_widget}")
         
         # 为 NodeGraph widget 安装事件过滤器（拦截节点删除）
         graph_widget.installEventFilter(self.main_window)
@@ -690,5 +849,8 @@ class ProjectUIManager:
         tab_title = workflow.name
         if workflow.is_modified:
             tab_title += " *"
-            
-        self.main_window.tab_widget.addTab(graph_widget, tab_title)
+        
+        print(f"      ➕ 添加标签页: '{tab_title}'")
+        tab_index = self.main_window.tab_widget.addTab(graph_widget, tab_title)
+        print(f"      ✅ 标签页索引: {tab_index}")
+        print(f"      📑 当前标签页总数: {self.main_window.tab_widget.count()}")
