@@ -206,7 +206,7 @@ class PluginManager:
                 module_name = f"plugin_{plugin_name}_nodes"
             
             # 3. 权限检查
-            violations = PermissionChecker.check_source_code(source_code)
+            violations = PermissionChecker.check_source_code(source_code, plugin_name)
             if violations:
                 print(f"🚫 插件 {plugin_name} 安全检查失败:")
                 for v in violations:
