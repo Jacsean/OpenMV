@@ -64,7 +64,7 @@ class ContoursAnalysisNode(BaseNode):
         
         # 轮廓查找参数
         self.add_text_input('retrieval_mode', '查找模式', tab='properties')
-        self.set_property('retrieval_mode', 'RETR_EXTERNAL') # RETR_EXTERNAL / RETR_LIST / RETR_CCOMP / RETR_TREE
+        self.set_property('retrieval_mode', 'RETR_EXTERNAL')                # RETR_EXTERNAL / RETR_LIST / RETR_CCOMP / RETR_TREE
         
         self.add_text_input('approximation_method', '近似方法', tab='properties')
         self.set_property('approximation_method', 'CHAIN_APPROX_SIMPLE')    # CHAIN_APPROX_NONE / CHAIN_APPROX_SIMPLE / CHAIN_APPROX_TC89_L1 / CHAIN_APPROX_TC89_KCOS
@@ -78,26 +78,26 @@ class ContoursAnalysisNode(BaseNode):
         
         # 形状检测开关
         self.add_text_input('enable_circle_detection', '启用圆形检测', tab='properties')
-        self.set_property('enable_circle_detection', 'True')
+        self.set_property('enable_circle_detection', 'True')            # True / False
         
         self.add_text_input('circle_circularity_threshold', '圆度阈值(0-1)', tab='properties')
         self.set_property('circle_circularity_threshold', '0.85')
         
         self.add_text_input('enable_rectangle_detection', '启用矩形检测', tab='properties')
-        self.set_property('enable_rectangle_detection', 'True')
+        self.set_property('enable_rectangle_detection', 'True')            # True / False
         
         self.add_text_input('rectangle_fill_ratio_threshold', '填充率阈值(0-1)', tab='properties')
         self.set_property('rectangle_fill_ratio_threshold', '0.80')
         
         self.add_text_input('enable_line_detection', '启用直线检测', tab='properties')
-        self.set_property('enable_line_detection', 'True')
+        self.set_property('enable_line_detection', 'True')            # True / False
         
         self.add_text_input('line_straightness_threshold', '直线度阈值(0-1)', tab='properties')
         self.set_property('line_straightness_threshold', '0.90')
         
         # 显示选项
         self.add_text_input('draw_contours', '绘制轮廓', tab='properties')
-        self.set_property('draw_contours', 'True')
+        self.set_property('draw_contours', 'True')            # True / False
         
         self.add_text_input('contour_color_r', '轮廓颜色-R', tab='properties')
         self.set_property('contour_color_r', '0')
@@ -116,10 +116,10 @@ class ContoursAnalysisNode(BaseNode):
         self.set_property('export_mode', 'memory_only')  # memory_only / csv / excel / json / all
         
         self.add_text_input('export_path', '导出路径(可选)', tab='properties')
-        self.set_property('export_path', '')
+        self.set_property('export_path', '')        # 导出路径，默认为空
         
         self.add_text_input('filename_prefix', '文件名前缀', tab='properties')
-        self.set_property('filename_prefix', 'contours_')
+        self.set_property('filename_prefix', 'contours_')       # 导出文件名前缀，默认值为'contours_'
 
     def _get_retrieval_mode(self, mode_str):
         """获取轮廓检索模式"""

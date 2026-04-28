@@ -7,3 +7,4 @@ from .sobel_edge import SobelEdgeNode
 from .other_features import LaplacianNode, HarrisCornerNode, HoughLinesNode, HoughCirclesNode
 from .contours_analysis import ContoursAnalysisNode
 from .template_creator import TemplateCreatorNode
+from .template_match import TemplateMatchNode
