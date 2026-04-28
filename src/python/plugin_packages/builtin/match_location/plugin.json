@@ -67,6 +67,60 @@
         "opencv-python>=4.5.0"
       ],
       "optional_dependencies": {}
+    },
+    {
+      "class": "TemplateCreatorNode",
+      "display_name": "模板创建",
+      "category": "模板匹配",
+      "color": [
+        255,
+        255,
+        100
+      ],
+      "icon": "📋",
+      "width": 200,
+      "height": 120,
+      "description": "从轮廓分析结果中提取特征描述符并生成模板数据，支持Hu矩/Shape Context/Hausdorff算法",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {
+        "shape_context": ["opencv-contrib-python>=4.5.0"]
+      }
+    },
+    {
+      "class": "TemplateMatchNode",
+      "display_name": "模板匹配",
+      "category": "模板匹配",
+      "color": [
+        255,
+        200,
+        100
+      ],
+      "icon": "🎯",
+      "width": 200,
+      "height": 120,
+      "description": "基于预生成模板在图像中搜索匹配的轮廓，支持Hu矩/Hausdorff/Shape Context算法和相似度阈值控制",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {
+        "shape_context": ["opencv-contrib-python>=4.5.0"]
+      }
     }
   ],
   "dependencies": [],

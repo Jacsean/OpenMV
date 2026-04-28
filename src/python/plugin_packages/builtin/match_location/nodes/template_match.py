@@ -31,7 +31,7 @@ class TemplateMatchNode(BaseNode):
     - GPU: 不需要
     """
     
-    __identifier__ = 'feature_extraction'
+    __identifier__ = 'match_location'
     NODE_NAME = '模板匹配'
     
     # 资源等级声明

@@ -32,7 +32,7 @@ class TemplateCreatorNode(BaseNode):
     - GPU: 不需要
     """
     
-    __identifier__ = 'feature_extraction'
+    __identifier__ = 'match_location'
     NODE_NAME = '模板创建'
     
     # 资源等级声明

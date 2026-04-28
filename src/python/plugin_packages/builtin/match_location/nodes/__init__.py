@@ -154,3 +154,8 @@ class ShapeMatchNode(BaseNode):
         except Exception as e:
             self.log_error(f"形状匹配错误: {e}")
             return {'输出图像': None}
+
+
+# 导入迁移的模板节点
+from .template_creator import TemplateCreatorNode
+from .template_match import TemplateMatchNode
