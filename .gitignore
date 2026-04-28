@@ -71,3 +71,8 @@ src/python/plugin_packages/marketplace/cache/
 
 # 用户实验性插件（可选，避免误提交未完成的插件）
 # src/python/plugin_packages/marketplace/installed/my_*
+
+# AI 记忆系统
+# ⚠️ 注意：.ai_memories/ 目录应纳入版本控制，不要忽略
+# 它包含全局偏好、项目规范和会话记录，是项目知识的重要组成部分
+# .ai_memories/
