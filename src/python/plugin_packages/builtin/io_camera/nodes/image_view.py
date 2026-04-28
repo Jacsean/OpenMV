@@ -42,15 +42,23 @@ class ImageViewNode(BaseNode):
         # 输入端口
         self.add_input('输入图像', color=(100, 255, 100))
         
-        # 输出端口（传递图像）
+        # 输出端口（传递图像和ROI信息）
         self.add_output('输出图像', color=(100, 255, 100))
+        self.add_output('ROI数据', color=(255, 165, 0))  # 橙色端口
         
         # 状态信息显示
         self.add_text_input('status', '状态信息', tab='properties')
         
+        # ROI数据显示（JSON格式）
+        self.add_text_input('roi_data', 'ROI数据(JSON)', tab='properties')
+        self.set_property('roi_data', '')
+        
         # 缓存最后一张处理的图像（用于预览）
         self._cached_image = None
-    
+        
+        # 缓存ROI数据
+        self._roi_data = []
+
     def process(self, inputs=None):
         """
         处理节点逻辑
@@ -89,11 +97,19 @@ class ImageViewNode(BaseNode):
             dtype = str(image.dtype)
             status_msg += f", 类型: {dtype}"
             
+            # 添加ROI数量信息
+            roi_count = len(self._roi_data)
+            if roi_count > 0:
+                status_msg += f", ROI数: {roi_count}"
+            
             self.set_property('status', status_msg)
             
-            # Step 4: 输出图像供下游节点使用
-            return {'输出图像': image}
-            
+            # Step 4: 输出图像和ROI数据供下游节点使用
+            return {
+                '输出图像': image,
+                'ROI数据': self._roi_data if self._roi_data else None
+            }
+
         except Exception as e:
             error_msg = f"处理错误: {str(e)}"
             self.set_property('status', error_msg)
@@ -108,3 +124,36 @@ class ImageViewNode(BaseNode):
             numpy.ndarray or None: 缓存的图像数据
         """
         return self._cached_image
+    
+    def set_roi_data(self, roi_data):
+        """
+        设置ROI数据（从预览窗口调用）
+        
+        Args:
+            roi_data: ROI数据列表
+        """
+        import json
+        if isinstance(roi_data, str):
+            # 如果是JSON字符串，解析它
+            try:
+                self._roi_data = json.loads(roi_data)
+                self.set_property('roi_data', roi_data)
+            except Exception as e:
+                self.log_error(f"解析ROI数据失败: {e}")
+                self._roi_data = []
+        else:
+            # 直接赋值
+            self._roi_data = roi_data if roi_data else []
+            # 更新属性显示
+            roi_json = json.dumps(self._roi_data, ensure_ascii=False, indent=2)
+            self.set_property('roi_data', roi_json)
+        
+        # 更新状态信息
+        if hasattr(self, '_cached_image') and self._cached_image is not None:
+            height, width = self._cached_image.shape[:2]
+            channels = self._cached_image.shape[2] if len(self._cached_image.shape) == 3 else 1
+            status_msg = f"图像尺寸: {width}x{height}"
+            if channels > 1:
+                status_msg += f", 通道数: {channels}"
+            status_msg += f", ROI数: {len(self._roi_data)}"
+            self.set_property('status', status_msg)

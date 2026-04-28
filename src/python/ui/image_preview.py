@@ -46,10 +46,17 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         # === 标注系统初始化 BEGIN ===
         self.annotation_layer = AnnotationLayer()
-        self.current_tool = None  # 当前激活的工具: 'rect', 'circle', 'text', None
+        self.current_tool = None  # 当前激活的工具: 'rect', 'circle', 'text', 'roi_rect', 'roi_circle', None
         self.drawing_start_pos = None  # 绘制起始位置（Qt坐标）
         self.current_drawing_rect = None  # 当前正在绘制的形状（用于实时预览）
         self.temp_text_dialog = None  # 文本输入对话框
+        
+        # ROI相关状态
+        self.roi_mode = False  # 是否处于ROI模式
+        self.selected_roi = None  # 当前选中的ROI
+        self.roi_resize_handle = None  # ROI调整手柄: None, 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'top', 'bottom', 'left', 'right'
+        self.resize_start_pos = None  # 调整大小起始位置
+        self.HANDLE_SIZE = 8  # 手柄大小（像素）
         # === 标注系统初始化 END ===
         
         # 设置窗口属性
@@ -80,6 +87,25 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         # === 标注工具栏 BEGIN ===
         annotation_toolbar = QtWidgets.QHBoxLayout()
+        
+        # ROI模式切换按钮
+        self.roi_mode_btn = QtWidgets.QPushButton("📐 ROI模式")
+        self.roi_mode_btn.setCheckable(True)
+        self.roi_mode_btn.clicked.connect(self.toggle_roi_mode)
+        self.roi_mode_btn.setToolTip("切换到ROI编辑模式（绘制和调整ROI区域）")
+        self.roi_mode_btn.setStyleSheet("""
+            QPushButton:checked {
+                background-color: #4CAF50;
+                color: white;
+            }
+        """)
+        annotation_toolbar.addWidget(self.roi_mode_btn)
+        
+        # 分隔线
+        separator1 = QtWidgets.QFrame()
+        separator1.setFrameShape(QtWidgets.QFrame.VLine)
+        separator1.setFrameShadow(QtWidgets.QFrame.Sunken)
+        annotation_toolbar.addWidget(separator1)
         
         # 矩形工具
         self.rect_tool_btn = QtWidgets.QPushButton("▭ 矩形")
@@ -183,6 +209,12 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         refresh_btn.clicked.connect(self.refresh_preview)
         refresh_btn.setToolTip("从关联节点获取最新图像并刷新显示")
         button_layout.addWidget(refresh_btn)
+        
+        export_roi_btn = QtWidgets.QPushButton("📐 导出ROI")
+        export_roi_btn.clicked.connect(self.export_roi_to_node)
+        export_roi_btn.setToolTip("将ROI数据导出到关联的ImageViewNode")
+        export_roi_btn.setStyleSheet("color: #2196F3; font-weight: bold;")
+        button_layout.addWidget(export_roi_btn)
         
         save_btn = QtWidgets.QPushButton("💾 保存图像")
         save_btn.clicked.connect(self.save_image)
@@ -670,6 +702,480 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     # === 标注功能方法 END ===
 
+    # === ROI功能方法 BEGIN ===
+    
+    def toggle_roi_mode(self):
+        """
+        切换ROI模式
+        """
+        self.roi_mode = self.roi_mode_btn.isChecked()
+        
+        if self.roi_mode:
+            # 进入ROI模式：禁用其他工具
+            self.current_tool = None
+            self.rect_tool_btn.setChecked(False)
+            self.circle_tool_btn.setChecked(False)
+            self.text_tool_btn.setChecked(False)
+            
+            # 设置光标为十字形
+            self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
+            
+            print("✅ ROI模式已启用：点击绘制ROI，拖动调整大小")
+        else:
+            # 退出ROI模式
+            self.selected_roi = None
+            self.roi_resize_handle = None
+            
+            # 恢复默认光标
+            self.graphics_view.setCursor(QtCore.Qt.ArrowCursor)
+            
+            # 恢复拖拽模式
+            self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
+            
+            print("✅ ROI模式已关闭")
+        
+        # 重绘以更新显示
+        self.redraw_annotations()
+    
+    def get_roi_at_position(self, scene_pos):
+        """
+        获取指定位置的ROI
+        
+        Args:
+            scene_pos: 场景坐标 QPointF
+            
+        Returns:
+            Annotation or None: ROI对象，如果未找到则返回None
+        """
+        # 遍历所有ROI标注（假设type为'roi_rect'或'roi_circle'）
+        for ann in reversed(self.annotation_layer.annotations):
+            if ann.type in ['roi_rect', 'roi_circle']:
+                if self.is_point_in_roi(ann, scene_pos):
+                    return ann
+        return None
+    
+    def is_point_in_roi(self, roi, point):
+        """
+        判断点是否在ROI内
+        
+        Args:
+            roi: ROI标注对象
+            point: QPointF坐标
+            
+        Returns:
+            bool: 是否在ROI内
+        """
+        if roi.type == 'roi_rect' and len(roi.points) >= 2:
+            # 矩形ROI
+            x1, y1 = roi.points[0]
+            x2, y2 = roi.points[1]
+            rect = QtCore.QRectF(
+                min(x1, x2), min(y1, y2),
+                abs(x2 - x1), abs(y2 - y1)
+            )
+            return rect.contains(point)
+            
+        elif roi.type == 'roi_circle' and len(roi.points) >= 2:
+            # 圆形ROI
+            center_x, center_y = roi.points[0]
+            edge_x, edge_y = roi.points[1]
+            radius = ((edge_x - center_x)**2 + (edge_y - center_y)**2)**0.5
+            
+            distance = ((point.x() - center_x)**2 + (point.y() - center_y)**2)**0.5
+            return distance <= radius
+        
+        return False
+    
+    def get_resize_handle(self, roi, scene_pos):
+        """
+        获取ROI的调整手柄位置
+        
+        Args:
+            roi: ROI标注对象
+            scene_pos: 场景坐标
+            
+        Returns:
+            str or None: 手柄名称 ('top-left', 'top-right', etc.) 或 None
+        """
+        if roi.type != 'roi_rect' or len(roi.points) < 2:
+            return None
+        
+        x1, y1 = roi.points[0]
+        x2, y2 = roi.points[1]
+        
+        # 计算矩形的8个控制点
+        handles = {
+            'top-left': (min(x1, x2), min(y1, y2)),
+            'top-right': (max(x1, x2), min(y1, y2)),
+            'bottom-left': (min(x1, x2), max(y1, y2)),
+            'bottom-right': (max(x1, x2), max(y1, y2)),
+            'top': ((x1 + x2) / 2, min(y1, y2)),
+            'bottom': ((x1 + x2) / 2, max(y1, y2)),
+            'left': (min(x1, x2), (y1 + y2) / 2),
+            'right': (max(x1, x2), (y1 + y2) / 2),
+        }
+        
+        # 检查鼠标是否在手柄附近
+        for handle_name, (hx, hy) in handles.items():
+            distance = ((scene_pos.x() - hx)**2 + (scene_pos.y() - hy)**2)**0.5
+            if distance <= self.HANDLE_SIZE / self.zoom_factor:
+                return handle_name
+        
+        return None
+    
+    def mousePressEvent(self, event):
+        """
+        鼠标按下事件：处理ROI选择和调整
+        """
+        # 检查是否点击了graphics_view内部
+        if self.graphics_view.underMouse():
+            # 获取相对于graphics_view的位置
+            view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+            scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
+            
+            if self.roi_mode:
+                # ROI模式下
+                if event.button() == QtCore.Qt.LeftButton:
+                    # 检查是否点击了现有ROI的手柄
+                    if self.selected_roi:
+                        handle = self.get_resize_handle(self.selected_roi, scene_pos)
+                        if handle:
+                            # 开始调整大小
+                            self.roi_resize_handle = handle
+                            self.resize_start_pos = scene_pos
+                            print(f"🔧 开始调整ROI大小: {handle}")
+                            event.accept()
+                            return
+                    
+                    # 检查是否点击了现有ROI
+                    clicked_roi = self.get_roi_at_position(scene_pos)
+                    if clicked_roi:
+                        # 选中ROI
+                        self.selected_roi = clicked_roi
+                        print(f"✅ 选中ROI: {clicked_roi.id}")
+                        self.redraw_annotations()
+                        event.accept()
+                        return
+                    else:
+                        # 取消选中
+                        self.selected_roi = None
+                        self.drawing_start_pos = view_pos
+                        print("🎨 开始绘制新ROI")
+                        event.accept()
+                        return
+            
+            elif self.current_tool in ['rect', 'circle']:
+                # 普通标注模式
+                self.drawing_start_pos = view_pos
+                event.accept()
+                return
+                
+            elif self.current_tool == 'text':
+                # 文字工具
+                self.show_text_input_dialog(view_pos)
+                event.accept()
+                return
+        
+        super(ImagePreviewDialog, self).mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """
+        鼠标移动事件：处理ROI调整和实时预览
+        """
+        if self.graphics_view.underMouse():
+            view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+            scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
+            
+            if self.roi_mode and self.roi_resize_handle and self.selected_roi:
+                # 正在调整ROI大小
+                delta_x = scene_pos.x() - self.resize_start_pos.x()
+                delta_y = scene_pos.y() - self.resize_start_pos.y()
+                
+                # 根据手柄类型调整ROI
+                self.resize_roi(self.selected_roi, self.roi_resize_handle, delta_x, delta_y)
+                
+                # 更新起始位置
+                self.resize_start_pos = scene_pos
+                
+                # 重绘
+                self.redraw_annotations()
+                event.accept()
+                return
+            
+            elif self.roi_mode and self.drawing_start_pos is not None:
+                # 正在绘制新ROI
+                # 移除旧的临时预览
+                for item in self.scene.items():
+                    if hasattr(item, 'is_temp_preview'):
+                        self.scene.removeItem(item)
+                
+                # 绘制临时ROI预览（蓝色虚线）
+                color = QtGui.QColor(0, 100, 255)  # 蓝色
+                pen = QtGui.QPen(color, 2)
+                pen.setStyle(QtCore.Qt.DashLine)
+                
+                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
+                
+                temp_item = self.scene.addRect(
+                    QtCore.QRectF(start_scene_pos, scene_pos).normalized(),
+                    pen
+                )
+                temp_item.is_temp_preview = True
+            
+            elif self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
+                # 普通标注模式的实时预览
+                for item in self.scene.items():
+                    if hasattr(item, 'is_temp_preview'):
+                        self.scene.removeItem(item)
+                
+                color = QtGui.QColor(0, 255, 0)  # 绿色
+                pen = QtGui.QPen(color, 2)
+                pen.setStyle(QtCore.Qt.DashLine)
+                
+                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
+                
+                if self.current_tool == 'rect':
+                    temp_item = self.scene.addRect(
+                        QtCore.QRectF(start_scene_pos, scene_pos).normalized(),
+                        pen
+                    )
+                elif self.current_tool == 'circle':
+                    radius = ((scene_pos.x() - start_scene_pos.x())**2 + 
+                             (scene_pos.y() - start_scene_pos.y())**2)**0.5
+                    circle_rect = QtCore.QRectF(
+                        start_scene_pos.x() - radius,
+                        start_scene_pos.y() - radius,
+                        radius * 2,
+                        radius * 2
+                    )
+                    temp_item = self.scene.addEllipse(circle_rect, pen)
+                
+                temp_item.is_temp_preview = True
+        
+        super(ImagePreviewDialog, self).mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """
+        鼠标释放事件：完成ROI绘制或调整
+        """
+        if self.graphics_view.underMouse():
+            view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+            scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
+            
+            if self.roi_mode:
+                if self.roi_resize_handle:
+                    # 完成调整
+                    self.roi_resize_handle = None
+                    self.resize_start_pos = None
+                    print("✅ ROI调整完成")
+                    event.accept()
+                    return
+                
+                elif self.drawing_start_pos is not None:
+                    # 完成绘制新ROI
+                    start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
+                    
+                    # 清除临时预览
+                    for item in self.scene.items():
+                        if hasattr(item, 'is_temp_preview'):
+                            self.scene.removeItem(item)
+                    
+                    # 创建矩形ROI
+                    annotation = Annotation(
+                        type='roi_rect',
+                        points=[
+                            (int(start_scene_pos.x()), int(start_scene_pos.y())),
+                            (int(scene_pos.x()), int(scene_pos.y()))
+                        ],
+                        properties={
+                            'color': (255, 100, 0),  # 橙色 BGR
+                            'thickness': 3,
+                            'name': f'ROI_{len(self.annotation_layer.annotations) + 1}'
+                        }
+                    )
+                    
+                    self.annotation_layer.add_annotation(annotation)
+                    self.selected_roi = annotation
+                    
+                    self.drawing_start_pos = None
+                    
+                    self.redraw_annotations()
+                    print(f"✅ 已创建ROI: {annotation.properties['name']}")
+                    event.accept()
+                    return
+            
+            elif self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
+                # 普通标注模式完成绘制
+                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
+                
+                annotation = Annotation(
+                    type=self.current_tool,
+                    points=[
+                        (int(start_scene_pos.x()), int(start_scene_pos.y())),
+                        (int(scene_pos.x()), int(scene_pos.y()))
+                    ],
+                    properties={
+                        'color': (0, 255, 0),  # 绿色 BGR
+                        'thickness': 2
+                    }
+                )
+                
+                self.annotation_layer.add_annotation(annotation)
+                
+                for item in self.scene.items():
+                    if hasattr(item, 'is_temp_preview'):
+                        self.scene.removeItem(item)
+                
+                self.redraw_annotations()
+                self.drawing_start_pos = None
+                
+                print(f"✅ 已创建{self.current_tool}标注")
+                event.accept()
+                return
+        
+        super(ImagePreviewDialog, self).mouseReleaseEvent(event)
+    
+    def resize_roi(self, roi, handle, delta_x, delta_y):
+        """
+        调整ROI大小
+        
+        Args:
+            roi: ROI标注对象
+            handle: 手柄名称
+            delta_x: X方向偏移
+            delta_y: Y方向偏移
+        """
+        if roi.type != 'roi_rect' or len(roi.points) < 2:
+            return
+        
+        x1, y1 = roi.points[0]
+        x2, y2 = roi.points[1]
+        
+        # 根据手柄类型调整坐标
+        if 'left' in handle:
+            x1 += delta_x
+        if 'right' in handle:
+            x2 += delta_x
+        if 'top' in handle:
+            y1 += delta_y
+        if 'bottom' in handle:
+            y2 += delta_y
+        
+        roi.points[0] = (int(x1), int(y1))
+        roi.points[1] = (int(x2), int(y2))
+    
+    def draw_annotation_on_scene(self, annotation: Annotation):
+        """
+        在场景上绘制单个标注（重写以支持ROI）
+        
+        Args:
+            annotation: 标注对象
+        """
+        color = QtGui.QColor(*annotation.properties['color'][::-1])  # BGR -> RGB
+        thickness = annotation.properties['thickness']
+        
+        # ROI使用特殊样式
+        is_roi = annotation.type in ['roi_rect', 'roi_circle']
+        if is_roi:
+            # ROI边框更粗，颜色不同
+            thickness = max(thickness, 3)
+            if annotation == self.selected_roi:
+                # 选中的ROI用亮色高亮
+                color = QtGui.QColor(0, 255, 255)  # 黄色
+        
+        if annotation.type in ['rect', 'roi_rect'] and len(annotation.points) >= 2:
+            # 绘制矩形
+            start_pos = QtCore.QPointF(*annotation.points[0])
+            end_pos = QtCore.QPointF(*annotation.points[1])
+            rect = QtCore.QRectF(start_pos, end_pos).normalized()
+            
+            pen = QtGui.QPen(color, thickness)
+            pen.setStyle(QtCore.Qt.SolidLine)
+            
+            rect_item = self.scene.addRect(rect, pen)
+            rect_item.is_annotation = True
+            rect_item.annotation_id = annotation.id
+            
+            # 如果是选中的ROI，绘制调整手柄
+            if is_roi and annotation == self.selected_roi:
+                self.draw_roi_handles(rect)
+            
+        elif annotation.type in ['circle', 'roi_circle'] and len(annotation.points) >= 2:
+            # 绘制圆形（使用椭圆近似）
+            start_pos = QtCore.QPointF(*annotation.points[0])
+            end_pos = QtCore.QPointF(*annotation.points[1])
+            
+            # 计算半径
+            radius = ((end_pos.x() - start_pos.x())**2 + (end_pos.y() - start_pos.y())**2)**0.5
+            
+            pen = QtGui.QPen(color, thickness)
+            pen.setStyle(QtCore.Qt.SolidLine)
+            
+            # 创建椭圆项（中心点 + 半径）
+            circle_rect = QtCore.QRectF(
+                start_pos.x() - radius,
+                start_pos.y() - radius,
+                radius * 2,
+                radius * 2
+            )
+            circle_item = self.scene.addEllipse(circle_rect, pen)
+            circle_item.is_annotation = True
+            circle_item.annotation_id = annotation.id
+            
+        elif annotation.type == 'text' and len(annotation.points) >= 1:
+            # 绘制文字
+            pos = QtCore.QPointF(*annotation.points[0])
+            text = annotation.properties.get('text', '')
+            font_size = annotation.properties.get('font_size', 16)
+            
+            text_item = self.scene.addText(text)
+            text_item.setPos(pos)
+            text_item.setDefaultTextColor(color)
+            
+            font = QtGui.QFont()
+            font.setPointSize(font_size)
+            text_item.setFont(font)
+            
+            text_item.is_annotation = True
+            text_item.annotation_id = annotation.id
+    
+    def draw_roi_handles(self, rect):
+        """
+        绘制ROI调整手柄
+        
+        Args:
+            rect: QRectF矩形
+        """
+        handle_color = QtGui.QColor(255, 255, 255)  # 白色
+        handle_pen = QtGui.QPen(handle_color, 1)
+        handle_brush = QtGui.QBrush(handle_color)
+        
+        handle_size = self.HANDLE_SIZE / self.zoom_factor
+        
+        # 8个手柄位置
+        handles = [
+            rect.topLeft(),
+            rect.topRight(),
+            rect.bottomLeft(),
+            rect.bottomRight(),
+            QtCore.QPointF(rect.center().x(), rect.top()),
+            QtCore.QPointF(rect.center().x(), rect.bottom()),
+            QtCore.QPointF(rect.left(), rect.center().y()),
+            QtCore.QPointF(rect.right(), rect.center().y()),
+        ]
+        
+        for pos in handles:
+            handle_rect = QtCore.QRectF(
+                pos.x() - handle_size/2,
+                pos.y() - handle_size/2,
+                handle_size,
+                handle_size
+            )
+            handle_item = self.scene.addRect(handle_rect, handle_pen, handle_brush)
+            handle_item.is_annotation = True  # 标记为标注的一部分
+    
+    # === ROI功能方法 END ===
+
     def save_image(self):
         """
         保存图像
@@ -700,6 +1206,69 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     f"保存失败:\n{str(e)}"
                 )
     
+    def get_roi_data(self):
+        """
+        获取所有ROI数据（用于传递给模板创建节点）
+        
+        Returns:
+            list: ROI数据列表，每个元素包含type, points, properties
+        """
+        roi_list = []
+        for ann in self.annotation_layer.annotations:
+            if ann.type in ['roi_rect', 'roi_circle']:
+                roi_data = {
+                    'type': ann.type,
+                    'points': ann.points,
+                    'properties': ann.properties
+                }
+                roi_list.append(roi_data)
+        return roi_list
+    
+    def export_roi_to_node(self):
+        """
+        导出ROI数据到关联的ImageViewNode
+        
+        Returns:
+            dict or None: ROI数据字典，如果没有关联节点则返回None
+        """
+        if self.node is None:
+            print("⚠️ 预览窗口未关联节点")
+            return None
+        
+        roi_data = self.get_roi_data()
+        
+        if not roi_data:
+            print("⚠️ 没有ROI数据可导出")
+            QtWidgets.QMessageBox.information(
+                self,
+                "提示",
+                "当前没有ROI数据\n请先绘制ROI区域"
+            )
+            return None
+        
+        # 调用节点的set_roi_data方法
+        if hasattr(self.node, 'set_roi_data'):
+            self.node.set_roi_data(roi_data)
+            print(f"✅ 已导出 {len(roi_data)} 个ROI到节点")
+            
+            # 显示确认对话框
+            QtWidgets.QMessageBox.information(
+                self,
+                "导出成功",
+                f"已导出 {len(roi_data)} 个ROI数据到节点\n\n"
+                f"可以在属性面板中查看和编辑\n"
+                f"ROI数据将通过'ROI数据'端口输出"
+            )
+        else:
+            print("⚠️ 节点不支持ROI数据设置")
+            QtWidgets.QMessageBox.warning(
+                self,
+                "警告",
+                "关联的节点不支持ROI功能"
+            )
+        
+        return roi_data
+
     def resizeEvent(self, event):
         """
         窗口大小改变时重新显示图像
