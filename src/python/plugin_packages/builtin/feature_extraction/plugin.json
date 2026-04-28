@@ -1,8 +1,8 @@
 {
   "name": "feature_extraction",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "OpenCV Team",
-  "description": "特征提取节点包 - 边缘检测、Blob分析、几何匹配、角点检测",
+  "description": "特征提取节点包 - 边缘检测、Blob分析、几何匹配、角点检测、轮廓分析",
   "category_group": "特征提取",
   "nodes": [
     {
@@ -143,6 +143,31 @@
       "width": 180,
       "height": 100,
       "description": "使用Hough变换检测图像中的圆形，支持半径范围限制",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {}
+    },
+    {
+      "class": "ContoursAnalysisNode",
+      "display_name": "轮廓分析",
+      "category": "轮廓分析",
+      "color": [
+        100,
+        255,
+        200
+      ],
+      "icon": "🔲",
+      "width": 200,
+      "height": 120,
+      "description": "从二值化图像中提取轮廓并进行统计分析，支持面积筛选、形状检测（圆形/矩形/直线）及置信度评估",
       "resource_level": "light",
       "hardware_requirements": {
         "cpu_cores": 1,

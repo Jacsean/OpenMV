@@ -1,0 +1,562 @@
+"""
+轮廓分析节点 - 提取和分析图像中的轮廓信息
+
+提供完整的轮廓分析功能，包括：
+- 轮廓提取和筛选
+- 基础统计（周长、面积、边界框、质心）
+- 形状检测（圆形、矩形、直线）
+- 自动二值化检测
+- 标注图像绘制
+"""
+
+from shared_libs.node_base import BaseNode
+import cv2
+import numpy as np
+
+
+class ContoursAnalysisNode(BaseNode):
+    """
+    轮廓分析节点
+    
+    从二值化图像中提取轮廓并进行统计分析。
+    
+    功能特性：
+    - 自动检测并二值化输入图像
+    - 可配置的轮廓查找模式和近似方法
+    - 基于面积的轮廓筛选
+    - 计算周长、面积、边界框、质心等统计信息
+    - 形状检测（圆形、矩形、直线）及置信度评估
+    - 在图像上按形状类型着色绘制轮廓标注
+    
+    硬件要求：
+    - CPU: 1+ 核心
+    - 内存: 1GB+
+    - GPU: 不需要
+    """
+    
+    __identifier__ = 'feature_extraction'
+    NODE_NAME = '轮廓分析'
+    
+    # 资源等级声明
+    resource_level = "light"
+    hardware_requirements = {
+        'cpu_cores': 1,
+        'memory_gb': 1,
+        'gpu_required': False,
+        'gpu_memory_gb': 0
+    }
+    
+    def __init__(self):
+        super(ContoursAnalysisNode, self).__init__()
+        
+        # 输入端口
+        self.add_input('输入图像', color=(100, 255, 100))
+        
+        # 输出端口
+        self.add_output('标注图像', color=(100, 255, 100))
+        self.add_output('轮廓数量', color=(100, 100, 255))
+        self.add_output('统计数据', color=(255, 255, 100))
+        
+        # 轮廓查找参数
+        self.add_text_input('retrieval_mode', '查找模式', tab='properties')
+        self.set_property('retrieval_mode', 'RETR_EXTERNAL')
+        
+        self.add_text_input('approximation_method', '近似方法', tab='properties')
+        self.set_property('approximation_method', 'CHAIN_APPROX_SIMPLE')
+        
+        # 筛选参数
+        self.add_text_input('min_area', '最小面积(像素²)', tab='properties')
+        self.set_property('min_area', '0')
+        
+        self.add_text_input('max_area', '最大面积(像素²)', tab='properties')
+        self.set_property('max_area', '999999')
+        
+        # 形状检测开关
+        self.add_text_input('enable_circle_detection', '启用圆形检测', tab='properties')
+        self.set_property('enable_circle_detection', 'True')
+        
+        self.add_text_input('circle_circularity_threshold', '圆度阈值(0-1)', tab='properties')
+        self.set_property('circle_circularity_threshold', '0.85')
+        
+        self.add_text_input('enable_rectangle_detection', '启用矩形检测', tab='properties')
+        self.set_property('enable_rectangle_detection', 'True')
+        
+        self.add_text_input('rectangle_fill_ratio_threshold', '填充率阈值(0-1)', tab='properties')
+        self.set_property('rectangle_fill_ratio_threshold', '0.80')
+        
+        self.add_text_input('enable_line_detection', '启用直线检测', tab='properties')
+        self.set_property('enable_line_detection', 'True')
+        
+        self.add_text_input('line_straightness_threshold', '直线度阈值(0-1)', tab='properties')
+        self.set_property('line_straightness_threshold', '0.90')
+        
+        # 显示选项
+        self.add_text_input('draw_contours', '绘制轮廓', tab='properties')
+        self.set_property('draw_contours', 'True')
+        
+        self.add_text_input('contour_color_r', '轮廓颜色-R', tab='properties')
+        self.set_property('contour_color_r', '0')
+        
+        self.add_text_input('contour_color_g', '轮廓颜色-G', tab='properties')
+        self.set_property('contour_color_g', '255')
+        
+        self.add_text_input('contour_color_b', '轮廓颜色-B', tab='properties')
+        self.set_property('contour_color_b', '0')
+        
+        self.add_text_input('thickness', '线宽(1-5)', tab='properties')
+        self.set_property('thickness', '2')
+    
+    def _get_retrieval_mode(self, mode_str):
+        """获取轮廓检索模式"""
+        modes = {
+            'RETR_EXTERNAL': cv2.RETR_EXTERNAL,      # 只检测最外层轮廓
+            'RETR_LIST': cv2.RETR_LIST,              # 检测所有轮廓，不建立层次关系
+            'RETR_CCOMP': cv2.RETR_CCOMP,            # 检测所有轮廓，建立两层层次关系
+            'RETR_TREE': cv2.RETR_TREE               # 检测所有轮廓，建立完整层次关系
+        }
+        return modes.get(mode_str, cv2.RETR_EXTERNAL)
+    
+    def _get_approximation_method(self, method_str):
+        """获取轮廓近似方法"""
+        methods = {
+            'CHAIN_APPROX_NONE': cv2.CHAIN_APPROX_NONE,          # 存储所有点
+            'CHAIN_APPROX_SIMPLE': cv2.CHAIN_APPROX_SIMPLE,      # 压缩水平、垂直和对角线段
+            'CHAIN_APPROX_TC89_L1': cv2.CHAIN_APPROX_TC89_L1,    # Teh-Chin链近似算法L1
+            'CHAIN_APPROX_TC89_KCOS': cv2.CHAIN_APPROX_TC89_KCOS # Teh-Chin链近似算法KCOS
+        }
+        return methods.get(method_str, cv2.CHAIN_APPROX_SIMPLE)
+    
+    def _auto_binarize(self, image):
+        """
+        自动检测并二值化图像
+        
+        Args:
+            image: 输入图像
+            
+        Returns:
+            tuple: (二值化图像, 是否进行了转换)
+        """
+        # 转换为灰度图
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            self.log_info("检测到彩色图像，已自动转换为灰度图")
+        else:
+            gray = image.copy()
+        
+        # 检查是否已是二值图（只有0和255两个值）
+        unique_values = np.unique(gray)
+        if len(unique_values) <= 2 and set(unique_values).issubset({0, 255}):
+            self.log_info("检测到输入已是二值化图像")
+            return gray, False
+        
+        # 自动二值化（Otsu方法）
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        self.log_warning(f"输入非二值化图像，已自动二值化（阈值={_:.1f}）")
+        return binary, True
+    
+    def _detect_circle(self, contour):
+        """
+        检测圆形
+        
+        Args:
+            contour: 轮廓点集
+            
+        Returns:
+            dict: 圆形检测结果，包含圆心、半径、圆度、置信度
+        """
+        try:
+            # 计算最小外接圆
+            (cx, cy), radius = cv2.minEnclosingCircle(contour)
+            
+            # 计算理论圆面积
+            theoretical_area = np.pi * (radius ** 2)
+            
+            # 计算实际轮廓面积
+            actual_area = cv2.contourArea(contour)
+            
+            # 计算圆度
+            circularity = actual_area / theoretical_area if theoretical_area > 0 else 0
+            circularity = min(circularity, 1.0)  # 防止浮点误差
+            
+            return {
+                'center': {'x': int(cx), 'y': int(cy)},
+                'radius': int(radius),
+                'circularity': round(circularity, 4),
+                'confidence': round(circularity, 4)
+            }
+        except Exception as e:
+            self.log_warning(f"圆形检测失败: {e}")
+            return None
+    
+    def _detect_rectangle(self, contour):
+        """
+        检测矩形
+        
+        Args:
+            contour: 轮廓点集
+            
+        Returns:
+            dict: 矩形检测结果，包含中心、宽高、角度、顶点、填充率、置信度
+        """
+        try:
+            # 计算最小外接矩形
+            rect = cv2.minAreaRect(contour)
+            (cx, cy), (width, height), angle = rect
+            
+            # 获取四个顶点
+            box = cv2.boxPoints(rect)
+            box = np.int0(box)
+            
+            # 计算矩形面积
+            rect_area = width * height
+            
+            # 计算实际轮廓面积
+            actual_area = cv2.contourArea(contour)
+            
+            # 计算填充率
+            fill_ratio = actual_area / rect_area if rect_area > 0 else 0
+            fill_ratio = min(fill_ratio, 1.0)
+            
+            return {
+                'center': {'x': int(cx), 'y': int(cy)},
+                'width': int(width),
+                'height': int(height),
+                'angle': round(angle, 2),
+                'corners': box.tolist(),
+                'fill_ratio': round(fill_ratio, 4),
+                'confidence': round(fill_ratio, 4)
+            }
+        except Exception as e:
+            self.log_warning(f"矩形检测失败: {e}")
+            return None
+    
+    def _detect_line(self, contour):
+        """
+        检测直线
+        
+        Args:
+            contour: 轮廓点集
+            
+        Returns:
+            dict: 直线检测结果，包含起点、终点、角度、长度、直线度、置信度
+        """
+        try:
+            # 拟合直线
+            rows, cols = 500, 500  # 默认图像尺寸，用于计算端点
+            [vx, vy, x, y] = cv2.fitLine(contour, cv2.DIST_L2, 0, 0.01, 0.01)
+            
+            # 计算直线角度
+            angle = np.arctan2(vy[0], vx[0]) * 180 / np.pi
+            
+            # 计算轮廓的边界框，用于确定端点
+            x_min, y_min, w, h = cv2.boundingRect(contour)
+            x_max = x_min + w
+            y_max = y_min + h
+            
+            # 计算直线与边界框的交点作为端点
+            # 简化处理：使用轮廓的第一个和最后一个点
+            start_point = tuple(contour[0][0])
+            end_point = tuple(contour[-1][0])
+            
+            # 计算长度
+            length = np.sqrt((end_point[0] - start_point[0])**2 + 
+                           (end_point[1] - start_point[1])**2)
+            
+            # 计算直线度：点到直线的平均距离
+            distances = []
+            for point in contour:
+                px, py = point[0]
+                # 点到直线的距离公式
+                dist = abs(vy[0] * (px - x[0]) - vx[0] * (py - y[0]))
+                distances.append(dist)
+            
+            avg_distance = np.mean(distances) if distances else 0
+            straightness = 1.0 - (avg_distance / length) if length > 0 else 0
+            straightness = max(0.0, min(straightness, 1.0))
+            
+            return {
+                'start_point': {'x': int(start_point[0]), 'y': int(start_point[1])},
+                'end_point': {'x': int(end_point[0]), 'y': int(end_point[1])},
+                'angle': round(angle, 2),
+                'length': round(length, 2),
+                'straightness': round(straightness, 4),
+                'confidence': round(straightness, 4)
+            }
+        except Exception as e:
+            self.log_warning(f"直线检测失败: {e}")
+            return None
+    
+    def _classify_shape(self, contour, params):
+        """
+        按优先级判断形状
+        
+        Args:
+            contour: 轮廓点集
+            params: 形状检测参数字典
+            
+        Returns:
+            tuple: (shape_type, confidence, shape_data)
+        """
+        area = cv2.contourArea(contour)
+        
+        # 过小轮廓跳过形状检测
+        if area < 50:
+            return ('unknown', 0.0, {})
+        
+        # 点数过少无法拟合
+        if len(contour) < 3:
+            return ('unknown', 0.0, {})
+        
+        # 1. 尝试矩形检测（最高优先级）
+        if params['enable_rectangle']:
+            rect_result = self._detect_rectangle(contour)
+            if rect_result and rect_result['confidence'] >= params['rect_threshold']:
+                return ('rectangle', rect_result['confidence'], {'rectangle': rect_result})
+        
+        # 2. 尝试圆形检测
+        if params['enable_circle']:
+            circle_result = self._detect_circle(contour)
+            if circle_result and circle_result['confidence'] >= params['circle_threshold']:
+                return ('circle', circle_result['confidence'], {'circle': circle_result})
+        
+        # 3. 尝试直线检测
+        if params['enable_line']:
+            line_result = self._detect_line(contour)
+            if line_result and line_result['confidence'] >= params['line_threshold']:
+                return ('line', line_result['confidence'], {'line': line_result})
+        
+        # 4. 未知形状
+        return ('unknown', 0.0, {})
+    
+    def process(self, inputs=None):
+        """
+        处理节点逻辑
+        
+        Args:
+            inputs: 输入图像
+            
+        Returns:
+            dict: 包含标注图像、轮廓数量和统计数据的字典
+        """
+        try:
+            # Step 1: 验证输入
+            if not inputs or len(inputs) == 0 or inputs[0] is None:
+                self.log_error("未接收到输入图像")
+                return {
+                    '标注图像': None,
+                    '轮廓数量': 0,
+                    '统计数据': {}
+                }
+            
+            image = inputs[0][0] if isinstance(inputs[0], list) else inputs[0]
+            
+            if image is None or not isinstance(image, np.ndarray):
+                self.log_error("输入图像格式错误")
+                return {
+                    '标注图像': None,
+                    '轮廓数量': 0,
+                    '统计数据': {}
+                }
+            
+            if image.size == 0:
+                self.log_error("输入图像尺寸为0")
+                return {
+                    '标注图像': None,
+                    '轮廓数量': 0,
+                    '统计数据': {}
+                }
+            
+            # Step 2: 自动二值化
+            binary, was_converted = self._auto_binarize(image)
+            
+            # Step 3: 读取参数
+            retrieval_mode = self._get_retrieval_mode(self.get_property('retrieval_mode'))
+            approximation_method = self._get_approximation_method(self.get_property('approximation_method'))
+            
+            min_area = float(self.get_property('min_area'))
+            max_area = float(self.get_property('max_area'))
+            
+            draw_contours = self.get_property('draw_contours').lower() == 'true'
+            contour_color = (
+                int(self.get_property('contour_color_b')),
+                int(self.get_property('contour_color_g')),
+                int(self.get_property('contour_color_r'))
+            )
+            thickness = int(self.get_property('thickness'))
+            thickness = max(1, min(5, thickness))  # 限制范围1-5
+            
+            # 形状检测参数
+            enable_circle = self.get_property('enable_circle_detection').lower() == 'true'
+            circle_threshold = float(self.get_property('circle_circularity_threshold'))
+            enable_rectangle = self.get_property('enable_rectangle_detection').lower() == 'true'
+            rect_threshold = float(self.get_property('rectangle_fill_ratio_threshold'))
+            enable_line = self.get_property('enable_line_detection').lower() == 'true'
+            line_threshold = float(self.get_property('line_straightness_threshold'))
+            
+            shape_params = {
+                'enable_circle': enable_circle,
+                'circle_threshold': circle_threshold,
+                'enable_rectangle': enable_rectangle,
+                'rect_threshold': rect_threshold,
+                'enable_line': enable_line,
+                'line_threshold': line_threshold
+            }
+            
+            # Step 4: 查找轮廓
+            contours, hierarchy = cv2.findContours(binary, retrieval_mode, approximation_method)
+            
+            total_count = len(contours)
+            self.log_info(f"检测到 {total_count} 个轮廓")
+            
+            if total_count == 0:
+                self.log_warning("未检测到任何轮廓，请检查二值化效果")
+                return {
+                    '标注图像': image.copy(),
+                    '轮廓数量': 0,
+                    '统计数据': {
+                        'total_count': 0,
+                        'filtered_count': 0,
+                        'contours': []
+                    }
+                }
+            
+            # Step 5: 筛选轮廓并计算统计信息
+            filtered_contours = []
+            contour_stats = []
+            
+            for idx, contour in enumerate(contours):
+                # 计算面积
+                area = cv2.contourArea(contour)
+                
+                # 面积筛选
+                if area < min_area or area > max_area:
+                    continue
+                
+                # 计算周长
+                perimeter = cv2.arcLength(contour, True)
+                
+                # 计算边界框
+                x, y, w, h = cv2.boundingRect(contour)
+                
+                # 计算质心
+                M = cv2.moments(contour)
+                if M['m00'] != 0:
+                    cx = int(M['m10'] / M['m00'])
+                    cy = int(M['m01'] / M['m00'])
+                else:
+                    cx, cy = 0, 0
+                
+                # 形状检测
+                shape_type, shape_confidence, shape_data = self._classify_shape(contour, shape_params)
+                
+                # 记录统计信息
+                stat = {
+                    'index': idx,
+                    'area': round(area, 2),
+                    'perimeter': round(perimeter, 2),
+                    'bounding_rect': {
+                        'x': x,
+                        'y': y,
+                        'w': w,
+                        'h': h
+                    },
+                    'centroid': {
+                        'x': cx,
+                        'y': cy
+                    },
+                    'shape_type': shape_type,
+                    'shape_confidence': shape_confidence
+                }
+                
+                # 合并形状数据
+                stat.update(shape_data)
+                
+                contour_stats.append(stat)
+                filtered_contours.append(contour)
+            
+            filtered_count = len(filtered_contours)
+            self.log_info(f"筛选后剩余 {filtered_count} 个轮廓")
+            
+            # Step 6: 绘制标注图像
+            if draw_contours and filtered_count > 0:
+                # 创建副本用于绘制
+                if len(image.shape) == 3:
+                    annotated_image = image.copy()
+                else:
+                    annotated_image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                
+                # 按形状类型分别绘制
+                for i, (contour, stat) in enumerate(zip(filtered_contours, contour_stats)):
+                    shape_type = stat['shape_type']
+                    
+                    # 根据形状类型选择颜色
+                    if shape_type == 'circle':
+                        color = (0, 255, 0)  # 绿色
+                        marker_color = (255, 0, 0)  # 红色标记
+                    elif shape_type == 'rectangle':
+                        color = (255, 0, 0)  # 蓝色
+                        marker_color = (255, 255, 0)  # 黄色标记
+                    elif shape_type == 'line':
+                        color = (255, 0, 255)  # 紫色
+                        marker_color = (255, 165, 0)  # 橙色标记
+                    else:
+                        color = (128, 128, 128)  # 灰色（未知）
+                        marker_color = (128, 128, 128)
+                    
+                    # 绘制轮廓
+                    cv2.drawContours(annotated_image, [contour], -1, color, thickness)
+                    
+                    # 绘制质心标记
+                    cx = stat['centroid']['x']
+                    cy = stat['centroid']['y']
+                    cv2.circle(annotated_image, (cx, cy), 3, marker_color, -1)
+                    
+                    # 绘制形状特定标注
+                    if shape_type == 'circle' and 'circle' in stat:
+                        # 绘制圆心和半径
+                        circle_data = stat['circle']
+                        center = (circle_data['center']['x'], circle_data['center']['y'])
+                        radius = circle_data['radius']
+                        cv2.circle(annotated_image, center, radius, color, 1)
+                    
+                    elif shape_type == 'rectangle' and 'rectangle' in stat:
+                        # 绘制矩形四顶点
+                        rect_data = stat['rectangle']
+                        corners = np.array(rect_data['corners'], np.int32)
+                        cv2.polylines(annotated_image, [corners], True, color, thickness)
+                    
+                    elif shape_type == 'line' and 'line' in stat:
+                        # 绘制直线
+                        line_data = stat['line']
+                        start_pt = (line_data['start_point']['x'], line_data['start_point']['y'])
+                        end_pt = (line_data['end_point']['x'], line_data['end_point']['y'])
+                        cv2.line(annotated_image, start_pt, end_pt, color, thickness)
+            else:
+                annotated_image = image.copy()
+                if len(annotated_image.shape) == 2:
+                    annotated_image = cv2.cvtColor(annotated_image, cv2.COLOR_GRAY2BGR)
+            
+            # Step 7: 构建统计数据
+            stats_data = {
+                'total_count': total_count,
+                'filtered_count': filtered_count,
+                'contours': contour_stats
+            }
+            
+            self.log_success(f"轮廓分析完成 (总数:{total_count}, 筛选后:{filtered_count})")
+            
+            return {
+                '标注图像': annotated_image,
+                '轮廓数量': filtered_count,
+                '统计数据': stats_data
+            }
+            
+        except Exception as e:
+            self.log_error(f"轮廓分析错误: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                '标注图像': None,
+                '轮廓数量': 0,
+                '统计数据': {}
+            }
