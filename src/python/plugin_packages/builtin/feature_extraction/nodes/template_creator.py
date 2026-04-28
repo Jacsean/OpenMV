@@ -89,6 +89,10 @@ class TemplateCreatorNode(BaseNode):
         
         self.add_text_input('inner_radius_ratio', '内半径比例', tab='properties')
         self.set_property('inner_radius_ratio', '0.1')
+        
+        # 采样策略参数
+        self.add_text_input('sampling_strategy', '采样策略', tab='properties')
+        self.set_property('sampling_strategy', 'arc_length')  # uniform / arc_length / douglas_peucker
     
     def _check_shape_context_availability(self):
         """
@@ -139,6 +143,87 @@ class TemplateCreatorNode(BaseNode):
             self.log_error(f"Hu矩提取失败: {e}")
             return None
     
+    def _arc_length_sampling(self, contour, target_points):
+        """
+        基于弧长的等距采样
+        
+        Args:
+            contour: 轮廓点集
+            target_points: 目标采样点数
+            
+        Returns:
+            numpy.ndarray: 采样后的点集
+        """
+        if len(contour) <= target_points:
+            return contour.reshape(-1, 2).astype(np.float32)
+        
+        # 计算累积弧长
+        distances = np.cumsum(np.linalg.norm(np.diff(contour, axis=0), axis=1))
+        total_length = distances[-1]
+        
+        if total_length == 0:
+            return contour[:target_points].reshape(-1, 2).astype(np.float32)
+        
+        # 等距采样
+        sample_distances = np.linspace(0, total_length, target_points)
+        indices = np.searchsorted(distances, sample_distances)
+        
+        # 确保索引不越界
+        indices = np.clip(indices, 0, len(contour) - 1)
+        
+        return contour[indices].reshape(-1, 2).astype(np.float32)
+    
+    def _douglas_peucker_sampling(self, contour, target_points):
+        """
+        使用Douglas-Peucker算法简化轮廓
+        
+        Args:
+            contour: 轮廓点集
+            target_points: 目标采样点数
+            
+        Returns:
+            numpy.ndarray: 简化后的点集
+        """
+        if len(contour) <= target_points:
+            return contour.reshape(-1, 2).astype(np.float32)
+        
+        # 自适应epsilon：根据轮廓周长和目标点数计算
+        perimeter = cv2.arcLength(contour, True)
+        epsilon = perimeter / (target_points * 2)
+        
+        # OpenCV内置函数
+        simplified = cv2.approxPolyDP(contour, epsilon, closed=True)
+        
+        # 如果简化后点数仍过多，进一步增加epsilon
+        while len(simplified) > target_points and epsilon < perimeter / 10:
+            epsilon *= 1.2
+            simplified = cv2.approxPolyDP(contour, epsilon, closed=True)
+        
+        return simplified.reshape(-1, 2).astype(np.float32)
+    
+    def _sample_contour_points(self, contour, n_points, sampling_strategy='arc_length'):
+        """
+        采样轮廓点
+        
+        Args:
+            contour: 轮廓点集
+            n_points: 目标采样点数
+            sampling_strategy: 采样策略 ('uniform'/'arc_length'/'douglas_peucker')
+            
+        Returns:
+            numpy.ndarray: 采样后的点集
+        """
+        if len(contour) <= n_points:
+            return contour.reshape(-1, 2).astype(np.float32)
+        
+        if sampling_strategy == 'arc_length':
+            return self._arc_length_sampling(contour, n_points)
+        elif sampling_strategy == 'douglas_peucker':
+            return self._douglas_peucker_sampling(contour, n_points)
+        else:  # uniform (默认)
+            indices = np.linspace(0, len(contour) - 1, n_points, dtype=int)
+            return contour[indices].reshape(-1, 2).astype(np.float32)
+    
     def _extract_shape_context(self, contour, params):
         """
         提取Shape Context特征
@@ -163,13 +248,12 @@ class TemplateCreatorNode(BaseNode):
             n_radial_bins = int(params.get('n_radial_bins', 4))
             n_angular_bins = int(params.get('n_angular_bins', 12))
             inner_radius_ratio = float(params.get('inner_radius_ratio', 0.1))
+            sampling_strategy = params.get('sampling_strategy', 'arc_length')  # 新增采样策略参数
             
-            # 采样轮廓点
-            if len(contour) > n_points:
-                indices = np.linspace(0, len(contour) - 1, n_points, dtype=int)
-                sampled_points = contour[indices].reshape(-1, 2).astype(np.float32)
-            else:
-                sampled_points = contour.reshape(-1, 2).astype(np.float32)
+            # 采样轮廓点（使用优化后的采样策略）
+            sampled_points = self._sample_contour_points(contour, n_points, sampling_strategy)
+            
+            self.log_info(f"✅ Shape Context采样完成 (策略={sampling_strategy}, 点数={len(sampled_points)})")
             
             # 计算参考信息
             area = cv2.contourArea(contour)
@@ -182,7 +266,8 @@ class TemplateCreatorNode(BaseNode):
                 'outer_radius': 2.0,
                 'n_radial_bins': n_radial_bins,
                 'n_angular_bins': n_angular_bins,
-                'sampled_points': sampled_points.tolist()
+                'sampled_points': sampled_points.tolist(),
+                'sampling_strategy': sampling_strategy
             }
             
             return {
@@ -358,7 +443,8 @@ class TemplateCreatorNode(BaseNode):
                 'n_sample_points': self.get_property('n_sample_points'),
                 'n_radial_bins': self.get_property('n_radial_bins'),
                 'n_angular_bins': self.get_property('n_angular_bins'),
-                'inner_radius_ratio': self.get_property('inner_radius_ratio')
+                'inner_radius_ratio': self.get_property('inner_radius_ratio'),
+                'sampling_strategy': self.get_property('sampling_strategy')  # 新增采样策略参数
             }
             feature_data = self._extract_shape_context(contour, params)
         elif algorithm == 'hausdorff':
