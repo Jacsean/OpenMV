@@ -10,6 +10,7 @@
 - 📕 [Python图形化版详解](src/python_graph/README.md): 节点式编程和使用说明
 - 🏗️ [架构演进方案](docs/ARCHITECTURE_EVOLUTION.md): 从OpenCV到AI的架构设计思路
 - 🤖 [AI模块设计规范](docs/AI_MODULE_RESOURCE_ISOLATION.md): AI功能资源隔离与分级部署规范
+- 🔄 [跨环境迁移指南](docs/CROSS_ENVIRONMENT_MIGRATION.md): 重装系统或更换设备时的记忆保留方法
 - 📝 [贡献指南](CONTRIBUTING.md): 如何参与项目开发
 
 ---
