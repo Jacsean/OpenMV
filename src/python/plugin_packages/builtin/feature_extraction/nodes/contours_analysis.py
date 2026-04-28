@@ -5,6 +5,7 @@
 - 轮廓提取和筛选
 - 基础统计（周长、面积、边界框、质心）
 - 形状检测（圆形、矩形、直线）
+- 数据导出（CSV/Excel/JSON）
 - 自动二值化检测
 - 标注图像绘制
 """
@@ -12,6 +13,10 @@
 from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
+import os
+import csv
+import json
+from datetime import datetime
 
 
 class ContoursAnalysisNode(BaseNode):
@@ -105,7 +110,17 @@ class ContoursAnalysisNode(BaseNode):
         
         self.add_text_input('thickness', '线宽(1-5)', tab='properties')
         self.set_property('thickness', '2')
-    
+        
+        # 数据导出参数
+        self.add_text_input('export_mode', '导出模式', tab='properties')
+        self.set_property('export_mode', 'memory_only')  # memory_only / csv / excel / json / all
+        
+        self.add_text_input('export_path', '导出路径(可选)', tab='properties')
+        self.set_property('export_path', '')
+        
+        self.add_text_input('filename_prefix', '文件名前缀', tab='properties')
+        self.set_property('filename_prefix', 'contours_')
+
     def _get_retrieval_mode(self, mode_str):
         """获取轮廓检索模式"""
         modes = {
@@ -125,6 +140,402 @@ class ContoursAnalysisNode(BaseNode):
             'CHAIN_APPROX_TC89_KCOS': cv2.CHAIN_APPROX_TC89_KCOS # Teh-Chin链近似算法KCOS
         }
         return methods.get(method_str, cv2.CHAIN_APPROX_SIMPLE)
+    
+    def _get_project_directory(self):
+        """
+        获取工程目录路径
+        
+        Returns:
+            str: 工程目录路径，若无法获取则返回当前工作目录
+        """
+        try:
+            # 尝试从节点编辑器获取工程路径
+            if hasattr(self, 'graph') and self.graph:
+                # 假设graph有get_project_path方法
+                if hasattr(self.graph, 'get_project_path'):
+                    project_path = self.graph.get_project_path()
+                    if project_path:
+                        return os.path.dirname(project_path)
+        except Exception:
+            pass
+        
+        # 降级方案：使用当前工作目录
+        return os.getcwd()
+    
+    def _generate_export_filename(self, ext, count):
+        """
+        生成导出文件名
+        
+        Args:
+            ext: 文件扩展名 (.csv/.xlsx/.json)
+            count: 轮廓数量
+            
+        Returns:
+            str: 文件名
+        """
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        prefix = self.get_property('filename_prefix')
+        return f"{prefix}{timestamp}_{count}{ext}"
+    
+    def _get_default_export_path(self, ext, count):
+        """
+        获取默认导出路径
+        
+        Args:
+            ext: 文件扩展名
+            count: 轮廓数量
+            
+        Returns:
+            str: 完整的文件路径
+        """
+        project_dir = self._get_project_directory()
+        
+        # 创建 exports 子目录
+        export_dir = os.path.join(project_dir, 'exports')
+        os.makedirs(export_dir, exist_ok=True)
+        
+        # 生成文件名
+        filename = self._generate_export_filename(ext, count)
+        
+        return os.path.join(export_dir, filename)
+    
+    def _resolve_export_path(self, custom_path, ext, count):
+        """
+        解析自定义导出路径
+        
+        Args:
+            custom_path: 用户指定的路径（可为相对或绝对）
+            ext: 文件扩展名
+            count: 轮廓数量
+            
+        Returns:
+            str: 完整的文件路径
+        """
+        if not custom_path or custom_path.strip() == '':
+            return self._get_default_export_path(ext, count)
+        
+        custom_path = custom_path.strip()
+        
+        # 若是相对路径，转换为绝对路径
+        if not os.path.isabs(custom_path):
+            project_dir = self._get_project_directory()
+            custom_path = os.path.join(project_dir, custom_path)
+        
+        # 确保目录存在
+        dir_path = os.path.dirname(custom_path)
+        if dir_path:
+            os.makedirs(dir_path, exist_ok=True)
+        
+        # 若用户未指定扩展名，自动添加
+        if not custom_path.lower().endswith(ext):
+            # 检查是否已有其他扩展名
+            if not any(custom_path.lower().endswith(e) for e in ['.csv', '.xlsx', '.xls', '.json']):
+                custom_path += ext
+        
+        return custom_path
+    
+    def _check_excel_dependency(self):
+        """
+        检查Excel导出依赖
+        
+        Returns:
+            bool: 是否可用
+        """
+        try:
+            import openpyxl
+            return True
+        except ImportError:
+            self.log_warning("⚠️ Excel导出需要安装openpyxl库")
+            self.log_info("💡 安装命令: pip install openpyxl")
+            return False
+    
+    def _export_to_csv(self, stats_data, file_path):
+        """
+        导出数据到CSV文件
+        
+        Args:
+            stats_data: 统计数据字典
+            file_path: 输出文件路径
+            
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            contours = stats_data.get('contours', [])
+            
+            if not contours:
+                self.log_warning("没有数据可导出")
+                return False
+            
+            # CSV表头
+            headers = [
+                'Index', 'Area', 'Perimeter',
+                'Centroid_X', 'Centroid_Y',
+                'BBox_X', 'BBox_Y', 'BBox_W', 'BBox_H',
+                'Shape_Type', 'Shape_Confidence',
+                'Circle_Radius',
+                'Rectangle_Width', 'Rectangle_Height', 'Rectangle_Angle',
+                'Line_Length', 'Line_Angle'
+            ]
+            
+            with open(file_path, 'w', newline='', encoding='utf-8-sig') as f:
+                writer = csv.writer(f)
+                
+                # 写入表头
+                writer.writerow(headers)
+                
+                # 写入数据行
+                for stat in contours:
+                    row = [
+                        stat.get('index', ''),
+                        stat.get('area', ''),
+                        stat.get('perimeter', ''),
+                        stat.get('centroid', {}).get('x', ''),
+                        stat.get('centroid', {}).get('y', ''),
+                        stat.get('bounding_rect', {}).get('x', ''),
+                        stat.get('bounding_rect', {}).get('y', ''),
+                        stat.get('bounding_rect', {}).get('w', ''),
+                        stat.get('bounding_rect', {}).get('h', ''),
+                        stat.get('shape_type', ''),
+                        stat.get('shape_confidence', ''),
+                        # 圆形数据
+                        stat.get('circle', {}).get('radius', '') if stat.get('shape_type') == 'circle' else '',
+                        # 矩形数据
+                        stat.get('rectangle', {}).get('width', '') if stat.get('shape_type') == 'rectangle' else '',
+                        stat.get('rectangle', {}).get('height', '') if stat.get('shape_type') == 'rectangle' else '',
+                        stat.get('rectangle', {}).get('angle', '') if stat.get('shape_type') == 'rectangle' else '',
+                        # 直线数据
+                        stat.get('line', {}).get('length', '') if stat.get('shape_type') == 'line' else '',
+                        stat.get('line', {}).get('angle', '') if stat.get('shape_type') == 'line' else ''
+                    ]
+                    writer.writerow(row)
+            
+            self.log_success(f"✅ CSV文件已导出: {file_path}")
+            return True
+        
+        except Exception as e:
+            self.log_error(f"❌ CSV导出失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def _export_to_excel(self, stats_data, file_path):
+        """
+        导出数据到Excel文件
+        
+        Args:
+            stats_data: 统计数据字典
+            file_path: 输出文件路径
+            
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            import openpyxl
+            from openpyxl.styles import Font, Alignment, PatternFill
+            
+            contours = stats_data.get('contours', [])
+            total_count = stats_data.get('total_count', 0)
+            filtered_count = stats_data.get('filtered_count', 0)
+            
+            # 创建工作簿
+            wb = openpyxl.Workbook()
+            
+            # Sheet 1: 原始数据
+            ws_data = wb.active
+            ws_data.title = "原始数据"
+            
+            # 表头
+            headers = [
+                'Index', 'Area', 'Perimeter',
+                'Centroid_X', 'Centroid_Y',
+                'BBox_X', 'BBox_Y', 'BBox_W', 'BBox_H',
+                'Shape_Type', 'Shape_Confidence'
+            ]
+            ws_data.append(headers)
+            
+            # 设置表头样式
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            header_alignment = Alignment(horizontal="center", vertical="center")
+            
+            for cell in ws_data[1]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_alignment
+            
+            # 写入数据
+            for stat in contours:
+                row = [
+                    stat.get('index', ''),
+                    stat.get('area', ''),
+                    stat.get('perimeter', ''),
+                    stat.get('centroid', {}).get('x', ''),
+                    stat.get('centroid', {}).get('y', ''),
+                    stat.get('bounding_rect', {}).get('x', ''),
+                    stat.get('bounding_rect', {}).get('y', ''),
+                    stat.get('bounding_rect', {}).get('w', ''),
+                    stat.get('bounding_rect', {}).get('h', ''),
+                    stat.get('shape_type', ''),
+                    stat.get('shape_confidence', '')
+                ]
+                ws_data.append(row)
+            
+            # 自动调整列宽
+            for column in ws_data.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 30)
+                ws_data.column_dimensions[column_letter].width = adjusted_width
+            
+            # Sheet 2: 统计摘要
+            ws_summary = wb.create_sheet(title="统计摘要")
+            
+            summary_data = [
+                ['指标', '数值'],
+                ['总轮廓数', total_count],
+                ['筛选后数量', filtered_count],
+                ['', ''],
+                ['面积统计', ''],
+                ['平均面积', round(np.mean([c.get('area', 0) for c in contours]), 2) if contours else 0],
+                ['最大面积', round(max([c.get('area', 0) for c in contours]), 2) if contours else 0],
+                ['最小面积', round(min([c.get('area', 0) for c in contours]), 2) if contours else 0],
+                ['', ''],
+                ['形状分布', ''],
+            ]
+            
+            # 统计各形状数量
+            shape_counts = {}
+            for stat in contours:
+                shape_type = stat.get('shape_type', 'unknown')
+                shape_counts[shape_type] = shape_counts.get(shape_type, 0) + 1
+            
+            for shape_type, count in shape_counts.items():
+                percentage = round(count / filtered_count * 100, 1) if filtered_count > 0 else 0
+                summary_data.append([f"{shape_type}数量", f"{count} ({percentage}%)"])
+            
+            for row_data in summary_data:
+                ws_summary.append(row_data)
+            
+            # 设置统计摘要样式
+            for cell in ws_summary[1]:
+                cell.font = Font(bold=True)
+            
+            # 保存文件
+            wb.save(file_path)
+            
+            self.log_success(f"✅ Excel文件已导出: {file_path}")
+            return True
+        
+        except ImportError:
+            self.log_error("❌ 缺少openpyxl库，无法导出Excel")
+            self.log_info("💡 请运行: pip install openpyxl")
+            return False
+        
+        except Exception as e:
+            self.log_error(f"❌ Excel导出失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def _export_to_json(self, stats_data, file_path):
+        """
+        导出数据到JSON文件
+        
+        Args:
+            stats_data: 统计数据字典
+            file_path: 输出文件路径
+            
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            # 构建完整的JSON数据结构
+            export_data = {
+                'metadata': {
+                    'export_time': datetime.now().isoformat(),
+                    'total_count': stats_data.get('total_count', 0),
+                    'filtered_count': stats_data.get('filtered_count', 0),
+                    'algorithm_version': '1.2.0'
+                },
+                'contours': stats_data.get('contours', [])
+            }
+            
+            # 写入JSON文件
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(export_data, f, ensure_ascii=False, indent=2)
+            
+            self.log_success(f"✅ JSON文件已导出: {file_path}")
+            return True
+        
+        except Exception as e:
+            self.log_error(f"❌ JSON导出失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def _export_data(self, stats_data):
+        """
+        根据配置执行数据导出
+        
+        Args:
+            stats_data: 统计数据字典
+        """
+        export_mode = self.get_property('export_mode').lower()
+        
+        if export_mode == 'memory_only':
+            return
+        
+        custom_path = self.get_property('export_path')
+        filtered_count = stats_data.get('filtered_count', 0)
+        
+        # 定义导出任务列表
+        export_tasks = []
+        
+        if export_mode in ['csv', 'all']:
+            ext = '.csv'
+            file_path = self._resolve_export_path(custom_path, ext, filtered_count)
+            export_tasks.append(('csv', file_path))
+        
+        if export_mode in ['excel', 'all']:
+            # 检查依赖
+            if self._check_excel_dependency():
+                ext = '.xlsx'
+                file_path = self._resolve_export_path(custom_path, ext, filtered_count)
+                export_tasks.append(('excel', file_path))
+            else:
+                self.log_warning("⚠️ Excel导出已跳过（缺少openpyxl依赖）")
+        
+        if export_mode in ['json', 'all']:
+            ext = '.json'
+            file_path = self._resolve_export_path(custom_path, ext, filtered_count)
+            export_tasks.append(('json', file_path))
+        
+        # 执行导出任务
+        self.log_info(f"📤 开始导出数据 (模式: {export_mode}, 任务数: {len(export_tasks)})")
+        
+        success_count = 0
+        for export_type, file_path in export_tasks:
+            if export_type == 'csv':
+                if self._export_to_csv(stats_data, file_path):
+                    success_count += 1
+            elif export_type == 'excel':
+                if self._export_to_excel(stats_data, file_path):
+                    success_count += 1
+            elif export_type == 'json':
+                if self._export_to_json(stats_data, file_path):
+                    success_count += 1
+        
+        if success_count > 0:
+            self.log_success(f"✅ 数据导出完成 ({success_count}/{len(export_tasks)} 个文件)")
+        else:
+            self.log_warning("⚠️ 所有导出任务均失败")
     
     def _auto_binarize(self, image):
         """
@@ -542,6 +953,11 @@ class ContoursAnalysisNode(BaseNode):
                 'filtered_count': filtered_count,
                 'contours': contour_stats
             }
+            
+            # Step 8: 数据导出（若配置）
+            export_mode = self.get_property('export_mode').lower()
+            if export_mode != 'memory_only':
+                self._export_data(stats_data)
             
             self.log_success(f"轮廓分析完成 (总数:{total_count}, 筛选后:{filtered_count})")
             

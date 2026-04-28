@@ -167,7 +167,7 @@
       "icon": "🔲",
       "width": 200,
       "height": 120,
-      "description": "从二值化图像中提取轮廓并进行统计分析，支持面积筛选、形状检测（圆形/矩形/直线）及置信度评估",
+      "description": "从二值化图像中提取轮廓并进行统计分析，支持面积筛选、形状检测（圆形/矩形/直线）、置信度评估及数据导出（CSV/Excel/JSON）",
       "resource_level": "light",
       "hardware_requirements": {
         "cpu_cores": 1,
@@ -178,7 +178,9 @@
       "dependencies": [
         "opencv-python>=4.5.0"
       ],
-      "optional_dependencies": {}
+      "optional_dependencies": {
+        "excel_export": ["openpyxl>=3.0"]
+      }
     }
   ],
   "dependencies": [
