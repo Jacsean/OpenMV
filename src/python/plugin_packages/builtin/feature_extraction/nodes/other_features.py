@@ -11,7 +11,7 @@ class LaplacianNode(BaseNode):
     """Laplacian边缘检测节点"""
     
     __identifier__ = 'feature_extraction'
-    NODE_NAME = 'Laplacian边缘检测'
+    NODE_NAME = 'Laplacian算子'
     resource_level = "light"
     hardware_requirements = {'cpu_cores': 1, 'memory_gb': 1, 'gpu_required': False, 'gpu_memory_gb': 0}
     
@@ -48,7 +48,7 @@ class HarrisCornerNode(BaseNode):
     """Harris角点检测节点"""
     
     __identifier__ = 'feature_extraction'
-    NODE_NAME = 'Harris角点检测'
+    NODE_NAME = 'Harris角点'
     resource_level = "light"
     hardware_requirements = {'cpu_cores': 1, 'memory_gb': 1, 'gpu_required': False, 'gpu_memory_gb': 0}
     
@@ -93,7 +93,7 @@ class HoughLinesNode(BaseNode):
     """Hough直线检测节点"""
     
     __identifier__ = 'feature_extraction'
-    NODE_NAME = 'Hough直线检测'
+    NODE_NAME = 'Hough直线'
     resource_level = "light"
     hardware_requirements = {'cpu_cores': 1, 'memory_gb': 1, 'gpu_required': False, 'gpu_memory_gb': 0}
     
@@ -146,7 +146,7 @@ class HoughCirclesNode(BaseNode):
     """Hough圆检测节点"""
     
     __identifier__ = 'feature_extraction'
-    NODE_NAME = 'Hough圆检测'
+    NODE_NAME = 'Hough圆'
     resource_level = "light"
     hardware_requirements = {'cpu_cores': 1, 'memory_gb': 1, 'gpu_required': False, 'gpu_memory_gb': 0}
     

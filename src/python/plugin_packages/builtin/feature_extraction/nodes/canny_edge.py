@@ -11,7 +11,7 @@ class CannyEdgeNode(BaseNode):
     """Canny边缘检测节点"""
     
     __identifier__ = 'feature_extraction'
-    NODE_NAME = 'Canny边缘检测'
+    NODE_NAME = 'Canny算子'
     resource_level = "light"
     hardware_requirements = {'cpu_cores': 1, 'memory_gb': 1, 'gpu_required': False, 'gpu_memory_gb': 0}
     

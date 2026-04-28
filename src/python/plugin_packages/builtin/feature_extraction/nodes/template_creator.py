@@ -97,6 +97,16 @@ class TemplateCreatorNode(BaseNode):
         # 采样策略参数
         self.add_text_input('sampling_strategy', '采样策略', tab='properties')
         self.set_property('sampling_strategy', 'arc_length')  # uniform / arc_length / douglas_peucker
+        
+        # 鲁棒性增强参数
+        self.add_text_input('enable_smoothing', '启用轮廓平滑', tab='properties')
+        self.set_property('enable_smoothing', 'False')  # True / False
+        
+        self.add_text_input('smoothing_kernel_size', '平滑核大小', tab='properties')
+        self.set_property('smoothing_kernel_size', '5')  # 3, 5, 7, 9...
+        
+        self.add_text_input('enable_scale_normalization', '启用尺度归一化', tab='properties')
+        self.set_property('enable_scale_normalization', 'False')  # True / False
     
     def _check_shape_context_availability(self):
         """
@@ -257,6 +267,95 @@ class TemplateCreatorNode(BaseNode):
         
         return simplified.reshape(-1, 2).astype(np.float32)
     
+    def _smooth_contour(self, contour, kernel_size=5):
+        """
+        轮廓平滑滤波
+        
+        Args:
+            contour: 原始轮廓
+            kernel_size: 滤波器大小（奇数）
+            
+        Returns:
+            numpy.ndarray: 平滑后的轮廓
+        """
+        if len(contour) < kernel_size:
+            return contour.copy()
+        
+        # 确保kernel_size为奇数
+        if kernel_size % 2 == 0:
+            kernel_size += 1
+        
+        smoothed = np.zeros_like(contour, dtype=np.float32)
+        half_kernel = kernel_size // 2
+        
+        # 移动平均滤波
+        for i in range(len(contour)):
+            indices = [(i + j) % len(contour) for j in range(-half_kernel, half_kernel + 1)]
+            smoothed[i] = np.mean(contour[indices], axis=0)
+        
+        return smoothed.astype(np.int32)
+    
+    def _normalize_scale(self, contour, reference_area):
+        """
+        尺度归一化
+        
+        Args:
+            contour: 候选轮廓
+            reference_area: 参考面积（来自模板）
+            
+        Returns:
+            numpy.ndarray: 归一化后的轮廓
+        """
+        current_area = cv2.contourArea(contour)
+        
+        if current_area == 0 or reference_area == 0:
+            self.log_warning("⚠️ 面积为0，跳过尺度归一化")
+            return contour.copy()
+        
+        # 计算缩放比例
+        scale_factor = np.sqrt(reference_area / current_area)
+        
+        # 以质心为中心缩放
+        moments = cv2.moments(contour)
+        if moments['m00'] == 0:
+            return contour.copy()
+        
+        cx = moments['m10'] / moments['m00']
+        cy = moments['m01'] / moments['m00']
+        
+        normalized = (contour - np.array([cx, cy])) * scale_factor + np.array([cx, cy])
+        
+        return normalized.astype(np.int32)
+    
+    def _validate_contour(self, contour):
+        """
+        验证轮廓有效性
+        
+        Args:
+            contour: 待验证轮廓
+            
+        Returns:
+            bool: 是否有效
+        """
+        # 检查点数
+        if len(contour) < 3:
+            self.log_warning("⚠️ 轮廓点数不足 (<3)，视为无效")
+            return False
+        
+        # 检查面积
+        area = cv2.contourArea(contour)
+        if area == 0:
+            self.log_warning("⚠️ 轮廓面积为0，视为无效")
+            return False
+        
+        # 检查周长
+        perimeter = cv2.arcLength(contour, True)
+        if perimeter == 0:
+            self.log_warning("⚠️ 轮廓周长为0，视为无效")
+            return False
+        
+        return True
+    
     def _sample_contour_points(self, contour, n_points, sampling_strategy='arc_length'):
         """
         采样轮廓点
@@ -328,23 +427,33 @@ class TemplateCreatorNode(BaseNode):
                 self.log_warning(f"⚠️ 未知采样策略 '{sampling_strategy}'，已切换到默认策略 'arc_length'")
                 sampling_strategy = 'arc_length'
             
+            # 鲁棒性增强参数
+            enable_smoothing = params.get('enable_smoothing', 'False').lower() == 'true'
+            smoothing_kernel_size = int(params.get('smoothing_kernel_size', '5'))
+            enable_scale_normalization = params.get('enable_scale_normalization', 'False').lower() == 'true'
+            
+            # 验证轮廓有效性
+            if not self._validate_contour(contour):
+                self.log_error("❌ 轮廓无效，无法提取Shape Context特征")
+                return None
+            
+            # 应用轮廓平滑（如果启用）
+            processed_contour = contour.copy()
+            if enable_smoothing:
+                if smoothing_kernel_size < 3 or smoothing_kernel_size > 15:
+                    self.log_warning(f"⚠️ 平滑核大小 {smoothing_kernel_size} 超出范围 [3-15]，已调整为5")
+                    smoothing_kernel_size = 5
+                
+                processed_contour = self._smooth_contour(processed_contour, smoothing_kernel_size)
+                self.log_info(f"✅ 已应用轮廓平滑 (核大小={smoothing_kernel_size})")
+            
             # 记录最终使用的参数
             self.log_info(f"🔧 Shape Context参数: 点数={n_points}, 径向bins={n_radial_bins}, 角度bins={n_angular_bins}")
             self.log_info(f"   内半径={inner_radius_ratio}, 外半径=2.0, 采样策略={sampling_strategy}")
-            
-            # 生成缓存键值（基于轮廓和参数）
-            contour_key = self._generate_contour_key(contour)
-            param_key = f"{n_points}_{n_radial_bins}_{n_angular_bins}_{inner_radius_ratio}_{sampling_strategy}"
-            cache_key = f"{contour_key}_{param_key}"
-            
-            # 尝试从缓存获取
-            cached_descriptor = self._get_cached_descriptor(cache_key)
-            if cached_descriptor is not None:
-                self.log_info("✅ 使用缓存的Shape Context描述符")
-                return cached_descriptor
+            self.log_info(f"   平滑={enable_smoothing}, 尺度归一化={enable_scale_normalization}")
             
             # 采样轮廓点（使用优化后的采样策略）
-            sampled_points = self._sample_contour_points(contour, n_points, sampling_strategy)
+            sampled_points = self._sample_contour_points(processed_contour, n_points, sampling_strategy)
             
             self.log_info(f"✅ Shape Context采样完成 (策略={sampling_strategy}, 点数={len(sampled_points)})")
             
@@ -542,7 +651,10 @@ class TemplateCreatorNode(BaseNode):
                 'n_radial_bins': self.get_property('n_radial_bins'),
                 'n_angular_bins': self.get_property('n_angular_bins'),
                 'inner_radius_ratio': self.get_property('inner_radius_ratio'),
-                'sampling_strategy': self.get_property('sampling_strategy')  # 新增采样策略参数
+                'sampling_strategy': self.get_property('sampling_strategy'),
+                'enable_smoothing': self.get_property('enable_smoothing'),
+                'smoothing_kernel_size': self.get_property('smoothing_kernel_size'),
+                'enable_scale_normalization': self.get_property('enable_scale_normalization')
             }
             feature_data = self._extract_shape_context(contour, params)
         elif algorithm == 'hausdorff':
