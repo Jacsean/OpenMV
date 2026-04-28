@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "author": "OpenCV Team",
   "description": "OCR 文字识别插件 - 基于 PaddleOCR 实现高精度中文/英文文字检测与识别",
-  "category_group": "AI",
+  "category_group": "OCR/条码",
   "nodes": [
     {
       "class": "OCRTextRecognitionNode",

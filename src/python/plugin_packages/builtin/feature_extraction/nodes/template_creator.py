@@ -243,12 +243,38 @@ class TemplateCreatorNode(BaseNode):
             
             import cv2.xfeatures2d
             
-            # 参数配置
+            # 参数配置与验证
             n_points = int(params.get('n_sample_points', 100))
             n_radial_bins = int(params.get('n_radial_bins', 4))
             n_angular_bins = int(params.get('n_angular_bins', 12))
             inner_radius_ratio = float(params.get('inner_radius_ratio', 0.1))
-            sampling_strategy = params.get('sampling_strategy', 'arc_length')  # 新增采样策略参数
+            sampling_strategy = params.get('sampling_strategy', 'arc_length')
+            
+            # 参数范围验证
+            if n_points < 50 or n_points > 500:
+                self.log_warning(f"⚠️ 采样点数 {n_points} 超出推荐范围 [50-500]，已自动调整")
+                n_points = max(50, min(500, n_points))
+            
+            if n_radial_bins < 2 or n_radial_bins > 10:
+                self.log_warning(f"⚠️ 径向bins {n_radial_bins} 超出推荐范围 [2-10]，已自动调整")
+                n_radial_bins = max(2, min(10, n_radial_bins))
+            
+            if n_angular_bins < 6 or n_angular_bins > 36:
+                self.log_warning(f"⚠️ 角度bins {n_angular_bins} 超出推荐范围 [6-36]，已自动调整")
+                n_angular_bins = max(6, min(36, n_angular_bins))
+            
+            if inner_radius_ratio < 0.01 or inner_radius_ratio > 1.0:
+                self.log_warning(f"⚠️ 内半径比例 {inner_radius_ratio} 超出推荐范围 [0.01-1.0]，已自动调整")
+                inner_radius_ratio = max(0.01, min(1.0, inner_radius_ratio))
+            
+            valid_strategies = ['uniform', 'arc_length', 'douglas_peucker']
+            if sampling_strategy not in valid_strategies:
+                self.log_warning(f"⚠️ 未知采样策略 '{sampling_strategy}'，已切换到默认策略 'arc_length'")
+                sampling_strategy = 'arc_length'
+            
+            # 记录最终使用的参数
+            self.log_info(f"🔧 Shape Context参数: 点数={n_points}, 径向bins={n_radial_bins}, 角度bins={n_angular_bins}")
+            self.log_info(f"   内半径={inner_radius_ratio}, 外半径=2.0, 采样策略={sampling_strategy}")
             
             # 采样轮廓点（使用优化后的采样策略）
             sampled_points = self._sample_contour_points(contour, n_points, sampling_strategy)

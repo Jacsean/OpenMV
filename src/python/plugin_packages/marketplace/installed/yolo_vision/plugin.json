@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "author": "OpenCV视觉系统开发团队",
   "description": "YOLO 视觉算法套件（支持检测/分类/分割/姿态估计）",
-  "category_group": "识别分类",
+  "category_group": "YOLO",
   "nodes": [
     {
       "class": "YOLODetectNode",
