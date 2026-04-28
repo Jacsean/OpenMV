@@ -181,6 +181,33 @@
       "optional_dependencies": {
         "excel_export": ["openpyxl>=3.0"]
       }
+    },
+    {
+      "class": "TemplateCreatorNode",
+      "display_name": "模板创建",
+      "category": "轮廓分析",
+      "color": [
+        255,
+        255,
+        100
+      ],
+      "icon": "📋",
+      "width": 200,
+      "height": 120,
+      "description": "从轮廓分析结果中提取特征描述符并生成模板数据，支持Hu矩/Shape Context/Hausdorff算法",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {
+        "shape_context": ["opencv-contrib-python>=4.5.0"]
+      }
     }
   ],
   "dependencies": [

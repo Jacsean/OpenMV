@@ -64,14 +64,14 @@ class ContoursAnalysisNode(BaseNode):
         
         # 轮廓查找参数
         self.add_text_input('retrieval_mode', '查找模式', tab='properties')
-        self.set_property('retrieval_mode', 'RETR_EXTERNAL')
+        self.set_property('retrieval_mode', 'RETR_EXTERNAL') # RETR_EXTERNAL / RETR_LIST / RETR_CCOMP / RETR_TREE
         
         self.add_text_input('approximation_method', '近似方法', tab='properties')
-        self.set_property('approximation_method', 'CHAIN_APPROX_SIMPLE')
+        self.set_property('approximation_method', 'CHAIN_APPROX_SIMPLE')    # CHAIN_APPROX_NONE / CHAIN_APPROX_SIMPLE / CHAIN_APPROX_TC89_L1 / CHAIN_APPROX_TC89_KCOS
         
         # 筛选参数
         self.add_text_input('min_area', '最小面积(像素²)', tab='properties')
-        self.set_property('min_area', '0')
+        self.set_property('min_area', '10')
         
         self.add_text_input('max_area', '最大面积(像素²)', tab='properties')
         self.set_property('max_area', '999999')
