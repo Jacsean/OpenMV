@@ -799,15 +799,7 @@ class MainWindow(QtWidgets.QMainWindow):
         clear_action.setStatusTip("清空当前工作流的所有节点")
         clear_action.triggered.connect(self.clear_graph)
         run_menu.addAction(clear_action)
-        
-        # === 帮助菜单 ===
-        help_menu = menubar.addMenu("帮助(&H)")
-        
-        about_action = QtWidgets.QAction("ℹ️ 关于", self)
-        about_action.setStatusTip("关于本软件")
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
-        
+     
         # === 插件管理菜单 ===
         plugin_menu = menubar.addMenu("插件(&P)")
         
@@ -838,7 +830,15 @@ class MainWindow(QtWidgets.QMainWindow):
         reload_plugins_action.setStatusTip("重新扫描并加载插件")
         reload_plugins_action.triggered.connect(self.reload_plugins)
         plugin_menu.addAction(reload_plugins_action)
+         
+        # === 帮助菜单 ===
+        help_menu = menubar.addMenu("帮助(&H)")
         
+        about_action = QtWidgets.QAction("ℹ️ 关于", self)
+        about_action.setStatusTip("关于本软件")
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+          
     def run_graph(self):
         """
         执行当前激活的节点图（委托给ExecutionUIManager）
