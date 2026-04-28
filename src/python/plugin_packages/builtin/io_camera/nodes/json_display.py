@@ -1,5 +1,5 @@
 """
-JSON数据显示节点 - 以清单列表形式显示JSON数据结果
+JSON数据显示节点 - 以独立文本框方式显示JSON数据结果
 """
 
 from shared_libs.node_base import BaseNode
@@ -10,14 +10,14 @@ class JsonDisplayNode(BaseNode):
     """
     JSON数据显示节点
     
-    接收JSON字符串输入，以清单列表形式在节点上显示所有字段及其值
+    接收JSON字符串输入，为每个JSON字段创建独立的文本框显示
     
     功能说明：
     - 解析JSON字符串
     - 支持嵌套对象展开显示
-    - 在节点本体上以清单/列表方式显示字段和值
+    - 为每个字段创建独立的文本框（在属性面板中）
     - 支持数组类型数据显示
-    - 属性面板中提供完整JSON文本查看
+    - 属性面板顶部提供完整JSON文本查看
     
     硬件要求：
     - CPU: 1+ 核心
@@ -45,21 +45,24 @@ class JsonDisplayNode(BaseNode):
         # 输出端口 - 传递原始数据
         self.add_output('原始数据', color=(100, 100, 255))
         
-        # 属性面板中的完整JSON文本显示
-        self.add_text_input('full_json_text', '完整JSON文本', tab='properties')
+        # 属性面板中的完整JSON文本显示（放在最顶部）
+        self.add_text_input('full_json_text', '=== 完整JSON文本 ===', tab='properties')
+        
+        # 分隔线标记
+        self.add_text_input('_separator_1', '--- 字段详情 ---', tab='properties')
         
         # 缓存解析后的数据和字段数量
         self._parsed_data = None
         self._field_count = 0
         
-        # 用于跟踪已添加的动态属性
-        self._dynamic_properties = []
+        # 用于跟踪已添加的动态属性（字段名 -> 属性名映射）
+        self._dynamic_properties = {}
     
     def _clear_dynamic_properties(self):
-        """清除之前添加的动态属性"""
-        for prop_name in self._dynamic_properties:
+        """清除之前添加的动态字段属性"""
+        for field_key, prop_name in self._dynamic_properties.items():
             try:
-                # NodeGraphQt不支持直接删除属性，我们将其设置为空
+                # NodeGraphQt不支持直接删除属性，我们将其设置为空并隐藏
                 self.set_property(prop_name, '')
             except:
                 pass
@@ -119,6 +122,33 @@ class JsonDisplayNode(BaseNode):
         else:
             return str(value)
     
+    def _add_field_property(self, field_key, value):
+        """
+        为字段添加独立的文本框属性
+        
+        Args:
+            field_key: 字段键名（带路径）
+            value: 字段值
+        """
+        # 生成唯一的属性名（替换特殊字符）
+        prop_name = f"field_{field_key.replace('.', '_').replace('[', '_').replace(']', '_')}"
+        
+        # 格式化显示值
+        formatted_value = self._format_value_for_display(value)
+        
+        # 添加文本输入控件
+        try:
+            self.add_text_input(prop_name, field_key, tab='properties')
+            self.set_property(prop_name, formatted_value)
+            # 记录映射关系
+            self._dynamic_properties[field_key] = prop_name
+        except Exception as e:
+            # 如果属性已存在，只更新值
+            try:
+                self.set_property(prop_name, formatted_value)
+            except:
+                pass
+    
     def process(self, inputs=None):
         """
         处理节点逻辑
@@ -134,9 +164,9 @@ class JsonDisplayNode(BaseNode):
             if not inputs or len(inputs) == 0 or inputs[0] is None:
                 self._clear_dynamic_properties()
                 self.set_property('full_json_text', '无输入数据')
+                self.set_property('_separator_1', '--- 字段详情 ---')
                 self._parsed_data = None
                 self._field_count = 0
-                # 更新节点名称显示状态
                 self.NODE_NAME = 'JSON数据显示 (无数据)'
                 return {'原始数据': None}
             
@@ -145,6 +175,7 @@ class JsonDisplayNode(BaseNode):
             if not isinstance(json_str, str):
                 self._clear_dynamic_properties()
                 self.set_property('full_json_text', '输入不是字符串类型')
+                self.set_property('_separator_1', '--- 字段详情 ---')
                 self._parsed_data = None
                 self._field_count = 0
                 self.NODE_NAME = 'JSON数据显示 (错误)'
@@ -158,44 +189,44 @@ class JsonDisplayNode(BaseNode):
                 error_msg = f"JSON解析错误: {str(e)}"
                 self._clear_dynamic_properties()
                 self.set_property('full_json_text', error_msg)
+                self.set_property('_separator_1', '--- 字段详情 ---')
                 self.log_error(error_msg)
                 self._field_count = 0
                 self.NODE_NAME = 'JSON数据显示 (解析失败)'
                 return {'原始数据': None}
             
-            # Step 3: 保存完整JSON文本到属性面板
+            # Step 3: 保存完整JSON文本到属性面板顶部
             formatted_json = json.dumps(parsed_data, ensure_ascii=False, indent=2)
             self.set_property('full_json_text', formatted_json)
             
-            # Step 4: 清除之前的动态属性
+            # Step 4: 清除之前的动态字段属性
             self._clear_dynamic_properties()
             
             # Step 5: 扁平化JSON数据并生成字段列表
             flat_items = self._flatten_json(parsed_data)
             self._field_count = len([item for item in flat_items if item[1] != '[复杂类型]'])
             
-            # Step 6: 构建清单显示文本（用于日志和调试）
-            display_lines = ["=== JSON 数据清单 ===", ""]
-            for key, value in flat_items:
+            # Step 6: 为每个字段创建独立的文本框
+            for field_key, value in flat_items:
                 if value != '[复杂类型]':
-                    formatted_value = self._format_value_for_display(value)
-                    display_lines.append(f"• {key}: {formatted_value}")
+                    self._add_field_property(field_key, value)
             
-            display_text = "\n".join(display_lines)
+            # Step 7: 更新分隔线显示字段数量
+            self.set_property('_separator_1', f'--- 字段详情 (共{self._field_count}个) ---')
             
-            # Step 7: 更新节点名称以显示字段数量
+            # Step 8: 更新节点名称以显示字段数量
             self.NODE_NAME = f'JSON数据显示 ({self._field_count}个字段)'
             
             self.log_success(f"JSON数据显示完成，共 {self._field_count} 个字段")
-            self.log_info(display_text)
             
-            # Step 8: 输出原始解析数据供下游使用
+            # Step 9: 输出原始解析数据供下游使用
             return {'原始数据': parsed_data}
             
         except Exception as e:
             error_msg = f"处理错误: {str(e)}"
             self._clear_dynamic_properties()
             self.set_property('full_json_text', error_msg)
+            self.set_property('_separator_1', '--- 字段详情 ---')
             self.log_error(f"JSON显示节点错误: {e}")
             self._field_count = 0
             self.NODE_NAME = 'JSON数据显示 (异常)'
