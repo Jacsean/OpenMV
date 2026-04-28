@@ -106,6 +106,31 @@
       "optional_dependencies": {}
     },
     {
+      "class": "ImageEvaluationNode",
+      "display_name": "图像评估",
+      "category": "图像评估",
+      "color": [
+        200,
+        150,
+        255
+      ],
+      "icon": "📊",
+      "width": 200,
+      "height": 140,
+      "description": "评估图像质量，支持清晰度、亮度、对比度、噪声、色彩丰富度等多种指标的可选择性分析",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {}
+    },
+    {
       "class": "ResizeNode",
       "display_name": "图像缩放",
       "category": "几何变换",

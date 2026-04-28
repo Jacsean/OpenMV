@@ -6,9 +6,51 @@
   "category_group": "系统集成",
   "nodes": [
     {
+      "class": "PLCNode",
+      "display_name": "PLC",
+      "category": "PLC",
+      "color": [
+        100,
+        150,
+        255
+      ],
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {}
+    },
+    {
       "class": "DataOutputNode",
       "display_name": "数据输出",
       "category": "数采服务器",
+      "color": [
+        100,
+        150,
+        255
+      ],
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {}
+    },
+    {
+      "class": "RobotNode",
+      "display_name": "RobotNode",
+      "category": "机器人",
       "color": [
         100,
         150,

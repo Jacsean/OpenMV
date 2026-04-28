@@ -80,6 +80,29 @@
         "opencv-python>=4.5.0"
       ],
       "optional_dependencies": {}
+    },
+    {
+      "class": "JsonDisplayNode",
+      "display_name": "JSON数据显示",
+      "category": "数据显示",
+      "color": [
+        100,
+        100,
+        255
+      ],
+      "icon": "📊",
+      "width": 220,
+      "height": 140,
+      "description": "以表格形式显示JSON数据结果，支持嵌套对象和数组的展开显示",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [],
+      "optional_dependencies": {}
     }
   ],
   "dependencies": [

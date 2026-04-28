@@ -10,3 +10,4 @@ from .resize import ResizeNode
 from .rotate import RotateNode
 from .brightness_contrast import BrightnessContrastNode
 from .threshold import ThresholdNode
+from .image_evaluation import ImageEvaluationNode
