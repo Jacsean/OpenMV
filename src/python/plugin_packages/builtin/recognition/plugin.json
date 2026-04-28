@@ -2,13 +2,13 @@
   "name": "recognition",
   "version": "1.0.0",
   "author": "OpenCV Team",
-  "description": "识别分类节点包（二维码、OCR、模板匹配）",
-  "category_group": "识别分类",
+  "description": "系统集成节点包（PLC连接、数据处理）",
+  "category_group": "系统集成",
   "nodes": [
     {
       "class": "TemplateMatchNode",
       "display_name": "模板匹配",
-      "category": "模板匹配",
+      "category": "PLC",
       "color": [
         200,
         100,

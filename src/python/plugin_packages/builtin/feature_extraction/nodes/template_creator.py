@@ -47,6 +47,10 @@ class TemplateCreatorNode(BaseNode):
     def __init__(self):
         super(TemplateCreatorNode, self).__init__()
         
+        # 初始化Shape Context描述符缓存（LRU策略，最大100个）
+        self._shape_context_cache = {}
+        self._cache_max_size = 100
+        
         # 输入端口
         self.add_input('统计数据', color=(255, 255, 100))
         
@@ -108,6 +112,58 @@ class TemplateCreatorNode(BaseNode):
             self.log_warning("⚠️ Shape Context算法需要安装opencv-contrib-python")
             self.log_info("💡 安装命令: pip install opencv-contrib-python")
             return False
+    
+    def _generate_contour_key(self, contour):
+        """
+        生成轮廓的唯一键值（用于缓存）
+        
+        Args:
+            contour: 轮廓点集
+            
+        Returns:
+            str: 轮廓的唯一标识符
+        """
+        # 使用轮廓的哈希值作为键
+        contour_hash = hash(contour.tobytes())
+        return f"contour_{contour_hash}"
+    
+    def _get_cached_descriptor(self, contour_key):
+        """
+        从缓存中获取描述符
+        
+        Args:
+            contour_key: 轮廓键值
+            
+        Returns:
+            dict or None: 缓存的描述符，未命中则返回None
+        """
+        if contour_key in self._shape_context_cache:
+            self.log_info(f"💾 缓存命中: {contour_key[:20]}...")
+            return self._shape_context_cache[contour_key]
+        return None
+    
+    def _cache_descriptor(self, contour_key, descriptor):
+        """
+        将描述符存入缓存（LRU策略）
+        
+        Args:
+            contour_key: 轮廓键值
+            descriptor: 描述符数据
+        """
+        # LRU淘汰：如果缓存已满，删除最早的条目
+        if len(self._shape_context_cache) >= self._cache_max_size:
+            oldest_key = next(iter(self._shape_context_cache))
+            del self._shape_context_cache[oldest_key]
+            self.log_info(f"🗑️ 缓存淘汰: {oldest_key[:20]}...")
+        
+        self._shape_context_cache[contour_key] = descriptor
+        self.log_info(f"💾 缓存保存: {contour_key[:20]}... (当前缓存大小: {len(self._shape_context_cache)})")
+    
+    def _clear_cache(self):
+        """清空缓存"""
+        cache_size = len(self._shape_context_cache)
+        self._shape_context_cache.clear()
+        self.log_info(f"🗑️ 缓存已清空 (释放{cache_size}个条目)")
     
     def _extract_hu_moments(self, contour):
         """
@@ -276,6 +332,17 @@ class TemplateCreatorNode(BaseNode):
             self.log_info(f"🔧 Shape Context参数: 点数={n_points}, 径向bins={n_radial_bins}, 角度bins={n_angular_bins}")
             self.log_info(f"   内半径={inner_radius_ratio}, 外半径=2.0, 采样策略={sampling_strategy}")
             
+            # 生成缓存键值（基于轮廓和参数）
+            contour_key = self._generate_contour_key(contour)
+            param_key = f"{n_points}_{n_radial_bins}_{n_angular_bins}_{inner_radius_ratio}_{sampling_strategy}"
+            cache_key = f"{contour_key}_{param_key}"
+            
+            # 尝试从缓存获取
+            cached_descriptor = self._get_cached_descriptor(cache_key)
+            if cached_descriptor is not None:
+                self.log_info("✅ 使用缓存的Shape Context描述符")
+                return cached_descriptor
+            
             # 采样轮廓点（使用优化后的采样策略）
             sampled_points = self._sample_contour_points(contour, n_points, sampling_strategy)
             
@@ -296,11 +363,16 @@ class TemplateCreatorNode(BaseNode):
                 'sampling_strategy': sampling_strategy
             }
             
-            return {
+            result = {
                 'shape_context_descriptor': descriptor_data,
                 'reference_area': round(area, 2),
                 'reference_perimeter': round(perimeter, 2)
             }
+            
+            # 存入缓存
+            self._cache_descriptor(cache_key, result)
+            
+            return result
         
         except Exception as e:
             self.log_error(f"Shape Context提取失败: {e}")

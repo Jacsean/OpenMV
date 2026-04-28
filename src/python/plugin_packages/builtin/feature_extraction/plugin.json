@@ -7,7 +7,7 @@
   "nodes": [
     {
       "class": "CannyEdgeNode",
-      "display_name": "Canny边缘检测",
+      "display_name": "Canny算子",
       "category": "边缘检测",
       "color": [
         255,
@@ -32,7 +32,7 @@
     },
     {
       "class": "SobelEdgeNode",
-      "display_name": "Sobel边缘检测",
+      "display_name": "Sobel算子",
       "category": "边缘检测",
       "color": [
         255,
@@ -57,7 +57,7 @@
     },
     {
       "class": "LaplacianNode",
-      "display_name": "Laplacian边缘检测",
+      "display_name": "Laplacian算子",
       "category": "边缘检测",
       "color": [
         255,
@@ -82,7 +82,7 @@
     },
     {
       "class": "HarrisCornerNode",
-      "display_name": "Harris角点检测",
+      "display_name": "Harris角点",
       "category": "角点检测",
       "color": [
         200,
@@ -107,7 +107,7 @@
     },
     {
       "class": "HoughLinesNode",
-      "display_name": "Hough直线检测",
+      "display_name": "Hough直线",
       "category": "形状检测",
       "color": [
         100,
@@ -132,7 +132,7 @@
     },
     {
       "class": "HoughCirclesNode",
-      "display_name": "Hough圆检测",
+      "display_name": "Hough圆",
       "category": "形状检测",
       "color": [
         100,
