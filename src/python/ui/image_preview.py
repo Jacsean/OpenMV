@@ -557,10 +557,10 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             # 获取结束位置
             view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
             
-            # 转换为场景坐标
-            start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
-            end_scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
-            
+            # 转换为场景坐标（view_pos已经是QPoint，不需要.toPoint()）
+            start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
+            end_scene_pos = self.graphics_view.mapToScene(view_pos)
+
             # 创建标注对象
             annotation = Annotation(
                 type=self.current_tool,
@@ -599,11 +599,11 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         显示文本输入对话框
         
         Args:
-            view_pos: 视图坐标位置
+            view_pos: 视图坐标位置（QPoint类型）
         """
-        # 转换为场景坐标
-        scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
-        
+        # 转换为场景坐标（view_pos已经是QPoint，不需要.toPoint()）
+        scene_pos = self.graphics_view.mapToScene(view_pos)
+
         # 创建输入对话框
         text, ok = QtWidgets.QInputDialog.getText(
             self,
@@ -829,9 +829,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         # 检查是否点击了graphics_view内部
         if self.graphics_view.underMouse():
-            # 获取相对于graphics_view的位置
+            # 获取相对于graphics_view的位置（已经是QPoint）
             view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
-            scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
+            scene_pos = self.graphics_view.mapToScene(view_pos)
             
             if self.roi_mode:
                 # ROI模式下
@@ -884,7 +884,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         if self.graphics_view.underMouse():
             view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
-            scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
+            scene_pos = self.graphics_view.mapToScene(view_pos)
             
             if self.roi_mode and self.roi_resize_handle and self.selected_roi:
                 # 正在调整ROI大小
@@ -914,7 +914,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 pen = QtGui.QPen(color, 2)
                 pen.setStyle(QtCore.Qt.DashLine)
                 
-                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
+                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
                 
                 temp_item = self.scene.addRect(
                     QtCore.QRectF(start_scene_pos, scene_pos).normalized(),
@@ -932,7 +932,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 pen = QtGui.QPen(color, 2)
                 pen.setStyle(QtCore.Qt.DashLine)
                 
-                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
+                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
                 
                 if self.current_tool == 'rect':
                     temp_item = self.scene.addRect(
@@ -960,7 +960,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         if self.graphics_view.underMouse():
             view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
-            scene_pos = self.graphics_view.mapToScene(view_pos.toPoint())
+            scene_pos = self.graphics_view.mapToScene(view_pos)
             
             if self.roi_mode:
                 if self.roi_resize_handle:
@@ -973,7 +973,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 
                 elif self.drawing_start_pos is not None:
                     # 完成绘制新ROI
-                    start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
+                    start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
                     
                     # 清除临时预览
                     for item in self.scene.items():
@@ -1006,7 +1006,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             
             elif self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
                 # 普通标注模式完成绘制
-                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos.toPoint())
+                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
                 
                 annotation = Annotation(
                     type=self.current_tool,
