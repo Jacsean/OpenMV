@@ -1542,88 +1542,78 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def mousePressEvent(self, event):
         """
-        鼠标按下事件：处理图形绘制和选择
+        鼠标按下事件：处理图形绘制、选择和编辑
         """
-        # 检查是否点击了graphics_view内部
-        if self.graphics_view.underMouse():
-            # 获取相对于graphics_view的位置（已经是QPoint）
-            view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
-            scene_pos = self.graphics_view.mapToScene(view_pos)
-            
-            # === 多边形绘制逻辑（Phase 2）===
-            if self.current_tool == 'polygon':
-                if event.button() == QtCore.Qt.LeftButton:
-                    if not self.is_drawing_polygon:
-                        # 开始绘制多边形
-                        self.is_drawing_polygon = True
-                        self.polygon_points = [scene_pos]
-                        print(f"🎨 开始绘制多边形，第1个点: ({int(scene_pos.x())}, {int(scene_pos.y())})")
-                    else:
-                        # 添加顶点
-                        self.polygon_points.append(scene_pos)
-                        print(f"   添加顶点: ({int(scene_pos.x())}, {int(scene_pos.y())})")
-                    
+        if not self.graphics_view.underMouse():
+            super(ImagePreviewDialog, self).mousePressEvent(event)
+            return
+        
+        view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+        scene_pos = self.graphics_view.mapToScene(view_pos)
+        
+        # === 多边形绘制逻辑 ===
+        if self.current_tool == 'polygon':
+            if event.button() == QtCore.Qt.LeftButton:
+                if not self.is_drawing_polygon:
+                    self.is_drawing_polygon = True
+                    self.polygon_points = [scene_pos]
+                    print(f"🎨 开始绘制多边形，第1个点: ({int(scene_pos.x())}, {int(scene_pos.y())})")
+                else:
+                    self.polygon_points.append(scene_pos)
+                    print(f"   添加顶点: ({int(scene_pos.x())}, {int(scene_pos.y())})")
+                event.accept()
+                return
+        
+        # === 文字工具逻辑 ===
+        elif self.current_tool == 'text':
+            if event.button() == QtCore.Qt.LeftButton:
+                self.show_text_input_dialog(view_pos)
+                event.accept()
+                return
+        
+        # === 通用图形编辑逻辑 ===
+        elif event.button() == QtCore.Qt.LeftButton:
+            # 检查是否点击了选中图形的手柄
+            if self.container.selected_shape:
+                handle = self.container.get_handle_at_position(
+                    self.container.selected_shape, scene_pos
+                )
+                if handle:
+                    # 开始调整大小
+                    self.container.resize_handle = handle
+                    self.container.resize_start_pos = scene_pos
+                    print(f"🔧 开始调整图形大小: {handle}")
                     event.accept()
                     return
             
-            # === ROI模式逻辑（兼容旧代码）===
-            elif self.roi_mode:
-                if event.button() == QtCore.Qt.LeftButton:
-                    # 检查是否点击了现有ROI的手柄
-                    if self.selected_roi:
-                        handle = self.get_resize_handle(self.selected_roi, scene_pos)
-                        if handle:
-                            # 开始调整大小 - 保持十字光标
-                            self.roi_resize_handle = handle
-                            self.resize_start_pos = scene_pos
-                            print(f"🔧 开始调整ROI大小: {handle}")
-                            event.accept()
-                            return
-                    
-                    # 检查是否点击了现有ROI
-                    clicked_roi = self.get_roi_at_position(scene_pos)
-                    if clicked_roi:
-                        # 选中ROI - 显示手型光标
-                        self.selected_roi = clicked_roi
-                        self.container.select_roi(clicked_roi)
-                        
-                        # 检查是否在ROI内部（用于移动）
-                        if self.is_point_in_roi(clicked_roi, scene_pos):
-                            self.is_moving_roi = True
-                            # 计算移动偏移量
-                            x1, y1 = clicked_roi.points[0]
-                            self.roi_move_offset = (scene_pos.x() - x1, scene_pos.y() - y1)
-                            self.graphics_view.setCursor(QtCore.Qt.ClosedHandCursor)
-                            print(f"✋ 开始移动ROI: {clicked_roi.name}")
-                        else:
-                            self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
-                        
-                        self.redraw_annotations()
-                        event.accept()
-                        return
-                    else:
-                        # 取消选中 - 开始绘制，显示十字光标
-                        self.selected_roi = None
-                        self.container.clear_selection()
-                        self.drawing_start_pos = view_pos
-                        self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
-                        print("🎨 开始绘制新ROI")
-                        event.accept()
-                        return
-            
-            # === 矩形/圆形绘制逻辑 ===
-            elif self.current_tool in ['rect', 'circle']:
-                if event.button() == QtCore.Qt.LeftButton:
-                    # 普通标注模式 - 保持十字光标
+            # 检查是否点击了现有图形
+            clicked_shape = self.container.get_shape_at_position(scene_pos)
+            if clicked_shape:
+                # 选中图形
+                self.container.select_shape(clicked_shape)
+                
+                # 检查是否在图形内部（用于移动）
+                if self.container.is_point_in_shape(clicked_shape, scene_pos):
+                    self.container.is_moving_shape = True
+                    # 计算移动偏移量
+                    if clicked_shape.type in ['rect', 'circle']:
+                        x1, y1 = clicked_shape.points[0]
+                        self.container.shape_move_offset = (scene_pos.x() - x1, scene_pos.y() - y1)
+                    self.graphics_view.setCursor(QtCore.Qt.ClosedHandCursor)
+                    print(f"✋ 开始移动图形: {clicked_shape.name or clicked_shape.id}")
+                
+                self.redraw_annotations()
+                event.accept()
+                return
+            else:
+                # 取消选中
+                self.container.clear_selection()
+                
+                # 开始绘制新图形
+                if self.current_tool in ['rect', 'circle']:
                     self.drawing_start_pos = view_pos
-                    event.accept()
-                    return
-            
-            # === 文字工具逻辑 ===
-            elif self.current_tool == 'text':
-                if event.button() == QtCore.Qt.LeftButton:
-                    # 文字工具
-                    self.show_text_input_dialog(view_pos)
+                    self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
+                    print(f"🎨 开始绘制新{self.current_tool}")
                     event.accept()
                     return
         
@@ -1631,167 +1621,122 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def mouseMoveEvent(self, event):
         """
-        鼠标移动事件：处理实时预览
+        鼠标移动事件：处理实时预览、拖动和调整大小
         """
-        if self.graphics_view.underMouse():
-            view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
-            scene_pos = self.graphics_view.mapToScene(view_pos)
-            
-            # === 多边形绘制实时预览（Phase 2）===
-            if self.is_drawing_polygon and len(self.polygon_points) > 0:
-                # 清除旧的临时线
-                for line in self.polygon_temp_lines:
-                    if line.scene() == self.scene:
-                        self.scene.removeItem(line)
-                self.polygon_temp_lines.clear()
-                
-                # 绘制从最后一个顶点到当前鼠标位置的橡皮筋线
-                last_point = self.polygon_points[-1]
-                pen = QtGui.QPen(QtGui.QColor(0, 255, 0), 2)
-                pen.setStyle(QtCore.Qt.DashLine)
-                
-                line_item = self.scene.addLine(
-                    last_point.x(), last_point.y(),
-                    scene_pos.x(), scene_pos.y(),
-                    pen
-                )
-                self.polygon_temp_lines.append(line_item)
-                
-                event.accept()
-                return
-            
-            # === ROI模式下的光标控制（兼容旧代码）===
-            elif self.roi_mode:
-                if self.is_moving_roi and self.selected_roi:
-                    # 正在移动ROI
-                    scene_pos = self.graphics_view.mapToScene(view_pos)
-                    offset_x = scene_pos.x() - self.roi_move_offset[0]
-                    offset_y = scene_pos.y() - self.roi_move_offset[1]
-                    
-                    # 计算新的位置
-                    x1, y1 = self.selected_roi.points[0]
-                    x2, y2 = self.selected_roi.points[1]
-                    
-                    width = abs(x2 - x1)
-                    height = abs(y2 - y1)
-                    
-                    # 更新ROI位置
-                    self.selected_roi.points[0] = (int(offset_x), int(offset_y))
-                    self.selected_roi.points[1] = (int(offset_x + width), int(offset_y + height))
-                    
-                    self.redraw_annotations()
-                    event.accept()
-                    return
-                
-                elif self.roi_resize_handle and self.selected_roi:
-                    # 正在调整ROI大小 - 保持十字光标
-                    delta_x = scene_pos.x() - self.resize_start_pos.x()
-                    delta_y = scene_pos.y() - self.resize_start_pos.y()
-                    
-                    # 根据手柄类型调整ROI
-                    self.resize_roi(self.selected_roi, self.roi_resize_handle, delta_x, delta_y)
-                    
-                    # 更新起始位置
-                    self.resize_start_pos = scene_pos
-                    
-                    # 重绘
-                    self.redraw_annotations()
-                    event.accept()
-                    return
-                
-                elif self.selected_roi:
-                    # 检查是否悬停在控制点上 - 显示手型光标
-                    handle = self.get_resize_handle(self.selected_roi, scene_pos)
-                    if handle:
-                        self.graphics_view.setCursor(QtCore.Qt.SizeAllCursor)  # 手型光标（调整大小）
-                    else:
-                        # 检查是否在ROI内部 - 显示手型光标
-                        if self.is_point_in_roi(self.selected_roi, scene_pos):
-                            self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)  # 手型光标（移动）
-                        else:
-                            self.graphics_view.setCursor(QtCore.Qt.CrossCursor)  # 十字光标（绘制）
-                else:
-                    # 没有选中ROI - 十字光标（准备绘制）
-                    self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
-            
-            # === 矩形/圆形绘制实时预览 ===
-            elif self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
-                # 普通标注模式的实时预览 - 保持十字光标
-                for item in self.scene.items():
-                    if hasattr(item, 'is_temp_preview'):
-                        self.scene.removeItem(item)
-                
-                color = QtGui.QColor(
-                    self.current_pen_color[2],  # R
-                    self.current_pen_color[1],  # G
-                    self.current_pen_color[0]   # B
-                )
-                pen = QtGui.QPen(color, 2)
-                pen.setStyle(QtCore.Qt.DashLine)
-                
-                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
-                
-                if self.current_tool == 'rect':
-                    temp_item = self.scene.addRect(
-                        QtCore.QRectF(start_scene_pos, scene_pos).normalized(),
-                        pen
-                    )
-                elif self.current_tool == 'circle':
-                    radius = ((scene_pos.x() - start_scene_pos.x())**2 + 
-                             (scene_pos.y() - start_scene_pos.y())**2)**0.5
-                    circle_rect = QtCore.QRectF(
-                        start_scene_pos.x() - radius,
-                        start_scene_pos.y() - radius,
-                        radius * 2,
-                        radius * 2
-                    )
-                    temp_item = self.scene.addEllipse(circle_rect, pen)
-                
-                temp_item.is_temp_preview = True
-        
-        super(ImagePreviewDialog, self).mouseMoveEvent(event)
-    
-    def finish_polygon_drawing(self):
-        """
-        完成多边形绘制
-        """
-        if not self.is_drawing_polygon or len(self.polygon_points) < 3:
+        if not self.graphics_view.underMouse():
+            super(ImagePreviewDialog, self).mouseMoveEvent(event)
             return
         
-        # 清除临时线
-        for line in self.polygon_temp_lines:
-            if line.scene() == self.scene:
-                self.scene.removeItem(line)
-        self.polygon_temp_lines.clear()
+        view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+        scene_pos = self.graphics_view.mapToScene(view_pos)
         
-        # 转换为整数坐标
-        points = [(int(p.x()), int(p.y())) for p in self.polygon_points]
-        
-        # 根据当前模式创建对应的图形对象
-        mode = self.container.current_mode
-        
-        if mode == 'mask':
-            # 创建Mask对象
-            mask_shape = MaskShape(
-                type='polygon',
-                points=points,
-                border_color=(255, 0, 0),
-                fill_color=(255, 0, 0),
-                thickness=2
+        # === 调整图形大小 ===
+        if self.container.resize_handle and self.container.selected_shape:
+            self.container.resize_shape(
+                self.container.selected_shape,
+                self.container.resize_handle,
+                scene_pos
             )
-            self.container.add_mask(mask_shape)
-            print(f"✅ 已创建Mask多边形: {mask_shape.name}")
+            self.redraw_annotations()
+            event.accept()
+            return
+        
+        # === 移动图形 ===
+        elif self.container.is_moving_shape and self.container.selected_shape:
+            offset_x = scene_pos.x() - self.container.shape_move_offset[0]
+            offset_y = scene_pos.y() - self.container.shape_move_offset[1]
+            
+            # 计算新位置
+            if self.container.selected_shape.type in ['rect', 'circle']:
+                x1, y1 = self.container.selected_shape.points[0]
+                delta_x = offset_x - x1
+                delta_y = offset_y - y1
+                
+                self.container.move_shape(self.container.selected_shape, delta_x, delta_y)
+                
+                # 更新偏移量
+                self.container.shape_move_offset = (offset_x, offset_y)
+            
+            self.redraw_annotations()
+            event.accept()
+            return
+        
+        # === 多边形绘制实时预览 ===
+        elif self.is_drawing_polygon and len(self.polygon_points) > 0:
+            # 清除旧的临时线
+            for line in self.polygon_temp_lines:
+                if line.scene() == self.scene:
+                    self.scene.removeItem(line)
+            self.polygon_temp_lines.clear()
+            
+            # 绘制橡皮筋线
+            last_point = self.polygon_points[-1]
+            pen = QtGui.QPen(QtGui.QColor(0, 255, 0), 2)
+            pen.setStyle(QtCore.Qt.DashLine)
+            
+            line_item = self.scene.addLine(
+                last_point.x(), last_point.y(),
+                scene_pos.x(), scene_pos.y(),
+                pen
+            )
+            self.polygon_temp_lines.append(line_item)
+            event.accept()
+            return
+        
+        # === 矩形/圆形绘制实时预览 ===
+        elif self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
+            # 清除旧预览
+            for item in self.scene.items():
+                if hasattr(item, 'is_temp_preview'):
+                    self.scene.removeItem(item)
+            
+            color = QtGui.QColor(
+                self.current_pen_color[2],
+                self.current_pen_color[1],
+                self.current_pen_color[0]
+            )
+            pen = QtGui.QPen(color, 2)
+            pen.setStyle(QtCore.Qt.DashLine)
+            
+            start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
+            
+            if self.current_tool == 'rect':
+                temp_item = self.scene.addRect(
+                    QtCore.QRectF(start_scene_pos, scene_pos).normalized(),
+                    pen
+                )
+            elif self.current_tool == 'circle':
+                radius = ((scene_pos.x() - start_scene_pos.x())**2 + 
+                         (scene_pos.y() - start_scene_pos.y())**2)**0.5
+                circle_rect = QtCore.QRectF(
+                    start_scene_pos.x() - radius,
+                    start_scene_pos.y() - radius,
+                    radius * 2,
+                    radius * 2
+                )
+                temp_item = self.scene.addEllipse(circle_rect, pen)
+            
+            temp_item.is_temp_preview = True
+            event.accept()
+            return
+        
+        # === 光标管理 ===
         else:
-            # 创建普通标注
-            annotation = AnnotationShape(
-                type='polygon',
-                points=points,
-                border_color=self.current_pen_color,
-                thickness=2
-            )
-            self.container.add_annotation(annotation)
-            print(f"✅ 已创建标注多边形")
+            # 检查是否悬停在手柄上
+            if self.container.selected_shape:
+                handle = self.container.get_handle_at_position(
+                    self.container.selected_shape, scene_pos
+                )
+                if handle:
+                    self.graphics_view.setCursor(QtCore.Qt.SizeAllCursor)
+                elif self.container.is_point_in_shape(self.container.selected_shape, scene_pos):
+                    self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
+                else:
+                    self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
+            else:
+                self.graphics_view.setCursor(QtCore.Qt.ArrowCursor)
         
+        super(ImagePreviewDialog, self).mouseMoveEvent(event)
         # 重置状态
         self.is_drawing_polygon = False
         self.polygon_points.clear()
@@ -1817,52 +1762,49 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def mouseReleaseEvent(self, event):
         """
-        鼠标释放事件：完成矩形/圆形绘制或ROI移动
+        鼠标释放事件：结束拖动、调整或绘制操作
         """
-        # 注意：多边形绘制在 mouseDoubleClickEvent 中完成，此处不处理多边形逻辑
+        # === 结束调整大小 ===
+        if self.container.resize_handle:
+            self.container.resize_handle = None
+            self.container.resize_start_pos = None
+            print("✅ 调整大小完成")
         
-        # === ROI移动完成 ===
-        if self.is_moving_roi and self.selected_roi:
-            self.is_moving_roi = False
-            self.roi_move_offset = None
+        # === 结束移动 ===
+        elif self.container.is_moving_shape:
+            self.container.is_moving_shape = False
+            self.container.shape_move_offset = None
             self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
-            print(f"✅ ROI移动完成")
-            event.accept()
-            return
+            print("✅ 移动完成")
         
-        # === 矩形/圆形绘制完成 ===
-        if self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
-            # 获取结束位置
+        # === 结束矩形/圆形绘制 ===
+        elif self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
             view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
-            
-            # 转换为场景坐标
+            scene_pos = self.graphics_view.mapToScene(view_pos)
             start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
-            end_scene_pos = self.graphics_view.mapToScene(view_pos)
             
-            # 转换为整数坐标
+            # 清除临时预览
+            for item in self.scene.items():
+                if hasattr(item, 'is_temp_preview'):
+                    self.scene.removeItem(item)
+            
+            # 创建新图形
+            from core.node_base import generate_id
+            shape_id = generate_id()
+            
             points = [
                 (int(start_scene_pos.x()), int(start_scene_pos.y())),
-                (int(end_scene_pos.x()), int(end_scene_pos.y()))
+                (int(scene_pos.x()), int(scene_pos.y()))
             ]
             
-            # 根据当前模式创建对应的图形对象
             mode = self.container.current_mode
             
             if mode == 'roi' and self.current_tool == 'rect':
-                # 创建ROI对象（仅矩形）
-                roi_shape = ROIShape(
-                    type='rect',
-                    points=points
-                )
+                # 创建ROI对象
+                roi_shape = ROIShape(type='rect', points=points)
                 self.container.add_roi(roi_shape)
-                
-                # 自动选中新创建的ROI
                 self.container.select_roi(roi_shape)
-                self.selected_roi = roi_shape
-                
-                # 弹出命名对话框
                 self.show_roi_name_dialog(roi_shape)
-                
                 print(f"✅ 已创建ROI: {roi_shape.name}")
                 
             elif mode == 'mask':
@@ -1888,72 +1830,23 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 self.container.add_annotation(annotation)
                 print(f"✅ 已创建标注{self.current_tool}")
             
-            # 清除临时预览
-            for item in self.scene.items():
-                if hasattr(item, 'is_temp_preview'):
-                    self.scene.removeItem(item)
-            
-            # 重绘所有图形
-            self.redraw_all_shapes()
-            
-            # 重置状态
+            # 重置绘制状态
             self.drawing_start_pos = None
-            
-            event.accept()
-            return
+            self.redraw_all_shapes()
         
         super(ImagePreviewDialog, self).mouseReleaseEvent(event)
-
-    def mouseDoubleClickEvent(self, event):
-        """
-        鼠标双击事件：用于闭合多边形绘制
-        """
-        if self.graphics_view.underMouse() and self.current_tool == 'polygon' and self.is_drawing_polygon:
-            if event.button() == QtCore.Qt.LeftButton:
-                # 双击闭合多边形
-                if len(self.polygon_points) >= 3:
-                    self.finish_polygon_drawing()
-                else:
-                    print("⚠️ 多边形至少需要3个顶点")
-                    self.cancel_polygon_drawing()
-                
-                event.accept()
-                return
-        
-        super(ImagePreviewDialog, self).mouseDoubleClickEvent(event)
     
     def keyPressEvent(self, event):
-        """
-        键盘事件处理
-        
-        Args:
-            event: 键盘事件对象
-        """
-        from PySide2.QtCore import Qt
-        
-        # Esc键：取消多边形绘制或取消选中
-        if event.key() == Qt.Key_Escape:
-            if self.is_drawing_polygon:
-                # 取消多边形绘制
-                self.cancel_polygon_drawing()
-            else:
-                # 取消选中
-                self.container.clear_selection()
-                self.redraw_all_shapes()
-            
-            event.accept()
-            return
-        
-        # Delete键：删除选中的图形
-        elif event.key() == Qt.Key_Delete:
+        """键盘事件处理"""
+        if event.key() in [QtCore.Qt.Key_Delete, QtCore.Qt.Key_Backspace]:
+            # 删除选中的图形
             if self.container.selected_roi:
-                # 删除选中的ROI
                 roi_id = self.container.selected_roi.id
                 self.container.remove_roi(roi_id)
                 print(f"🗑 已删除ROI")
                 self.redraw_all_shapes()
+            
             elif self.container.selected_mask:
-                # 删除选中的Mask
                 mask_id = self.container.selected_mask.id
                 self.container.remove_mask(mask_id)
                 print(f"🗑 已删除Mask")
@@ -1963,7 +1856,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             return
         
         super(ImagePreviewDialog, self).keyPressEvent(event)
-
+    
     def show_roi_name_dialog(self, roi: ROIShape):
         """
         显示ROI命名对话框
@@ -1976,7 +1869,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         name, ok = QtWidgets.QInputDialog.getText(
             self,
             "ROI命名",
-            "请输入ROI名称：",
+            "请输入ROI名称:",
             QtWidgets.QLineEdit.Normal,
             default_name
         )
@@ -1988,22 +1881,3 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             # 使用默认名称
             roi.name = default_name
             print(f"✅ 使用默认名称: {roi.name}")
-    
-    def move_roi(self, roi: ROIShape, delta_x: float, delta_y: float):
-        """
-        移动ROI位置
-        
-        Args:
-            roi: ROI对象
-            delta_x: X轴偏移量
-            delta_y: Y轴偏移量
-        """
-        if len(roi.points) < 2:
-            return
-        
-        # 更新两个顶点的坐标
-        x1, y1 = roi.points[0]
-        x2, y2 = roi.points[1]
-        
-        roi.points[0] = (int(x1 + delta_x), int(y1 + delta_y))
-        roi.points[1] = (int(x2 + delta_x), int(y2 + delta_y))
