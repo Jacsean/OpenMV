@@ -179,6 +179,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.scene = QtWidgets.QGraphicsScene(self)
         self.graphics_view.setScene(self.scene)
         
+        # 在scene上安装事件过滤器以捕获鼠标事件
+        self.scene.installEventFilter(self)
+        
         # 创建图像项
         self.pixmap_item = None
         
@@ -234,8 +237,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def eventFilter(self, obj, event):
         """
-        事件过滤器：处理键盘快捷键
+        事件过滤器：处理键盘快捷键和鼠标事件
         """
+        # 处理graphics_view的键盘事件
         if obj == self.graphics_view and event.type() == QtCore.QEvent.KeyPress:
             if event.key() == QtCore.Qt.Key_Plus or event.key() == QtCore.Qt.Key_Equal:
                 # + 键放大
@@ -259,6 +263,42 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     self.graphics_view.setDragMode(QtWidgets.QGraphicsView.NoDrag)
                 else:
                     self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
+                return True
+        
+        # 处理scene的鼠标事件（ROI和标注工具）
+        if obj == self.scene:
+            if event.type() == QtCore.QEvent.GraphicsSceneMousePress:
+                # 将QGraphicsSceneMouseEvent转换为QMouseEvent并调用mousePressEvent
+                mouse_event = QtGui.QMouseEvent(
+                    QtCore.QEvent.MouseButtonPress,
+                    event.screenPos().toPoint(),  # 转换为QPoint
+                    event.button(),
+                    event.buttons(),
+                    event.modifiers()
+                )
+                self.mousePressEvent(mouse_event)
+                return True
+            
+            elif event.type() == QtCore.QEvent.GraphicsSceneMouseMove:
+                mouse_event = QtGui.QMouseEvent(
+                    QtCore.QEvent.MouseMove,
+                    event.screenPos().toPoint(),  # 转换为QPoint
+                    QtCore.Qt.NoButton,
+                    event.buttons(),
+                    event.modifiers()
+                )
+                self.mouseMoveEvent(mouse_event)
+                return True
+            
+            elif event.type() == QtCore.QEvent.GraphicsSceneMouseRelease:
+                mouse_event = QtGui.QMouseEvent(
+                    QtCore.QEvent.MouseButtonRelease,
+                    event.screenPos().toPoint(),  # 转换为QPoint
+                    event.button(),
+                    event.buttons(),
+                    event.modifiers()
+                )
+                self.mouseReleaseEvent(mouse_event)
                 return True
         
         return super(ImagePreviewDialog, self).eventFilter(obj, event)
@@ -386,8 +426,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             self.rect_tool_btn.setChecked(False)
             self.circle_tool_btn.setChecked(False)
             self.text_tool_btn.setChecked(False)
-            # 恢复拖拽模式
+            # 恢复拖拽模式和光标
             self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
+            self.graphics_view.setCursor(QtCore.Qt.ArrowCursor)
             print(f"✅ 标注工具已关闭")
         else:
             # 激活新工具
@@ -397,6 +438,13 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             self.text_tool_btn.setChecked(tool_name == 'text')
             # 禁用拖拽模式，允许绘制
             self.graphics_view.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+            
+            # 根据工具类型设置光标
+            if tool_name in ['rect', 'circle']:
+                self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
+            elif tool_name == 'text':
+                self.graphics_view.setCursor(QtCore.Qt.IBeamCursor)
+            
             print(f"✅ 已激活工具: {tool_name}")
     
     def clear_all_annotations(self):
