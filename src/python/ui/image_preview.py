@@ -13,6 +13,8 @@
 """
 
 import cv2
+import numpy as np
+import json
 import uuid
 from datetime import datetime
 from typing import List, Tuple, Optional
@@ -775,7 +777,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def export_to_node(self):
         """
-        导出ROI和Mask数据到节点
+        导出ROI和Mask数据到节点（Phase 4实现）
         """
         if not self.node:
             QtWidgets.QMessageBox.warning(
@@ -785,13 +787,125 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             )
             return
         
-        # TODO: 实现导出逻辑（Phase 4）
-        QtWidgets.QMessageBox.information(
-            self,
-            "提示",
-            f"导出功能将在Phase 4实现\n"
-            f"当前有 {len(self.container.rois)} 个ROI, {len(self.container.masks)} 个Mask"
-        )
+        try:
+            # === 1. 导出ROI数据为JSON格式 ===
+            roi_json = self._export_roi_to_json()
+            self.node.set_roi_data(roi_json)
+            
+            # === 2. 生成并导出Mask图像 ===
+            if self._cached_image is not None:
+                mask_image = self._generate_mask_image(self._cached_image.shape[:2])
+                self.node.set_mask_image(mask_image)
+            else:
+                self.node.set_mask_image(None)
+            
+            # === 3. 显示成功提示 ===
+            roi_count = len(self.container.rois)
+            mask_count = len(self.container.masks)
+            
+            message = f"✅ 导出成功！\n\n"
+            message += f"• ROI数量: {roi_count}\n"
+            if roi_count > 0:
+                roi_names = [r.name for r in self.container.rois]
+                message += f"  - {', '.join(roi_names)}\n"
+            
+            message += f"• Mask数量: {mask_count}\n"
+            if mask_count > 0:
+                mask_types = [f"{m.type}({m.name})" for m in self.container.masks]
+                message += f"  - {', '.join(mask_types)}\n"
+            
+            message += f"\n数据已输出到节点端口：\n"
+            message += f"• 'ROI数据' → JSON字符串\n"
+            message += f"• 'Mask图像' → 8位灰度图"
+            
+            QtWidgets.QMessageBox.information(
+                self,
+                "导出完成",
+                message
+            )
+            
+            print(f"✅ 导出完成: {roi_count}个ROI, {mask_count}个Mask")
+            
+        except Exception as e:
+            error_msg = f"导出失败: {str(e)}"
+            QtWidgets.QMessageBox.critical(
+                self,
+                "导出错误",
+                error_msg
+            )
+            print(f"❌ {error_msg}")
+            import traceback
+            traceback.print_exc()
+    
+    def _export_roi_to_json(self):
+        """
+        导出ROI数据为JSON字符串
+        
+        Returns:
+            str: JSON格式的ROI数据
+        """
+        if not self.container.rois:
+            return json.dumps([])
+        
+        rois_data = []
+        for roi in self.container.rois:
+            if roi.type != 'rect' or len(roi.points) < 2:
+                continue
+            
+            # 计算边界框
+            x1, y1 = roi.points[0]
+            x2, y2 = roi.points[1]
+            
+            bbox = {
+                'x': min(x1, x2),
+                'y': min(y1, y2),
+                'width': abs(x2 - x1),
+                'height': abs(y2 - y1)
+            }
+            
+            rois_data.append({
+                'id': roi.id,
+                'name': roi.name,
+                'type': 'rect',
+                'bbox': bbox
+            })
+        
+        return json.dumps(rois_data, ensure_ascii=False, indent=2)
+    
+    def _generate_mask_image(self, image_size):
+        """
+        生成Mask灰度图
+        
+        Args:
+            image_size: (height, width) 元组
+        
+        Returns:
+            np.ndarray: HxW的uint8数组，区域=255，背景=0
+        """
+        height, width = image_size[:2]
+        mask = np.zeros((height, width), dtype=np.uint8)
+        
+        if not self.container.masks:
+            return mask
+        
+        # 绘制所有Mask形状
+        for mask_shape in self.container.masks:
+            if mask_shape.type == 'rect' and len(mask_shape.points) >= 2:
+                pt1 = (int(mask_shape.points[0][0]), int(mask_shape.points[0][1]))
+                pt2 = (int(mask_shape.points[1][0]), int(mask_shape.points[1][1]))
+                cv2.rectangle(mask, pt1, pt2, 255, -1)  # -1表示填充
+                
+            elif mask_shape.type == 'circle' and len(mask_shape.points) >= 2:
+                center = (int(mask_shape.points[0][0]), int(mask_shape.points[0][1]))
+                edge = (int(mask_shape.points[1][0]), int(mask_shape.points[1][1]))
+                radius = int(np.sqrt((edge[0]-center[0])**2 + (edge[1]-center[1])**2))
+                cv2.circle(mask, center, radius, 255, -1)
+                
+            elif mask_shape.type == 'polygon' and len(mask_shape.points) >= 3:
+                pts = np.array(mask_shape.points, dtype=np.int32)
+                cv2.fillPoly(mask, [pts], 255)
+        
+        return mask
     
     def clear_all_shapes(self):
         """

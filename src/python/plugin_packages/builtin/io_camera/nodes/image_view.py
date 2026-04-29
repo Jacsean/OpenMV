@@ -5,6 +5,7 @@
 from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
+import json
 
 
 class ImageViewNode(BaseNode):
@@ -18,6 +19,7 @@ class ImageViewNode(BaseNode):
     - 缓存最后一张处理的图像
     - 双击节点可打开图像预览窗口（在主窗口中实现）
     - 显示图像尺寸、通道数等信息
+    - 支持ROI和Mask数据的导出
     
     硬件要求：
     - CPU: 1+ 核心
@@ -42,9 +44,10 @@ class ImageViewNode(BaseNode):
         # 输入端口
         self.add_input('输入图像', color=(100, 255, 100))
         
-        # 输出端口（传递图像和ROI信息）
+        # 输出端口（传递图像、ROI和Mask信息）
         self.add_output('输出图像', color=(100, 255, 100))
         self.add_output('ROI数据', color=(255, 165, 0))  # 橙色端口
+        self.add_output('Mask图像', color=(100, 100, 255))  # 蓝色端口
         
         # 状态信息显示
         self.add_text_input('status', '状态信息', tab='properties')
@@ -53,11 +56,18 @@ class ImageViewNode(BaseNode):
         self.add_text_input('roi_data', 'ROI数据(JSON)', tab='properties')
         self.set_property('roi_data', '')
         
+        # Mask状态显示
+        self.add_text_input('mask_status', 'Mask状态', tab='properties')
+        self.set_property('mask_status', '无Mask')
+        
         # 缓存最后一张处理的图像（用于预览）
         self._cached_image = None
         
         # 缓存ROI数据
         self._roi_data = []
+        
+        # 缓存Mask图像
+        self._mask_image = None
 
     def process(self, inputs=None):
         """
@@ -73,14 +83,14 @@ class ImageViewNode(BaseNode):
             if not inputs or len(inputs) == 0 or inputs[0] is None:
                 self._cached_image = None
                 self.set_property('status', '无输入')
-                return {'输出图像': None}
+                return {'输出图像': None, 'ROI数据': None, 'Mask图像': None}
             
             image = inputs[0][0] if isinstance(inputs[0], list) else inputs[0]
             
             if image is None or not isinstance(image, np.ndarray):
                 self._cached_image = None
                 self.set_property('status', '无有效图像')
-                return {'输出图像': None}
+                return {'输出图像': None, 'ROI数据': None, 'Mask图像': None}
             
             # Step 1: 缓存图像用于预览
             self._cached_image = image.copy()
@@ -104,17 +114,18 @@ class ImageViewNode(BaseNode):
             
             self.set_property('status', status_msg)
             
-            # Step 4: 输出图像和ROI数据供下游节点使用
+            # Step 4: 输出图像、ROI数据和Mask图像
             return {
                 '输出图像': image,
-                'ROI数据': self._roi_data if self._roi_data else None
+                'ROI数据': self._roi_data if self._roi_data else None,
+                'Mask图像': self._mask_image
             }
 
         except Exception as e:
             error_msg = f"处理错误: {str(e)}"
             self.set_property('status', error_msg)
             self.log_error(f"图像显示节点错误: {e}")
-            return {'输出图像': None}
+            return {'输出图像': None, 'ROI数据': None, 'Mask图像': None}
     
     def get_cached_image(self):
         """
@@ -130,9 +141,8 @@ class ImageViewNode(BaseNode):
         设置ROI数据（从预览窗口调用）
         
         Args:
-            roi_data: ROI数据列表
+            roi_data: ROI数据列表或JSON字符串
         """
-        import json
         if isinstance(roi_data, str):
             # 如果是JSON字符串，解析它
             try:
@@ -149,11 +159,52 @@ class ImageViewNode(BaseNode):
             self.set_property('roi_data', roi_json)
         
         # 更新状态信息
-        if hasattr(self, '_cached_image') and self._cached_image is not None:
-            height, width = self._cached_image.shape[:2]
-            channels = self._cached_image.shape[2] if len(self._cached_image.shape) == 3 else 1
-            status_msg = f"图像尺寸: {width}x{height}"
-            if channels > 1:
-                status_msg += f", 通道数: {channels}"
-            status_msg += f", ROI数: {len(self._roi_data)}"
-            self.set_property('status', status_msg)
+        self._update_status_info()
+    
+    def set_mask_image(self, mask_image):
+        """
+        设置Mask图像（从预览窗口调用）
+        
+        Args:
+            mask_image: 8位灰度图 (HxW, uint8)，区域内=255，区域外=0
+        """
+        if mask_image is not None and isinstance(mask_image, np.ndarray):
+            self._mask_image = mask_image.copy()
+            
+            # 统计Mask覆盖面积
+            mask_area = np.count_nonzero(mask_image)
+            total_area = mask_image.shape[0] * mask_image.shape[1]
+            coverage = (mask_area / total_area * 100) if total_area > 0 else 0
+            
+            mask_status = f"Mask面积: {mask_area:,}像素 ({coverage:.1f}%)"
+            self.set_property('mask_status', mask_status)
+        else:
+            self._mask_image = None
+            self.set_property('mask_status', '无Mask')
+        
+        # 更新状态信息
+        self._update_status_info()
+    
+    def _update_status_info(self):
+        """更新状态信息（包含ROI和Mask信息）"""
+        if self._cached_image is None:
+            return
+        
+        height, width = self._cached_image.shape[:2]
+        channels = self._cached_image.shape[2] if len(self._cached_image.shape) == 3 else 1
+        
+        status_msg = f"图像尺寸: {width}x{height}"
+        if channels > 1:
+            status_msg += f", 通道数: {channels}"
+        
+        # 添加ROI数量信息
+        roi_count = len(self._roi_data)
+        if roi_count > 0:
+            status_msg += f", ROI数: {roi_count}"
+        
+        # 添加Mask信息
+        if self._mask_image is not None:
+            mask_area = np.count_nonzero(self._mask_image)
+            status_msg += f", Mask面积: {mask_area:,}像素"
+        
+        self.set_property('status', status_msg)
