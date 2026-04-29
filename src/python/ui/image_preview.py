@@ -51,6 +51,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.current_drawing_rect = None  # 当前正在绘制的形状（用于实时预览）
         self.temp_text_dialog = None  # 文本输入对话框
         
+        # 画笔颜色设置（默认为绿色）
+        self.current_pen_color = (0, 255, 0)  # BGR格式：绿色
+        
         # ROI相关状态
         self.roi_mode = False  # 是否处于ROI模式
         self.selected_roi = None  # 当前选中的ROI
@@ -83,6 +86,18 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.fit_btn.setToolTip("缩放图像以适应窗口大小")
         toolbar_layout.addWidget(self.fit_btn)
         
+        # 分隔线
+        separator_window = QtWidgets.QFrame()
+        separator_window.setFrameShape(QtWidgets.QFrame.VLine)
+        separator_window.setFrameShadow(QtWidgets.QFrame.Sunken)
+        toolbar_layout.addWidget(separator_window)
+        
+        # 最大化按钮
+        self.maximize_btn = QtWidgets.QPushButton("⬜ 最大化")
+        self.maximize_btn.clicked.connect(self.toggle_maximize)
+        self.maximize_btn.setToolTip("切换窗口最大化/恢复")
+        toolbar_layout.addWidget(self.maximize_btn)
+        
         toolbar_layout.addStretch()
         
         # === 标注工具栏 BEGIN ===
@@ -106,6 +121,32 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         separator1.setFrameShape(QtWidgets.QFrame.VLine)
         separator1.setFrameShadow(QtWidgets.QFrame.Sunken)
         annotation_toolbar.addWidget(separator1)
+        
+        # 颜色选择器
+        self.color_btn = QtWidgets.QPushButton("🎨 颜色")
+        self.color_btn.clicked.connect(self.show_color_picker)
+        self.color_btn.setToolTip("选择画笔颜色")
+        self.color_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgb(0, 255, 0);
+                color: white;
+                font-weight: bold;
+            }
+        """)
+        annotation_toolbar.addWidget(self.color_btn)
+        
+        # 当前颜色显示标签
+        self.current_color_label = QtWidgets.QLabel("RGB(0,255,0)")
+        self.current_color_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.current_color_label.setMinimumWidth(100)
+        self.current_color_label.setStyleSheet("font-size: 10px; color: #888;")
+        annotation_toolbar.addWidget(self.current_color_label)
+        
+        # 分隔线
+        separator2 = QtWidgets.QFrame()
+        separator2.setFrameShape(QtWidgets.QFrame.VLine)
+        separator2.setFrameShadow(QtWidgets.QFrame.Sunken)
+        annotation_toolbar.addWidget(separator2)
         
         # 矩形工具
         self.rect_tool_btn = QtWidgets.QPushButton("▭ 矩形")
@@ -421,6 +462,66 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 "此预览窗口未关联节点\n无法自动刷新"
             )
     
+    def toggle_maximize(self):
+        """
+        切换窗口最大化/恢复
+        """
+        if self.isMaximized():
+            # 当前是最大化状态，恢复正常大小
+            self.showNormal()
+            self.maximize_btn.setText("⬜ 最大化")
+            print("✅ 窗口已恢复正常大小")
+        else:
+            # 当前是正常状态，最大化窗口
+            self.showMaximized()
+            self.maximize_btn.setText("🔲 恢复")
+            print("✅ 窗口已最大化")
+    
+    def show_color_picker(self):
+        """
+        显示颜色选择器
+        """
+        # 将BGR转换为RGB用于Qt颜色对话框
+        current_rgb = (
+            self.current_pen_color[2],  # R
+            self.current_pen_color[1],  # G
+            self.current_pen_color[0]   # B
+        )
+        
+        # 创建初始颜色
+        initial_color = QtGui.QColor(*current_rgb)
+        
+        # 打开颜色对话框
+        color_dialog = QtWidgets.QColorDialog(self)
+        color_dialog.setCurrentColor(initial_color)
+        color_dialog.setOption(QtWidgets.QColorDialog.ShowAlphaChannel, False)
+        color_dialog.setWindowTitle("选择画笔颜色")
+        
+        if color_dialog.exec_() == QtWidgets.QDialog.Accepted:
+            selected_color = color_dialog.selectedColor()
+            
+            # 将RGB转换回BGR存储
+            self.current_pen_color = (
+                selected_color.blue(),
+                selected_color.green(),
+                selected_color.red()
+            )
+            
+            # 更新颜色按钮的背景色
+            rgb_tuple = (selected_color.red(), selected_color.green(), selected_color.blue())
+            self.color_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgb{rgb_tuple};
+                    color: white;
+                    font-weight: bold;
+                }}
+            """)
+            
+            # 更新颜色标签
+            self.current_color_label.setText(f"RGB({selected_color.red()},{selected_color.green()},{selected_color.blue()})")
+            
+            print(f"✅ 画笔颜色已更改为: RGB{rgb_tuple}")
+    
     # === 标注功能方法 BEGIN ===
     
     def activate_tool(self, tool_name: str):
@@ -449,7 +550,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             # 禁用拖拽模式，允许绘制
             self.graphics_view.setDragMode(QtWidgets.QGraphicsView.NoDrag)
             
-            # 根据工具类型设置光标
+            # 根据工具类型设置光标（绘制时必须是十字光标）
             if tool_name in ['rect', 'circle']:
                 self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
             elif tool_name == 'text':
@@ -547,21 +648,55 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def mousePressEvent(self, event):
         """
-        鼠标按下事件：开始绘制或选择标注
+        鼠标按下事件：处理ROI选择和调整
         """
         # 检查是否点击了graphics_view内部
         if self.graphics_view.underMouse():
-            # 获取相对于graphics_view的位置
+            # 获取相对于graphics_view的位置（已经是QPoint）
             view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+            scene_pos = self.graphics_view.mapToScene(view_pos)
             
-            if self.current_tool in ['rect', 'circle']:
-                # 开始绘制形状
+            if self.roi_mode:
+                # ROI模式下
+                if event.button() == QtCore.Qt.LeftButton:
+                    # 检查是否点击了现有ROI的手柄
+                    if self.selected_roi:
+                        handle = self.get_resize_handle(self.selected_roi, scene_pos)
+                        if handle:
+                            # 开始调整大小 - 保持十字光标
+                            self.roi_resize_handle = handle
+                            self.resize_start_pos = scene_pos
+                            print(f"🔧 开始调整ROI大小: {handle}")
+                            event.accept()
+                            return
+                    
+                    # 检查是否点击了现有ROI
+                    clicked_roi = self.get_roi_at_position(scene_pos)
+                    if clicked_roi:
+                        # 选中ROI - 显示手型光标
+                        self.selected_roi = clicked_roi
+                        self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
+                        print(f"✅ 选中ROI: {clicked_roi.id}")
+                        self.redraw_annotations()
+                        event.accept()
+                        return
+                    else:
+                        # 取消选中 - 开始绘制，显示十字光标
+                        self.selected_roi = None
+                        self.drawing_start_pos = view_pos
+                        self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
+                        print("🎨 开始绘制新ROI")
+                        event.accept()
+                        return
+            
+            elif self.current_tool in ['rect', 'circle']:
+                # 普通标注模式 - 保持十字光标
                 self.drawing_start_pos = view_pos
                 event.accept()
                 return
                 
             elif self.current_tool == 'text':
-                # 弹出文本输入对话框
+                # 文字工具
                 self.show_text_input_dialog(view_pos)
                 event.accept()
                 return
@@ -570,39 +705,77 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def mouseMoveEvent(self, event):
         """
-        鼠标移动事件：实时预览绘制形状
+        鼠标移动事件：处理ROI调整和实时预览
         """
-        if self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
-            # 获取当前位置
+        if self.graphics_view.underMouse():
             view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
+            scene_pos = self.graphics_view.mapToScene(view_pos)
             
-            # 移除旧的临时预览
-            for item in self.scene.items():
-                if hasattr(item, 'is_temp_preview'):
-                    self.scene.removeItem(item)
-            
-            # 绘制临时预览（虚线）
-            color = QtGui.QColor(0, 255, 0)  # 绿色
-            pen = QtGui.QPen(color, 2)
-            pen.setStyle(QtCore.Qt.DashLine)
-            
-            if self.current_tool == 'rect':
-                # 绘制矩形预览
-                rect = QtCore.QRectF(self.drawing_start_pos, view_pos).normalized()
-                temp_item = self.scene.addRect(rect, pen)
-                temp_item.is_temp_preview = True
+            if self.roi_mode:
+                # ROI模式下的光标控制
+                if self.roi_resize_handle and self.selected_roi:
+                    # 正在调整ROI大小 - 保持十字光标
+                    delta_x = scene_pos.x() - self.resize_start_pos.x()
+                    delta_y = scene_pos.y() - self.resize_start_pos.y()
+                    
+                    # 根据手柄类型调整ROI
+                    self.resize_roi(self.selected_roi, self.roi_resize_handle, delta_x, delta_y)
+                    
+                    # 更新起始位置
+                    self.resize_start_pos = scene_pos
+                    
+                    # 重绘
+                    self.redraw_annotations()
+                    event.accept()
+                    return
                 
-            elif self.current_tool == 'circle':
-                # 绘制圆形预览
-                radius = ((view_pos.x() - self.drawing_start_pos.x())**2 + 
-                         (view_pos.y() - self.drawing_start_pos.y())**2)**0.5
-                circle_rect = QtCore.QRectF(
-                    self.drawing_start_pos.x() - radius,
-                    self.drawing_start_pos.y() - radius,
-                    radius * 2,
-                    radius * 2
+                elif self.selected_roi:
+                    # 检查是否悬停在控制点上 - 显示手型光标
+                    handle = self.get_resize_handle(self.selected_roi, scene_pos)
+                    if handle:
+                        self.graphics_view.setCursor(QtCore.Qt.SizeAllCursor)  # 手型光标（调整大小）
+                    else:
+                        # 检查是否在ROI内部 - 显示手型光标
+                        if self.is_point_in_roi(self.selected_roi, scene_pos):
+                            self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)  # 手型光标（移动）
+                        else:
+                            self.graphics_view.setCursor(QtCore.Qt.CrossCursor)  # 十字光标（绘制）
+                else:
+                    # 没有选中ROI - 十字光标（准备绘制）
+                    self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
+            
+            elif self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
+                # 普通标注模式的实时预览 - 保持十字光标
+                for item in self.scene.items():
+                    if hasattr(item, 'is_temp_preview'):
+                        self.scene.removeItem(item)
+                
+                color = QtGui.QColor(
+                    self.current_pen_color[2],  # R
+                    self.current_pen_color[1],  # G
+                    self.current_pen_color[0]   # B
                 )
-                temp_item = self.scene.addEllipse(circle_rect, pen)
+                pen = QtGui.QPen(color, 2)
+                pen.setStyle(QtCore.Qt.DashLine)
+                
+                start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
+                
+                if self.current_tool == 'rect':
+                    temp_item = self.scene.addRect(
+                        QtCore.QRectF(start_scene_pos, scene_pos).normalized(),
+                        pen
+                    )
+                elif self.current_tool == 'circle':
+                    radius = ((scene_pos.x() - start_scene_pos.x())**2 + 
+                             (scene_pos.y() - start_scene_pos.y())**2)**0.5
+                    circle_rect = QtCore.QRectF(
+                        start_scene_pos.x() - radius,
+                        start_scene_pos.y() - radius,
+                        radius * 2,
+                        radius * 2
+                    )
+                    temp_item = self.scene.addEllipse(circle_rect, pen)
+                
                 temp_item.is_temp_preview = True
         
         super(ImagePreviewDialog, self).mouseMoveEvent(event)
@@ -619,7 +792,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
             end_scene_pos = self.graphics_view.mapToScene(view_pos)
 
-            # 创建标注对象
+            # 创建标注对象 - 使用当前选择的颜色
             annotation = Annotation(
                 type=self.current_tool,
                 points=[
@@ -627,7 +800,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     (int(end_scene_pos.x()), int(end_scene_pos.y()))
                 ],
                 properties={
-                    'color': (0, 255, 0),  # 绿色 BGR
+                    'color': self.current_pen_color,  # 使用当前选择的颜色 BGR
                     'thickness': 2
                 }
             )
@@ -898,7 +1071,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     if self.selected_roi:
                         handle = self.get_resize_handle(self.selected_roi, scene_pos)
                         if handle:
-                            # 开始调整大小
+                            # 开始调整大小 - 保持十字光标
                             self.roi_resize_handle = handle
                             self.resize_start_pos = scene_pos
                             print(f"🔧 开始调整ROI大小: {handle}")
@@ -908,22 +1081,24 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     # 检查是否点击了现有ROI
                     clicked_roi = self.get_roi_at_position(scene_pos)
                     if clicked_roi:
-                        # 选中ROI
+                        # 选中ROI - 显示手型光标
                         self.selected_roi = clicked_roi
+                        self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
                         print(f"✅ 选中ROI: {clicked_roi.id}")
                         self.redraw_annotations()
                         event.accept()
                         return
                     else:
-                        # 取消选中
+                        # 取消选中 - 开始绘制，显示十字光标
                         self.selected_roi = None
                         self.drawing_start_pos = view_pos
+                        self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
                         print("🎨 开始绘制新ROI")
                         event.accept()
                         return
             
             elif self.current_tool in ['rect', 'circle']:
-                # 普通标注模式
+                # 普通标注模式 - 保持十字光标
                 self.drawing_start_pos = view_pos
                 event.accept()
                 return
@@ -1022,15 +1197,16 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             
             if self.roi_mode:
                 if self.roi_resize_handle:
-                    # 完成调整
+                    # 完成调整 - 恢复十字光标
                     self.roi_resize_handle = None
                     self.resize_start_pos = None
+                    self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
                     print("✅ ROI调整完成")
                     event.accept()
                     return
                 
                 elif self.drawing_start_pos is not None:
-                    # 完成绘制新ROI
+                    # 完成绘制新ROI - 保持十字光标
                     start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
                     
                     # 清除临时预览
@@ -1063,7 +1239,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     return
             
             elif self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
-                # 普通标注模式完成绘制
+                # 普通标注模式完成绘制 - 保持十字光标
                 start_scene_pos = self.graphics_view.mapToScene(self.drawing_start_pos)
                 
                 annotation = Annotation(
@@ -1073,7 +1249,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                         (int(scene_pos.x()), int(scene_pos.y()))
                     ],
                     properties={
-                        'color': (0, 255, 0),  # 绿色 BGR
+                        'color': self.current_pen_color,  # 使用当前选择的颜色 BGR
                         'thickness': 2
                     }
                 )
