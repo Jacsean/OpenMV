@@ -9,11 +9,168 @@
 - 滚轮缩放快捷键
 - 与ImageViewNode关联，支持实时刷新
 - ✨ 交互式标注功能（矩形、圆形、文字等）
+- ✨ ROI和Mask管理模式
 """
 
 import cv2
+import uuid
+from datetime import datetime
+from typing import List, Tuple, Optional
+from dataclasses import dataclass, field
 from PySide2 import QtWidgets, QtCore, QtGui
 from .image_annotation import Annotation, AnnotationLayer
+
+
+# === 图形数据结构定义 BEGIN ===
+
+@dataclass
+class BaseShape:
+    """图形基类"""
+    id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+    type: str = ""  # 'rect', 'circle', 'polygon', 'point', 'line', 'text', 'arrow'
+    points: List[Tuple[int, int]] = field(default_factory=list)
+    
+    # 视觉属性
+    border_color: Tuple[int, int, int] = (0, 255, 0)  # BGR格式
+    fill_color: Optional[Tuple[int, int, int]] = None
+    thickness: int = 2
+    line_style: str = 'solid'  # 'solid', 'dashed', 'dotted'
+    
+    # 元数据
+    name: str = ""
+    visible: bool = True
+    locked: bool = False
+    created_at: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class AnnotationShape(BaseShape):
+    """普通标注（不导出，仅视觉辅助）"""
+    pass
+
+
+@dataclass
+class ROIShape(BaseShape):
+    """ROI对象（仅矩形，可导出到节点）"""
+    def __post_init__(self):
+        if self.type and self.type != 'rect':
+            raise ValueError("ROI只能是矩形")
+        # ROI固定样式
+        self.border_color = (255, 100, 0)  # 橙色
+        self.thickness = 3
+        self.line_style = 'solid'
+        self.fill_color = None
+
+
+@dataclass
+class MaskShape(BaseShape):
+    """Mask对象（矩形/圆/多边形，可导出为灰度图）"""
+    def __post_init__(self):
+        if self.type and self.type not in ['rect', 'circle', 'polygon']:
+            raise ValueError("Mask支持矩形、圆形、多边形")
+        # Mask默认样式
+        self.border_color = (255, 0, 0)    # 红色边框
+        self.fill_color = (255, 0, 0)      # 红色填充（半透明）
+        self.thickness = 2
+        self.line_style = 'solid'
+
+
+class ShapeContainer:
+    """图形容器管理器"""
+    
+    def __init__(self):
+        # 三种图形容器
+        self.annotations = []  # List[AnnotationShape] - 普通标注
+        self.rois = []         # List[ROIShape] - ROI对象
+        self.masks = []        # List[MaskShape] - Mask对象
+        
+        # 当前状态
+        self.current_mode = 'annotation'  # 'annotation', 'roi', 'mask'
+        self.current_tool = None          # 当前激活的工具
+        
+        # 当前选中的对象（互斥）
+        self.selected_roi = None
+        self.selected_mask = None
+    
+    def switch_mode(self, mode: str):
+        """切换模式，清空互斥的选中状态"""
+        old_mode = self.current_mode
+        self.current_mode = mode
+        
+        if mode == 'roi':
+            self.selected_mask = None  # 取消Mask选中
+        elif mode == 'mask':
+            self.selected_roi = None  # 取消ROI选中
+        
+        print(f"✅ 切换到{self._get_mode_name(mode)}模式")
+    
+    def select_roi(self, roi: ROIShape):
+        """选中ROI，自动取消Mask选中"""
+        self.selected_roi = roi
+        self.selected_mask = None
+        print(f"✅ 选中ROI: {roi.name or roi.id}")
+    
+    def select_mask(self, mask: MaskShape):
+        """选中Mask，自动取消ROI选中"""
+        self.selected_mask = mask
+        self.selected_roi = None
+        print(f"✅ 选中Mask: {mask.name or mask.id}")
+    
+    def clear_selection(self):
+        """清除所有选中"""
+        self.selected_roi = None
+        self.selected_mask = None
+    
+    def add_annotation(self, shape: AnnotationShape):
+        """添加普通标注"""
+        self.annotations.append(shape)
+    
+    def add_roi(self, shape: ROIShape):
+        """添加ROI"""
+        if not shape.name:
+            shape.name = f"检测区域_{len(self.rois) + 1}"
+        self.rois.append(shape)
+    
+    def add_mask(self, shape: MaskShape):
+        """添加Mask"""
+        if not shape.name:
+            shape.name = f"Mask区域_{len(self.masks) + 1}"
+        self.masks.append(shape)
+    
+    def remove_annotation(self, shape_id: str):
+        """删除普通标注"""
+        self.annotations = [a for a in self.annotations if a.id != shape_id]
+    
+    def remove_roi(self, shape_id: str):
+        """删除ROI"""
+        self.rois = [r for r in self.rois if r.id != shape_id]
+        if self.selected_roi and self.selected_roi.id == shape_id:
+            self.selected_roi = None
+    
+    def remove_mask(self, shape_id: str):
+        """删除Mask"""
+        self.masks = [m for m in self.masks if m.id != shape_id]
+        if self.selected_mask and self.selected_mask.id == shape_id:
+            self.selected_mask = None
+    
+    def get_all_shapes(self):
+        """获取所有可见图形"""
+        shapes = []
+        shapes.extend([a for a in self.annotations if a.visible])
+        shapes.extend([r for r in self.rois if r.visible])
+        shapes.extend([m for m in self.masks if m.visible])
+        return shapes
+    
+    def _get_mode_name(self, mode: str) -> str:
+        """获取模式的中文名称"""
+        mode_names = {
+            'annotation': '绘图',
+            'roi': 'ROI',
+            'mask': 'Mask'
+        }
+        return mode_names.get(mode, mode)
+
+# === 图形数据结构定义 END ===
 
 
 class ImagePreviewDialog(QtWidgets.QDialog):
@@ -44,9 +201,13 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.max_zoom = 5.0   # 最大500%
         self.zoom_step = 1.2  # 缩放步长
         
-        # === 标注系统初始化 BEGIN ===
+        # === 图形容器管理 BEGIN ===
+        self.container = ShapeContainer()
+        
+        # 兼容旧代码：保留annotation_layer引用（后续逐步迁移）
         self.annotation_layer = AnnotationLayer()
-        self.current_tool = None  # 当前激活的工具: 'rect', 'circle', 'text', 'roi_rect', 'roi_circle', None
+        
+        # 当前绘制状态
         self.drawing_start_pos = None  # 绘制起始位置（Qt坐标）
         self.current_drawing_rect = None  # 当前正在绘制的形状（用于实时预览）
         self.temp_text_dialog = None  # 文本输入对话框
@@ -54,13 +215,13 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # 画笔颜色设置（默认为绿色）
         self.current_pen_color = (0, 255, 0)  # BGR格式：绿色
         
-        # ROI相关状态
-        self.roi_mode = False  # 是否处于ROI模式
-        self.selected_roi = None  # 当前选中的ROI
-        self.roi_resize_handle = None  # ROI调整手柄: None, 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'top', 'bottom', 'left', 'right'
-        self.resize_start_pos = None  # 调整大小起始位置
-        self.HANDLE_SIZE = 8  # 手柄大小（像素）
-        # === 标注系统初始化 END ===
+        # ROI相关状态（兼容旧代码，后续移除）
+        self.roi_mode = False  # 是否处于ROI模式（旧）
+        self.selected_roi = None  # 当前选中的ROI（旧）
+        self.roi_resize_handle = None  # ROI调整手柄（旧）
+        self.resize_start_pos = None  # 调整大小起始位置（旧）
+        self.HANDLE_SIZE = 8  # 手柄大小（像素）（旧）
+        # === 图形容器管理 END ===
         
         # 设置窗口属性
         self.setMinimumSize(1024, 768)
@@ -70,6 +231,143 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         # 创建主布局
         main_layout = QtWidgets.QVBoxLayout(self)
+        
+        # === 模式选择工具栏 BEGIN ===
+        mode_toolbar = QtWidgets.QHBoxLayout()
+        
+        # 模式按钮组（单选互斥）
+        self.mode_button_group = QtWidgets.QButtonGroup(self)
+        
+        # 绘图模式按钮
+        self.annotation_mode_btn = QtWidgets.QPushButton("✏️ 绘图")
+        self.annotation_mode_btn.setCheckable(True)
+        self.annotation_mode_btn.setChecked(True)  # 默认选中
+        self.annotation_mode_btn.clicked.connect(lambda: self.switch_mode('annotation'))
+        self.annotation_mode_btn.setToolTip("普通绘图模式：自由绘制标注（不导出）")
+        self.mode_button_group.addButton(self.annotation_mode_btn, 0)
+        mode_toolbar.addWidget(self.annotation_mode_btn)
+        
+        # ROI模式按钮
+        self.roi_mode_btn = QtWidgets.QPushButton("📐 ROI")
+        self.roi_mode_btn.setCheckable(True)
+        self.roi_mode_btn.clicked.connect(lambda: self.switch_mode('roi'))
+        self.roi_mode_btn.setToolTip("ROI模式：仅矩形工具，生成可导出的ROI")
+        self.mode_button_group.addButton(self.roi_mode_btn, 1)
+        mode_toolbar.addWidget(self.roi_mode_btn)
+        
+        # Mask模式按钮
+        self.mask_mode_btn = QtWidgets.QPushButton("🎭 Mask")
+        self.mask_mode_btn.setCheckable(True)
+        self.mask_mode_btn.clicked.connect(lambda: self.switch_mode('mask'))
+        self.mask_mode_btn.setToolTip("Mask模式：矩形/圆/多边形，生成可导出的Mask")
+        self.mode_button_group.addButton(self.mask_mode_btn, 2)
+        mode_toolbar.addWidget(self.mask_mode_btn)
+        
+        # 分隔线
+        separator_mode = QtWidgets.QFrame()
+        separator_mode.setFrameShape(QtWidgets.QFrame.VLine)
+        separator_mode.setFrameShadow(QtWidgets.QFrame.Sunken)
+        mode_toolbar.addWidget(separator_mode)
+        
+        # 形状工具按钮
+        self.rect_tool_btn = QtWidgets.QPushButton("▭ 矩形")
+        self.rect_tool_btn.setCheckable(True)
+        self.rect_tool_btn.clicked.connect(lambda: self.activate_tool('rect'))
+        self.rect_tool_btn.setToolTip("绘制矩形")
+        mode_toolbar.addWidget(self.rect_tool_btn)
+        
+        self.circle_tool_btn = QtWidgets.QPushButton("○ 圆形")
+        self.circle_tool_btn.setCheckable(True)
+        self.circle_tool_btn.clicked.connect(lambda: self.activate_tool('circle'))
+        self.circle_tool_btn.setToolTip("绘制圆形")
+        mode_toolbar.addWidget(self.circle_tool_btn)
+        
+        self.polygon_tool_btn = QtWidgets.QPushButton("◇ 多边形")
+        self.polygon_tool_btn.setCheckable(True)
+        self.polygon_tool_btn.clicked.connect(lambda: self.activate_tool('polygon'))
+        self.polygon_tool_btn.setToolTip("绘制多边形（逐点点击，双击闭合）")
+        mode_toolbar.addWidget(self.polygon_tool_btn)
+        
+        self.text_tool_btn = QtWidgets.QPushButton("T 文字")
+        self.text_tool_btn.setCheckable(True)
+        self.text_tool_btn.clicked.connect(lambda: self.activate_tool('text'))
+        self.text_tool_btn.setToolTip("添加文字标注")
+        mode_toolbar.addWidget(self.text_tool_btn)
+        
+        mode_toolbar.addStretch()
+        
+        main_layout.addLayout(mode_toolbar)
+        # === 模式选择工具栏 END ===
+        
+        # === 属性工具栏 BEGIN ===
+        property_toolbar = QtWidgets.QHBoxLayout()
+        
+        # 颜色选择器
+        self.color_btn = QtWidgets.QPushButton("🎨 颜色")
+        self.color_btn.clicked.connect(self.show_color_picker)
+        self.color_btn.setToolTip("选择画笔颜色")
+        self.color_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgb(0, 255, 0);
+                color: white;
+                font-weight: bold;
+            }
+        """)
+        property_toolbar.addWidget(self.color_btn)
+        
+        # 当前颜色显示标签
+        self.current_color_label = QtWidgets.QLabel("RGB(0,255,0)")
+        self.current_color_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.current_color_label.setMinimumWidth(100)
+        self.current_color_label.setStyleSheet("font-size: 10px; color: #888;")
+        property_toolbar.addWidget(self.current_color_label)
+        
+        # 分隔线
+        separator_prop = QtWidgets.QFrame()
+        separator_prop.setFrameShape(QtWidgets.QFrame.VLine)
+        separator_prop.setFrameShadow(QtWidgets.QFrame.Sunken)
+        property_toolbar.addWidget(separator_prop)
+        
+        # 显示控制下拉菜单
+        self.visibility_btn = QtWidgets.QPushButton("👁 显示")
+        self.visibility_menu = QtWidgets.QMenu()
+        self.show_annotations_action = self.visibility_menu.addAction("☑ 标注")
+        self.show_annotations_action.setCheckable(True)
+        self.show_annotations_action.setChecked(True)
+        self.show_annotations_action.triggered.connect(lambda: self.toggle_visibility('annotations'))
+        
+        self.show_rois_action = self.visibility_menu.addAction("☑ ROI")
+        self.show_rois_action.setCheckable(True)
+        self.show_rois_action.setChecked(True)
+        self.show_rois_action.triggered.connect(lambda: self.toggle_visibility('rois'))
+        
+        self.show_masks_action = self.visibility_menu.addAction("☑ Mask")
+        self.show_masks_action.setCheckable(True)
+        self.show_masks_action.setChecked(True)
+        self.show_masks_action.triggered.connect(lambda: self.toggle_visibility('masks'))
+        
+        self.visibility_btn.setMenu(self.visibility_menu)
+        self.visibility_btn.setToolTip("控制各类图形的可见性")
+        property_toolbar.addWidget(self.visibility_btn)
+        
+        # 导出按钮
+        self.export_btn = QtWidgets.QPushButton("📤 导出")
+        self.export_btn.clicked.connect(self.export_to_node)
+        self.export_btn.setToolTip("将ROI和Mask数据导出到节点")
+        self.export_btn.setStyleSheet("color: #4CAF50; font-weight: bold;")
+        property_toolbar.addWidget(self.export_btn)
+        
+        # 清除所有图形按钮
+        self.clear_all_btn = QtWidgets.QPushButton("🗑 清除")
+        self.clear_all_btn.clicked.connect(self.clear_all_shapes)
+        self.clear_all_btn.setToolTip("清除所有图形（标注/ROI/Mask）")
+        self.clear_all_btn.setStyleSheet("color: #f44336;")
+        property_toolbar.addWidget(self.clear_all_btn)
+        
+        property_toolbar.addStretch()
+        
+        main_layout.addLayout(property_toolbar)
+        # === 属性工具栏 END ===
         
         # === 工具栏：缩放控制 BEGIN===
         toolbar_layout = QtWidgets.QHBoxLayout()
@@ -99,87 +397,6 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         toolbar_layout.addWidget(self.maximize_btn)
         
         toolbar_layout.addStretch()
-        
-        # === 标注工具栏 BEGIN ===
-        annotation_toolbar = QtWidgets.QHBoxLayout()
-        
-        # ROI模式切换按钮
-        self.roi_mode_btn = QtWidgets.QPushButton("📐 ROI模式")
-        self.roi_mode_btn.setCheckable(True)
-        self.roi_mode_btn.clicked.connect(self.toggle_roi_mode)
-        self.roi_mode_btn.setToolTip("切换到ROI编辑模式（绘制和调整ROI区域）")
-        self.roi_mode_btn.setStyleSheet("""
-            QPushButton:checked {
-                background-color: #4CAF50;
-                color: white;
-            }
-        """)
-        annotation_toolbar.addWidget(self.roi_mode_btn)
-        
-        # 分隔线
-        separator1 = QtWidgets.QFrame()
-        separator1.setFrameShape(QtWidgets.QFrame.VLine)
-        separator1.setFrameShadow(QtWidgets.QFrame.Sunken)
-        annotation_toolbar.addWidget(separator1)
-        
-        # 颜色选择器
-        self.color_btn = QtWidgets.QPushButton("🎨 颜色")
-        self.color_btn.clicked.connect(self.show_color_picker)
-        self.color_btn.setToolTip("选择画笔颜色")
-        self.color_btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgb(0, 255, 0);
-                color: white;
-                font-weight: bold;
-            }
-        """)
-        annotation_toolbar.addWidget(self.color_btn)
-        
-        # 当前颜色显示标签
-        self.current_color_label = QtWidgets.QLabel("RGB(0,255,0)")
-        self.current_color_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.current_color_label.setMinimumWidth(100)
-        self.current_color_label.setStyleSheet("font-size: 10px; color: #888;")
-        annotation_toolbar.addWidget(self.current_color_label)
-        
-        # 分隔线
-        separator2 = QtWidgets.QFrame()
-        separator2.setFrameShape(QtWidgets.QFrame.VLine)
-        separator2.setFrameShadow(QtWidgets.QFrame.Sunken)
-        annotation_toolbar.addWidget(separator2)
-        
-        # 矩形工具
-        self.rect_tool_btn = QtWidgets.QPushButton("▭ 矩形")
-        self.rect_tool_btn.setCheckable(True)
-        self.rect_tool_btn.clicked.connect(lambda: self.activate_tool('rect'))
-        self.rect_tool_btn.setToolTip("绘制矩形标注")
-        annotation_toolbar.addWidget(self.rect_tool_btn)
-        
-        # 圆形工具
-        self.circle_tool_btn = QtWidgets.QPushButton("○ 圆形")
-        self.circle_tool_btn.setCheckable(True)
-        self.circle_tool_btn.clicked.connect(lambda: self.activate_tool('circle'))
-        self.circle_tool_btn.setToolTip("绘制圆形标注")
-        annotation_toolbar.addWidget(self.circle_tool_btn)
-        
-        # 文字工具
-        self.text_tool_btn = QtWidgets.QPushButton("T 文字")
-        self.text_tool_btn.setCheckable(True)
-        self.text_tool_btn.clicked.connect(lambda: self.activate_tool('text'))
-        self.text_tool_btn.setToolTip("添加文字标注")
-        annotation_toolbar.addWidget(self.text_tool_btn)
-        
-        annotation_toolbar.addStretch()
-        
-        # 清除所有标注按钮
-        self.clear_annotations_btn = QtWidgets.QPushButton("🗑 清除标注")
-        self.clear_annotations_btn.clicked.connect(self.clear_all_annotations)
-        self.clear_annotations_btn.setToolTip("清除所有标注")
-        self.clear_annotations_btn.setStyleSheet("color: #f44336;")
-        annotation_toolbar.addWidget(self.clear_annotations_btn)
-        
-        main_layout.addLayout(annotation_toolbar)
-        # === 标注工具栏 END ===
         
         # 缩小按钮
         self.zoom_out_btn = QtWidgets.QPushButton("➖ 缩小")
@@ -462,65 +679,170 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 "此预览窗口未关联节点\n无法自动刷新"
             )
     
-    def toggle_maximize(self):
+    def switch_mode(self, mode: str):
         """
-        切换窗口最大化/恢复
+        切换模式（绘图/ROI/Mask）
+        
+        Args:
+            mode: 'annotation', 'roi', 'mask'
         """
-        if self.isMaximized():
-            # 当前是最大化状态，恢复正常大小
-            self.showNormal()
-            self.maximize_btn.setText("⬜ 最大化")
-            print("✅ 窗口已恢复正常大小")
-        else:
-            # 当前是正常状态，最大化窗口
-            self.showMaximized()
-            self.maximize_btn.setText("🔲 恢复")
-            print("✅ 窗口已最大化")
+        # 更新容器模式
+        self.container.switch_mode(mode)
+        
+        # 更新按钮状态
+        self.annotation_mode_btn.setChecked(mode == 'annotation')
+        self.roi_mode_btn.setChecked(mode == 'roi')
+        self.mask_mode_btn.setChecked(mode == 'mask')
+        
+        # 清除当前选中的对象
+        self.container.clear_selection()
+        
+        # 关闭当前激活的工具
+        self.current_tool = None
+        self.rect_tool_btn.setChecked(False)
+        self.circle_tool_btn.setChecked(False)
+        self.polygon_tool_btn.setChecked(False)
+        self.text_tool_btn.setChecked(False)
+        
+        # 根据模式更新工具可用性
+        self.update_tool_availability(mode)
+        
+        # 恢复拖拽模式和光标
+        self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
+        self.graphics_view.setCursor(QtCore.Qt.ArrowCursor)
+        
+        # 重绘
+        self.redraw_all_shapes()
     
-    def show_color_picker(self):
+    def update_tool_availability(self, mode: str):
         """
-        显示颜色选择器
+        根据模式更新工具按钮的可用性
+        
+        Args:
+            mode: 'annotation', 'roi', 'mask'
         """
-        # 将BGR转换为RGB用于Qt颜色对话框
-        current_rgb = (
-            self.current_pen_color[2],  # R
-            self.current_pen_color[1],  # G
-            self.current_pen_color[0]   # B
+        if mode == 'annotation':
+            # 绘图模式：所有工具可用
+            self.rect_tool_btn.setEnabled(True)
+            self.circle_tool_btn.setEnabled(True)
+            self.polygon_tool_btn.setEnabled(True)
+            self.text_tool_btn.setEnabled(True)
+            
+        elif mode == 'roi':
+            # ROI模式：仅矩形可用
+            self.rect_tool_btn.setEnabled(True)
+            self.circle_tool_btn.setEnabled(False)
+            self.polygon_tool_btn.setEnabled(False)
+            self.text_tool_btn.setEnabled(False)
+            
+        elif mode == 'mask':
+            # Mask模式：矩形、圆形、多边形可用
+            self.rect_tool_btn.setEnabled(True)
+            self.circle_tool_btn.setEnabled(True)
+            self.polygon_tool_btn.setEnabled(True)
+            self.text_tool_btn.setEnabled(False)
+    
+    def toggle_visibility(self, shape_type: str):
+        """
+        切换某类图形的可见性
+        
+        Args:
+            shape_type: 'annotations', 'rois', 'masks'
+        """
+        if shape_type == 'annotations':
+            visible = self.show_annotations_action.isChecked()
+            for ann in self.container.annotations:
+                ann.visible = visible
+        elif shape_type == 'rois':
+            visible = self.show_rois_action.isChecked()
+            for roi in self.container.rois:
+                roi.visible = visible
+        elif shape_type == 'masks':
+            visible = self.show_masks_action.isChecked()
+            for mask in self.container.masks:
+                mask.visible = visible
+        
+        self.redraw_all_shapes()
+    
+    def export_to_node(self):
+        """
+        导出ROI和Mask数据到节点
+        """
+        if not self.node:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "警告",
+                "此预览窗口未关联节点\n无法导出数据"
+            )
+            return
+        
+        # TODO: 实现导出逻辑（Phase 4）
+        QtWidgets.QMessageBox.information(
+            self,
+            "提示",
+            f"导出功能将在Phase 4实现\n"
+            f"当前有 {len(self.container.rois)} 个ROI, {len(self.container.masks)} 个Mask"
+        )
+    
+    def clear_all_shapes(self):
+        """
+        清除所有图形
+        """
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            "确认清除",
+            "确定要清除所有标注、ROI和Mask吗？\n此操作不可撤销。",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
         )
         
-        # 创建初始颜色
-        initial_color = QtGui.QColor(*current_rgb)
+        if reply == QtWidgets.QMessageBox.Yes:
+            self.container.annotations.clear()
+            self.container.rois.clear()
+            self.container.masks.clear()
+            self.container.clear_selection()
+            self.redraw_all_shapes()
+            print("✅ 已清除所有图形")
+    
+    def redraw_all_shapes(self):
+        """
+        重绘所有图形
+        """
+        # 清除场景中的所有图形项（保留背景图像）
+        items_to_remove = []
+        for item in self.scene.items():
+            if hasattr(item, 'is_shape'):
+                items_to_remove.append(item)
         
-        # 打开颜色对话框
-        color_dialog = QtWidgets.QColorDialog(self)
-        color_dialog.setCurrentColor(initial_color)
-        color_dialog.setOption(QtWidgets.QColorDialog.ShowAlphaChannel, False)
-        color_dialog.setWindowTitle("选择画笔颜色")
+        for item in items_to_remove:
+            self.scene.removeItem(item)
         
-        if color_dialog.exec_() == QtWidgets.QDialog.Accepted:
-            selected_color = color_dialog.selectedColor()
-            
-            # 将RGB转换回BGR存储
-            self.current_pen_color = (
-                selected_color.blue(),
-                selected_color.green(),
-                selected_color.red()
-            )
-            
-            # 更新颜色按钮的背景色
-            rgb_tuple = (selected_color.red(), selected_color.green(), selected_color.blue())
-            self.color_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: rgb{rgb_tuple};
-                    color: white;
-                    font-weight: bold;
-                }}
-            """)
-            
-            # 更新颜色标签
-            self.current_color_label.setText(f"RGB({selected_color.red()},{selected_color.green()},{selected_color.blue()})")
-            
-            print(f"✅ 画笔颜色已更改为: RGB{rgb_tuple}")
+        # 重绘所有图形
+        for ann in self.container.annotations:
+            if ann.visible:
+                self.draw_annotation(ann)
+        
+        for roi in self.container.rois:
+            if roi.visible:
+                self.draw_roi(roi)
+        
+        for mask in self.container.masks:
+            if mask.visible:
+                self.draw_mask(mask)
+    
+    def draw_annotation(self, annotation: AnnotationShape):
+        """绘制普通标注"""
+        # TODO: 实现绘制逻辑
+        pass
+    
+    def draw_roi(self, roi: ROIShape):
+        """绘制ROI"""
+        # TODO: 实现绘制逻辑
+        pass
+    
+    def draw_mask(self, mask: MaskShape):
+        """绘制Mask（半透明蓝色覆盖）"""
+        # TODO: 实现绘制逻辑
+        pass
     
     # === 标注功能方法 BEGIN ===
     
@@ -529,34 +851,54 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         激活标注工具
         
         Args:
-            tool_name: 工具名称 ('rect', 'circle', 'text')
+            tool_name: 工具名称 ('rect', 'circle', 'polygon', 'text')
         """
+        # 检查工具是否在当前模式下可用
+        mode = self.container.current_mode
+        if mode == 'roi' and tool_name != 'rect':
+            QtWidgets.QMessageBox.warning(
+                self,
+                "提示",
+                "ROI模式下仅支持矩形工具"
+            )
+            return
+        elif mode == 'mask' and tool_name not in ['rect', 'circle', 'polygon']:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "提示",
+                "Mask模式下仅支持矩形、圆形、多边形工具"
+            )
+            return
+        
         # 如果点击已激活的工具，则取消激活
         if self.current_tool == tool_name:
             self.current_tool = None
             self.rect_tool_btn.setChecked(False)
             self.circle_tool_btn.setChecked(False)
+            self.polygon_tool_btn.setChecked(False)
             self.text_tool_btn.setChecked(False)
             # 恢复拖拽模式和光标
             self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
             self.graphics_view.setCursor(QtCore.Qt.ArrowCursor)
-            print(f"✅ 标注工具已关闭")
+            print(f"✅ 工具已关闭")
         else:
             # 激活新工具
             self.current_tool = tool_name
             self.rect_tool_btn.setChecked(tool_name == 'rect')
             self.circle_tool_btn.setChecked(tool_name == 'circle')
+            self.polygon_tool_btn.setChecked(tool_name == 'polygon')
             self.text_tool_btn.setChecked(tool_name == 'text')
             # 禁用拖拽模式，允许绘制
             self.graphics_view.setDragMode(QtWidgets.QGraphicsView.NoDrag)
             
             # 根据工具类型设置光标（绘制时必须是十字光标）
-            if tool_name in ['rect', 'circle']:
+            if tool_name in ['rect', 'circle', 'polygon']:
                 self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
             elif tool_name == 'text':
                 self.graphics_view.setCursor(QtCore.Qt.IBeamCursor)
             
-            print(f"✅ 已激活工具: {tool_name}")
+            mode_name = self.container._get_mode_name(mode)
+            print(f"✅ 已激活工具: {tool_name} ({mode_name}模式)")
     
     def clear_all_annotations(self):
         """清除所有标注"""
