@@ -269,9 +269,13 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         if obj == self.scene:
             if event.type() == QtCore.QEvent.GraphicsSceneMousePress:
                 # 将QGraphicsSceneMouseEvent转换为QMouseEvent并调用mousePressEvent
+                screen_pos = event.screenPos()
+                # 安全转换：如果已经是QPoint则直接使用，否则调用toPoint()
+                pos_point = screen_pos.toPoint() if hasattr(screen_pos, 'toPoint') else screen_pos
+                
                 mouse_event = QtGui.QMouseEvent(
                     QtCore.QEvent.MouseButtonPress,
-                    event.screenPos().toPoint(),  # 转换为QPoint
+                    pos_point,
                     event.button(),
                     event.buttons(),
                     event.modifiers()
@@ -280,9 +284,12 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 return True
             
             elif event.type() == QtCore.QEvent.GraphicsSceneMouseMove:
+                screen_pos = event.screenPos()
+                pos_point = screen_pos.toPoint() if hasattr(screen_pos, 'toPoint') else screen_pos
+                
                 mouse_event = QtGui.QMouseEvent(
                     QtCore.QEvent.MouseMove,
-                    event.screenPos().toPoint(),  # 转换为QPoint
+                    pos_point,
                     QtCore.Qt.NoButton,
                     event.buttons(),
                     event.modifiers()
@@ -291,9 +298,12 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 return True
             
             elif event.type() == QtCore.QEvent.GraphicsSceneMouseRelease:
+                screen_pos = event.screenPos()
+                pos_point = screen_pos.toPoint() if hasattr(screen_pos, 'toPoint') else screen_pos
+                
                 mouse_event = QtGui.QMouseEvent(
                     QtCore.QEvent.MouseButtonRelease,
-                    event.screenPos().toPoint(),  # 转换为QPoint
+                    pos_point,
                     event.button(),
                     event.buttons(),
                     event.modifiers()
