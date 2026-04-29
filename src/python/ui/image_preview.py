@@ -1,4 +1,4 @@
-"""
+﻿"""
 图像预览对话框模块
 
 提供增强版的图像预览功能，支持：
@@ -93,6 +93,13 @@ class ShapeContainer:
         # 当前选中的对象（互斥）
         self.selected_roi = None
         self.selected_mask = None
+        
+        # === 新增：通用编辑状态 ===
+        self.selected_shape = None       # 当前选中的图形（任意类型）
+        self.is_moving_shape = False     # 是否正在移动图形
+        self.shape_move_offset = None    # 移动偏移量
+        self.resize_handle = None        # 当前激活的调整手柄
+        self.resize_start_pos = None     # 调整大小起始位置
     
     def switch_mode(self, mode: str):
         """切换模式，清空互斥的选中状态"""
@@ -171,6 +178,140 @@ class ShapeContainer:
             'mask': 'Mask'
         }
         return mode_names.get(mode, mode)
+    
+    def select_shape(self, shape):
+        """通用图形选择方法（支持所有类型）"""
+        self.clear_selection()
+        
+        if isinstance(shape, ROIShape):
+            self.selected_roi = shape
+            self.selected_shape = shape
+        elif isinstance(shape, MaskShape):
+            self.selected_mask = shape
+            self.selected_shape = shape
+        elif isinstance(shape, AnnotationShape):
+            self.selected_shape = shape
+        
+        print(f"u2705 选中图形: {shape.name or shape.id} (类型: {shape.type})")
+    
+    def get_shape_at_position(self, scene_pos, shapes_list=None):
+        """获取指定位置的图形"""
+        if shapes_list is None:
+            shapes_list = self.get_all_shapes()
+        
+        for shape in reversed(shapes_list):
+            if self.is_point_in_shape(shape, scene_pos):
+                return shape
+        return None
+    
+    def is_point_in_shape(self, shape, scene_pos):
+        """判断点是否在图形内部"""
+        x, y = int(scene_pos.x()), int(scene_pos.y())
+        
+        if shape.type == 'rect' and len(shape.points) >= 2:
+            x1, y1 = shape.points[0]
+            x2, y2 = shape.points[1]
+            min_x, max_x = min(x1, x2), max(x1, x2)
+            min_y, max_y = min(y1, y2), max(y1, y2)
+            return min_x <= x <= max_x and min_y <= y <= max_y
+        
+        elif shape.type == 'circle' and len(shape.points) >= 2:
+            cx, cy = shape.points[0]
+            radius = shape.points[1]
+            distance = ((x - cx)**2 + (y - cy)**2)**0.5
+            return distance <= radius
+        
+        elif shape.type == 'polygon' and len(shape.points) >= 3:
+            n = len(shape.points)
+            inside = False
+            p1x, p1y = shape.points[0]
+            for i in range(1, n + 1):
+                p2x, p2y = shape.points[i % n]
+                if y > min(p1y, p2y):
+                    if y <= max(p1y, p2y):
+                        if x <= max(p1x, p2x):
+                            if p1y != p2y:
+                                xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                            if p1x == p2x or x <= xinters:
+                                inside = not inside
+                p1x, p1y = p2x, p2y
+            return inside
+        
+        return False
+    
+    def get_resize_handles(self, shape):
+        """获取图形的调整大小手柄位置"""
+        handles = {}
+        
+        if shape.type == 'rect' and len(shape.points) >= 2:
+            x1, y1 = shape.points[0]
+            x2, y2 = shape.points[1]
+            min_x, max_x = min(x1, x2), max(x1, x2)
+            min_y, max_y = min(y1, y2), max(y1, y2)
+            
+            handles['top-left'] = (min_x, min_y)
+            handles['top-right'] = (max_x, min_y)
+            handles['bottom-left'] = (min_x, max_y)
+            handles['bottom-right'] = (max_x, max_y)
+            handles['top'] = ((min_x + max_x) // 2, min_y)
+            handles['bottom'] = ((min_x + max_x) // 2, max_y)
+            handles['left'] = (min_x, (min_y + max_y) // 2)
+            handles['right'] = (max_x, (min_y + max_y) // 2)
+        
+        elif shape.type == 'circle' and len(shape.points) >= 2:
+            cx, cy = shape.points[0]
+            radius = shape.points[1]
+            handles['radius'] = (cx + radius, cy)
+        
+        return handles
+    
+    def get_handle_at_position(self, shape, scene_pos, handle_size=10):
+        """获取指定位置的手柄名称"""
+        handles = self.get_resize_handles(shape)
+        x, y = int(scene_pos.x()), int(scene_pos.y())
+        
+        for handle_name, (hx, hy) in handles.items():
+            if abs(x - hx) <= handle_size and abs(y - hy) <= handle_size:
+                return handle_name
+        
+        return None
+    
+    def move_shape(self, shape, delta_x, delta_y):
+        """移动图形位置"""
+        if shape.type in ['rect', 'circle', 'polygon', 'text']:
+            shape.points = [(int(x + delta_x), int(y + delta_y)) for x, y in shape.points]
+    
+    def resize_shape(self, shape, handle_name, new_pos):
+        """调整图形大小"""
+        x, y = int(new_pos.x()), int(new_pos.y())
+        
+        if shape.type == 'rect' and len(shape.points) >= 2:
+            if handle_name == 'top-left':
+                shape.points[0] = (x, y)
+            elif handle_name == 'top-right':
+                shape.points[1] = (x, shape.points[0][1])
+                shape.points[0] = (shape.points[1][0], y)
+            elif handle_name == 'bottom-left':
+                shape.points[0] = (x, shape.points[1][1])
+                shape.points[1] = (shape.points[0][0], y)
+            elif handle_name == 'bottom-right':
+                shape.points[1] = (x, y)
+            elif handle_name == 'top':
+                shape.points[0] = (shape.points[0][0], y)
+                shape.points[1] = (shape.points[1][0], shape.points[0][1])
+            elif handle_name == 'bottom':
+                shape.points[1] = (shape.points[1][0], y)
+            elif handle_name == 'left':
+                shape.points[0] = (x, shape.points[0][1])
+            elif handle_name == 'right':
+                shape.points[1] = (x, shape.points[1][1])
+        
+        elif shape.type == 'circle' and len(shape.points) >= 2:
+            if handle_name == 'radius':
+                cx, cy = shape.points[0]
+                radius = int(((x - cx)**2 + (y - cy)**2)**0.5)
+                shape.points[1] = radius
+
 
 # === 图形数据结构定义 END ===
 
