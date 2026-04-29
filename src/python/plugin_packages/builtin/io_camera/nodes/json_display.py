@@ -26,7 +26,7 @@ class JsonDisplayNode(BaseNode):
     """
     
     __identifier__ = 'io_camera'
-    NODE_NAME = 'JSON数据显示'
+    NODE_NAME = '数据显示'
     
     resource_level = "light"
     hardware_requirements = {

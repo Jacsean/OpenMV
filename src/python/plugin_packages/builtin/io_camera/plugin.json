@@ -18,7 +18,9 @@
       "icon": "📂",
       "width": 180,
       "height": 100,
-      "description": "从文件系统加载图像文件，支持常见格式（JPG、PNG、BMP等）",
+      "description": "从文件系统加载图像文件，支持常见格式（JPG、PNG、BMP等）",  
+
+      
       "resource_level": "light",
       "hardware_requirements": {
         "cpu_cores": 1,
@@ -83,7 +85,7 @@
     },
     {
       "class": "JsonDisplayNode",
-      "display_name": "JSON数据显示",
+      "display_name": "数据显示",
       "category": "数据显示",
       "color": [
         100,
