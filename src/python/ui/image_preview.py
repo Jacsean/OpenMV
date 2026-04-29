@@ -619,8 +619,28 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         显示原始大小（100%）
         """
+        if self.pixmap_item is None:
+            return
+        
+        # 重置缩放因子
         self.zoom_factor = 1.0
-        self.apply_zoom()
+        
+        # 重置图像项的变换
+        self.pixmap_item.resetTransform()
+        
+        # 重置视图的变换（清除平移等）
+        self.graphics_view.resetTransform()
+        
+        # 重新应用100%缩放
+        transform = QtGui.QTransform()
+        transform.scale(self.zoom_factor, self.zoom_factor)
+        self.pixmap_item.setTransform(transform)
+        
+        # 更新缩放标签
+        self.update_zoom_label()
+        
+        # 确保图像居中显示
+        self.graphics_view.centerOn(self.pixmap_item)
     
     def fit_to_window(self):
         """
