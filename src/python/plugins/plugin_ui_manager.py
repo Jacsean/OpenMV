@@ -11,6 +11,8 @@
 from PySide2 import QtWidgets, QtCore
 from pathlib import Path
 import json
+import utils
+from utils import logger
 
 
 class PluginUIManager:
@@ -44,19 +46,19 @@ class PluginUIManager:
         Returns:
             set: 新增的分类名称集合
         """
-        print("\n" + "=" * 60)
-        print("🔧 PluginUIManager.load_plugins_to_graph 开始执行")
-        print("=" * 60)
+        utils.logger.info("\n" + "=" * 60, module="plugin_ui_manager")
+        utils.logger.info("🔧 PluginUIManager.load_plugins_to_graph 开始执行", module="plugin_ui_manager")
+        utils.logger.info("=" * 60, module="plugin_ui_manager")
         
         if not hasattr(self.main_window, '_pending_plugins'):
-            print("⚠️ main_window没有_pending_plugins属性")
+            utils.logger.warning("⚠️ main_window没有_pending_plugins属性", module="plugin_ui_manager")
             return set()
         
         if not self.main_window._pending_plugins:
-            print("⚠️ _pending_plugins为空列表")
+            utils.logger.warning("⚠️ _pending_plugins为空列表", module="plugin_ui_manager")
             return set()
         
-        print(f"📦 待加载插件数: {len(self.main_window._pending_plugins)}")
+        utils.logger.info(f"📦 待加载插件数: {len(self.main_window._pending_plugins)}", module="plugin_ui_manager")
         
         new_categories = set()
         # 构建标识符到显示名称的映射
@@ -71,31 +73,31 @@ class PluginUIManager:
                 if hasattr(plugin_info, 'category_group') and plugin_info.category_group:
                     identifier_to_display_name[plugin_info.name] = plugin_info.category_group
         
-        print(f"✅ 启用的插件数: {len(plugins_to_load)}")
+        utils.logger.success(f"✅ 启用的插件数: {len(plugins_to_load)}", module="plugin_ui_manager")
         
         if not plugins_to_load:
-            print("⚠️ 没有启用的插件需要加载")
+            utils.logger.warning("⚠️ 没有启用的插件需要加载", module="plugin_ui_manager")
             return set()
         
         # 先加载到节点库的Graph（用于UI显示）
-        print(f"\n📊 步骤1: 加载到节点库Graph")
-        print(f"   nodes_palette存在: {self.main_window.nodes_palette is not None}")
-        print(f"   temp_graph存在: {hasattr(self.main_window, 'temp_graph')}")
+        utils.logger.info(f"\n📊 步骤1: 加载到节点库Graph", module="plugin_ui_manager")
+        utils.logger.info(f"   nodes_palette存在: {self.main_window.nodes_palette is not None}", module="plugin_ui_manager")
+        utils.logger.info(f"   temp_graph存在: {hasattr(self.main_window, 'temp_graph')}", module="plugin_ui_manager")
         
         if self.main_window.nodes_palette and plugins_to_load:
             try:
                 # 使用保存的temp_graph引用，确保注册到正确的Graph
                 palette_graph = getattr(self.main_window, 'temp_graph', None)
-                print(f"   palette_graph获取结果: {palette_graph is not None}")
+                utils.logger.info(f"   palette_graph获取结果: {palette_graph is not None}", module="plugin_ui_manager")
                 
                 if palette_graph is None:
                     palette_graph = self.main_window.nodes_palette.node_graph
-                    print(f"   回退到nodes_palette.node_graph: {palette_graph is not None}")
+                    utils.logger.info(f"   回退到nodes_palette.node_graph: {palette_graph is not None}", module="plugin_ui_manager")
                 
-                print(f"   开始注册 {len(plugins_to_load)} 个插件到节点库Graph...")
+                utils.logger.info(f"   开始注册 {len(plugins_to_load)} 个插件到节点库Graph...", module="plugin_ui_manager")
                 
                 for plugin_info in plugins_to_load:
-                    print(f"   📌 加载插件: {plugin_info.name} ({len(plugin_info.nodes)} 个节点)")
+                    utils.logger.info(f"   📌 加载插件: {plugin_info.name} ({len(plugin_info.nodes)} 个节点)", module="plugin_ui_manager")
                     success = self.plugin_manager.load_plugin_nodes(
                         plugin_info.name,
                         palette_graph
@@ -103,48 +105,48 @@ class PluginUIManager:
                     if success:
                         for node_def in plugin_info.nodes:
                             new_categories.add(node_def.category)
-                            print(f"      ✅ 节点: {node_def.display_name} (category={node_def.category})")
+                            utils.logger.success(f"      ✅ 节点: {node_def.display_name} (category={node_def.category})", module="plugin_ui_manager")
                     else:
-                        print(f"      ❌ 插件加载失败: {plugin_info.name}")
+                        utils.logger.error(f"      ❌ 插件加载失败: {plugin_info.name}", module="plugin_ui_manager")
                 
-                print(f"   ✅ 节点库Graph加载完成，共 {len(new_categories)} 个分类")
+                utils.logger.success(f"   ✅ 节点库Graph加载完成，共 {len(new_categories)} 个分类", module="plugin_ui_manager")
                 
                 # 应用自定义标签页名称映射
                 if identifier_to_display_name:
-                    print(f"   🏷️ 应用自定义标签页名称映射 ({len(identifier_to_display_name)} 个)")
+                    utils.logger.info(f"   🏷️ 应用自定义标签页名称映射 ({len(identifier_to_display_name)} 个)", module="plugin_ui_manager")
                     self._apply_custom_tab_names(identifier_to_display_name)
                 
                 # 应用自定义标签页顺序
-                print(f"   📋 应用自定义标签页顺序")
+                utils.logger.info(f"   📋 应用自定义标签页顺序", module="plugin_ui_manager")
                 self._apply_custom_tab_order()
                 
             except Exception as e:
-                print(f"   ❌ 加载到节点库Graph时发生异常: {e}")
+                utils.logger.error(f"   ❌ 加载到节点库Graph时发生异常: {e}", module="plugin_ui_manager")
                 import traceback
                 traceback.print_exc()
         else:
-            print(f"   ⚠️ 跳过节点库Graph加载 (nodes_palette={self.main_window.nodes_palette is not None}, plugins_to_load={len(plugins_to_load)})")
+            utils.logger.warning(f"   ⚠️ 跳过节点库Graph加载 (nodes_palette={self.main_window.nodes_palette is not None}, plugins_to_load={len(plugins_to_load)})", module="plugin_ui_manager")
         
         # 再加载到工作流Graph（用于实际执行）
-        print(f"\n📊 步骤2: 加载到工作流Graph")
+        utils.logger.info(f"\n📊 步骤2: 加载到工作流Graph", module="plugin_ui_manager")
         for plugin_info in plugins_to_load:
-            print(f"   📌 加载插件到工作流: {plugin_info.name}")
+            utils.logger.info(f"   📌 加载插件到工作流: {plugin_info.name}", module="plugin_ui_manager")
             self.plugin_manager.load_plugin_nodes(
                 plugin_info.name,
                 node_graph
             )
         
         # 清除待加载标记，避免重复加载
-        print(f"\n🗑️ 清除_pending_plugins标记")
+        utils.logger.info(f"\n🗑️ 清除_pending_plugins标记", module="plugin_ui_manager")
         delattr(self.main_window, '_pending_plugins')
         
         # 刷新节点库的事件过滤器（使新加载的插件标签页也能响应点击）
         if hasattr(self.main_window, 'refresh_node_info_event_filters'):
-            print(f"🔄 刷新节点库事件过滤器")
+            utils.logger.info(f"🔄 刷新节点库事件过滤器", module="plugin_ui_manager")
             self.main_window.refresh_node_info_event_filters()
         
-        print(f"\n✅ load_plugins_to_graph执行完成")
-        print("=" * 60 + "\n")
+        utils.logger.success(f"\n✅ load_plugins_to_graph执行完成", module="plugin_ui_manager")
+        utils.logger.info("=" * 60 + "\n", module="plugin_ui_manager")
         
         return new_categories
     

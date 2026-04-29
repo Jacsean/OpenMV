@@ -1,3 +1,6 @@
+
+import utils
+from utils import logger
 """
 执行UI管理器
 
@@ -43,27 +46,27 @@ class ExecutionUIManager:
             QtWidgets.QMessageBox.warning(self.main_window, "警告", "没有激活的工作流")
             return
 
-        print("=" * 50)
-        print("开始执行节点图...")
-        print("=" * 50)
+        utils.logger.info("=" * 50, module="execution_ui_manager")
+        utils.logger.info("开始执行节点图...", module="execution_ui_manager")
+        utils.logger.info("=" * 50, module="execution_ui_manager")
         
         try:
             # 执行节点图
             results = self.graph_engine.execute_graph(self.main_window.current_node_graph)
             
-            print("=" * 50)
-            print("节点图执行完成!")
-            print("=" * 50)
+            utils.logger.info("=" * 50, module="execution_ui_manager")
+            utils.logger.success("节点图执行完成!", module="execution_ui_manager")
+            utils.logger.info("=" * 50, module="execution_ui_manager")
             
             # 显示结果摘要
             if results:
-                print(f"处理了 {len(results)} 个节点的输出")
+                utils.logger.info(f"处理了 {len(results)} 个节点的输出", module="execution_ui_manager")
                 
             # 自动刷新所有打开的预览窗口
             self.refresh_all_previews()
                 
         except Exception as e:
-            print(f"执行错误: {e}")
+            utils.logger.error(f"执行错误: {e}", module="execution_ui_manager")
             import traceback
             traceback.print_exc()
             
@@ -83,23 +86,23 @@ class ExecutionUIManager:
             QtWidgets.QMessageBox.warning(self.main_window, "警告", "没有可执行的工作流")
             return
             
-        print("=" * 50)
-        print("开始执行所有工作流...")
-        print("=" * 50)
+        utils.logger.info("=" * 50, module="execution_ui_manager")
+        utils.logger.info("开始执行所有工作流...", module="execution_ui_manager")
+        utils.logger.info("=" * 50, module="execution_ui_manager")
         
         success_count = 0
         for i, workflow in enumerate(project.workflows):
-            print(f"\n--- 执行工作流 [{i+1}/{len(project.workflows)}]: {workflow.name} ---")
+            utils.logger.info(f"\n--- 执行工作流 [{i+1}/{len(project.workflows)}]: {workflow.name} ---", module="execution_ui_manager")
             try:
                 if workflow.node_graph:
                     self.graph_engine.execute_graph(workflow.node_graph)
                     success_count += 1
             except Exception as e:
-                print(f"❌ 工作流 '{workflow.name}' 执行失败: {e}")
+                utils.logger.error(f"❌ 工作流 '{workflow.name}' 执行失败: {e}", module="execution_ui_manager")
                 
-        print("\n" + "=" * 50)
-        print(f"所有工作流执行完毕. 成功: {success_count}/{len(project.workflows)}")
-        print("=" * 50)
+        utils.logger.info("\n" + "=" * 50, module="execution_ui_manager")
+        utils.logger.success(f"所有工作流执行完毕. 成功: {success_count}/{len(project.workflows)}", module="execution_ui_manager")
+        utils.logger.info("=" * 50, module="execution_ui_manager")
         
         # 刷新所有预览
         self.refresh_all_previews()
@@ -121,7 +124,7 @@ class ExecutionUIManager:
         
         if reply == QtWidgets.QMessageBox.Yes:
             self.main_window.current_node_graph.clear_session()
-            print("节点图已清空")
+            utils.logger.info("节点图已清空", module="execution_ui_manager")
     
     def save_graph_to_file(self):
         """
@@ -142,7 +145,7 @@ class ExecutionUIManager:
                 # 使用save_session()直接保存
                 self.main_window.current_node_graph.save_session(file_path)
                 
-                print(f"节点图已保存到: {file_path}")
+                utils.logger.info(f"节点图已保存到: {file_path}", module="execution_ui_manager")
                 
                 QtWidgets.QMessageBox.information(
                     self.main_window,
@@ -177,7 +180,7 @@ class ExecutionUIManager:
                     session_data = json.load(f)
                 self.main_window.current_node_graph.deserialize_session(session_data)
                 
-                print(f"节点图已从 {file_path} 加载")
+                utils.logger.info(f"节点图已从 {file_path} 加载", module="execution_ui_manager")
                 
                 QtWidgets.QMessageBox.information(
                     self.main_window,
@@ -206,4 +209,4 @@ class ExecutionUIManager:
                 refreshed_count += 1
         
         if refreshed_count > 0:
-            print(f"✅ 已自动刷新 {refreshed_count} 个预览窗口")
+            utils.logger.success(f"✅ 已自动刷新 {refreshed_count} 个预览窗口", module="execution_ui_manager")

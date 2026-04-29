@@ -1,3 +1,6 @@
+import utils
+from utils import logger
+
 """
 插件管理器 - 负责插件的扫描、加载和管理
 """
@@ -64,17 +67,17 @@ class PluginManager:
         
         # 扫描builtin目录（优先级最高）
         if self.builtin_dir.exists():
-            print("\n📦 扫描内置插件 (builtin)...")
+            utils.logger.info("\n📦 扫描内置插件 (builtin)...", module="plugin_manager")
             builtin_plugins = self._scan_directory(self.builtin_dir, source='builtin', priority=1)
             plugins.extend(builtin_plugins)
         
         # 扫描marketplace目录（优先级中等）
         if self.marketplace_dir.exists():
-            print("\n📦 扫描市场插件 (marketplace)...")
+            utils.logger.info("\n📦 扫描市场插件 (marketplace)...", module="plugin_manager")
             marketplace_plugins = self._scan_directory(self.marketplace_dir, source='marketplace', priority=2)
             plugins.extend(marketplace_plugins)
         
-        print(f"\n✅ 共扫描到 {len(plugins)} 个插件")
+        utils.logger.info(f"\n✅ 共扫描到 {len(plugins)} 个插件", module="plugin_manager")
         return plugins
     
     def _scan_directory(self, directory: Path, source='builtin', priority=1) -> List[PluginInfo]:
@@ -100,7 +103,7 @@ class PluginManager:
                 if plugin_info:
                     plugins.append(plugin_info)
                     self.plugins[plugin_info.name] = plugin_info
-                    print(f"   ✅ {item.name} (source: {source})")
+                    utils.logger.info(f"   ✅ {item.name} (source: {source})", module="plugin_manager")
         
         return plugins
     
@@ -117,7 +120,7 @@ class PluginManager:
         metadata_file = plugin_path / "plugin.json"
         
         if not metadata_file.exists():
-            print(f"⚠️ 插件缺少元数据文件: {plugin_path}")
+            utils.logger.info(f"⚠️ 插件缺少元数据文件: {plugin_path}", module="plugin_manager")
             return None
         
         try:
@@ -128,14 +131,14 @@ class PluginManager:
             required_fields = ['name', 'version']
             for field in required_fields:
                 if field not in data:
-                    print(f"⚠️ 插件元数据缺少必需字段 '{field}': {plugin_path}")
+                    utils.logger.info(f"⚠️ 插件元数据缺少必需字段 '{field}': {plugin_path}", module="plugin_manager")
                     return None
             
             # 解析节点定义
             nodes = []
             for node_data in data.get('nodes', []):
                 if 'class' not in node_data:
-                    print(f"⚠️ 节点定义缺少'class'字段")
+                    utils.logger.info(f"⚠️ 节点定义缺少'class'字段", module="plugin_manager")
                     continue
                 
                 node_def = NodeDefinition(
@@ -181,10 +184,10 @@ class PluginManager:
             return plugin_info
             
         except json.JSONDecodeError as e:
-            print(f"❌ 插件元数据JSON格式错误 {plugin_path}: {e}")
+            utils.logger.info(f"❌ 插件元数据JSON格式错误 {plugin_path}: {e}", module="plugin_manager")
             return None
         except Exception as e:
-            print(f"❌ 加载插件元数据失败 {plugin_path}: {e}")
+            utils.logger.info(f"❌ 加载插件元数据失败 {plugin_path}: {e}", module="plugin_manager")
             return None
     
     def load_plugin_nodes(self, plugin_name: str, node_graph) -> bool:
@@ -199,7 +202,7 @@ class PluginManager:
             bool: 加载是否成功
         """
         if plugin_name not in self.plugins:
-            print(f"❌ 插件不存在: {plugin_name}")
+            utils.logger.info(f"❌ 插件不存在: {plugin_name}", module="plugin_manager")
             return False
         
         plugin_info = self.plugins[plugin_name]
@@ -214,7 +217,7 @@ class PluginManager:
             is_old_structure = nodes_file.exists()
             
             if not is_new_structure and not is_old_structure:
-                print(f"❌ 插件缺少节点文件: {plugin_name}")
+                utils.logger.info(f"❌ 插件缺少节点文件: {plugin_name}", module="plugin_manager")
                 return False
             
             # 2. 读取源代码进行安全检查
@@ -222,7 +225,7 @@ class PluginManager:
                 # 新体系：检查 nodes/__init__.py
                 init_file = nodes_dir / "__init__.py"
                 if not init_file.exists():
-                    print(f"❌ 新体系插件缺少 nodes/__init__.py: {plugin_name}")
+                    utils.logger.info(f"❌ 新体系插件缺少 nodes/__init__.py: {plugin_name}", module="plugin_manager")
                     return False
                 
                 with open(init_file, 'r', encoding='utf-8') as f:
@@ -247,9 +250,9 @@ class PluginManager:
             # 3. 权限检查
             violations = PermissionChecker.check_source_code(source_code, plugin_name)
             if violations:
-                print(f"🚫 插件 {plugin_name} 安全检查失败:")
+                utils.logger.info(f"🚫 插件 {plugin_name} 安全检查失败:", module="plugin_manager")
                 for v in violations:
-                    print(f"   - {v}")
+                    utils.logger.info(f"   - {v}", module="plugin_manager")
                 return False
             
             # 4. 动态导入模块
@@ -338,11 +341,11 @@ class PluginManager:
                     self.loaded_nodes[node_key] = node_class
                     
                     registered_count += 1
-                    print(f"   ✅ 注册节点: {node_def.display_name}")
+                    utils.logger.info(f"   ✅ 注册节点: {node_def.display_name}", module="plugin_manager")
                 else:
-                    print(f"   ⚠️ 未找到节点类: {class_name}")
+                    utils.logger.info(f"   ⚠️ 未找到节点类: {class_name}", module="plugin_manager")
             
-            print(f"✅ 插件 {plugin_name} 加载完成，注册 {registered_count} 个节点")
+            utils.logger.info(f"✅ 插件 {plugin_name} 加载完成，注册 {registered_count} 个节点", module="plugin_manager")
             
             # 启动热重载监听
             plugin_path = self.plugins[plugin_name].path
@@ -355,10 +358,10 @@ class PluginManager:
             return True
             
         except SandboxSecurityError as e:
-            print(f"🚫 安全违规: {e}")
+            utils.logger.info(f"🚫 安全违规: {e}", module="plugin_manager")
             return False
         except Exception as e:
-            print(f"❌ 加载插件节点失败 {plugin_name}: {e}")
+            utils.logger.info(f"❌ 加载插件节点失败 {plugin_name}: {e}", module="plugin_manager")
             import traceback
             traceback.print_exc()
             return False
@@ -401,7 +404,7 @@ class PluginManager:
                 color = node_def.color
                 
         except Exception as e:
-            print(f"   ⚠️ 应用节点样式失败: {e}")
+            utils.logger.info(f"   ⚠️ 应用节点样式失败: {e}", module="plugin_manager")
             import traceback
             traceback.print_exc()
     
@@ -412,7 +415,7 @@ class PluginManager:
         Args:
             plugin_name: 插件名称
         """
-        print(f"\n🔄 开始重载插件: {plugin_name}")
+        utils.logger.info(f"\n🔄 开始重载插件: {plugin_name}", module="plugin_manager")
         
         # 1. 卸载旧节点
         self.unload_plugin_nodes(plugin_name)
@@ -425,8 +428,8 @@ class PluginManager:
             self.plugins[plugin_name] = new_info
         
         # 3. 重新加载节点（需要外部传入node_graph，这里仅更新元数据）
-        print(f"✅ 插件 {plugin_name} 元数据已更新")
-        print(f"💡 提示：请刷新NodeGraph以应用更改")
+        utils.logger.info(f"✅ 插件 {plugin_name} 元数据已更新", module="plugin_manager")
+        utils.logger.info(f"💡 提示：请刷新NodeGraph以应用更改", module="plugin_manager")
     
     def unload_plugin_nodes(self, plugin_name: str) -> bool:
         """
@@ -457,9 +460,9 @@ class PluginManager:
                     try:
                         # NodeGraphQt没有直接的unregister_node方法
                         # 只能通过重新创建NodesPalette来刷新
-                        print(f"   🗑️ 从Graph移除节点: {node_def.display_name}")
+                        utils.logger.info(f"   🗑️ 从Graph移除节点: {node_def.display_name}", module="plugin_manager")
                     except Exception as e:
-                        print(f"   ⚠️ 移除节点失败: {e}")
+                        utils.logger.info(f"   ⚠️ 移除节点失败: {e}", module="plugin_manager")
         
         # 移除已注册的节点
         nodes_to_remove = [
@@ -469,14 +472,14 @@ class PluginManager:
         
         for node_key in nodes_to_remove:
             del self.loaded_nodes[node_key]
-            print(f"   🗑️ 卸载节点: {node_key}")
+            utils.logger.info(f"   🗑️ 卸载节点: {node_key}", module="plugin_manager")
         
         # 清除模块缓存
         module_name = f"plugin_{plugin_name}_nodes"
         if module_name in sys.modules:
             del sys.modules[module_name]
         
-        print(f"✅ 插件 {plugin_name} 已卸载")
+        utils.logger.info(f"✅ 插件 {plugin_name} 已卸载", module="plugin_manager")
         return True
     
     def get_installed_plugins(self) -> List[PluginInfo]:

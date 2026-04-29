@@ -1,3 +1,6 @@
+
+import utils
+from utils import logger
 """
 图形化视觉编程系统 - 主窗口
 
@@ -100,24 +103,24 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         加载所有已安装的插件（简化版：仅扫描，延迟加载）
         """
-        print("\n" + "=" * 60)
-        print("正在加载插件...")
-        print("=" * 60)
+        utils.logger.info("\n" + "=" * 60, module="main_window")
+        utils.logger.info("正在加载插件...", module="main_window")
+        utils.logger.info("=" * 60, module="main_window")
         
         # 扫描插件
         plugins = self.plugin_manager.scan_plugins()
-        print(f"发现 {len(plugins)} 个插件\n")
+        utils.logger.info(f"发现 {len(plugins)} 个插件\n", module="main_window")
         
         if not plugins:
-            print("💡 提示: 将插件文件夹放入 user_plugins/ 目录即可自动加载\n")
-            print("=" * 60 + "\n")
+            utils.logger.info("💡 提示: 将插件文件夹放入 user_plugins/ 目录即可自动加载\n", module="main_window")
+            utils.logger.info("=" * 60 + "\n", module="main_window")
             return
         
         # 由于此时还没有NodeGraph实例，延迟到第一个工作流创建时加载
         # 这里只记录需要加载的插件
         self._pending_plugins = plugins
-        print(f"📦 待加载插件: {', '.join([p.name for p in plugins])}")
-        print("=" * 60 + "\n")
+        utils.logger.info(f"📦 待加载插件: {', '.join([p.name for p in plugins])}", module="main_window")
+        utils.logger.info("=" * 60 + "\n", module="main_window")
     
     def _register_nodes(self, node_graph):
         """
@@ -446,7 +449,7 @@ class MainWindow(QtWidgets.QMainWindow):
                             child.installEventFilter(self)
                         
         except Exception as e:
-            print(f"⚠️ 连接节点选择信号失败: {e}")
+            utils.logger.error(f"⚠️ 连接节点选择信号失败: {e}", module="main_window")
     
     def refresh_node_info_event_filters(self):
         """
@@ -464,7 +467,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 # 重新安装
                 self._connect_node_selection_signal()
         except Exception as e:
-            print(f"⚠️ 刷新事件过滤器失败: {e}")
+            utils.logger.error(f"⚠️ 刷新事件过滤器失败: {e}", module="main_window")
     
     def eventFilter(self, obj, event):
         """
@@ -556,7 +559,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         return
                         
         except Exception as e:
-            print(f"⚠️ 更新节点信息失败: {e}")
+            utils.logger.error(f"⚠️ 更新节点信息失败: {e}", module="main_window")
     
     def _display_node_info_by_name(self, node_display_name):
         """
@@ -597,7 +600,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.info_text.setPlainText("暂无详细说明")
             
         except Exception as e:
-            print(f"⚠️ 显示节点信息失败: {e}")
+            utils.logger.error(f"⚠️ 显示节点信息失败: {e}", module="main_window")
     
     def update_node_info(self, node_class_name, display_name, category, description=""):
         """
@@ -884,7 +887,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if file_path:
             # 设置文件路径到节点的text_input
             node.set_property('file_path', file_path)
-            print(f"已选择图像: {file_path}")
+            utils.logger.info(f"已选择图像: {file_path}", module="main_window")
             # 可选：显示提示信息
             # QtWidgets.QMessageBox.information(
             #     self,
@@ -906,7 +909,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if file_path:
             # 设置保存路径到节点的text_input
             node.set_property('save_path', file_path)
-            print(f"保存路径: {file_path}")
+            utils.logger.info(f"保存路径: {file_path}", module="main_window")
             # 可选：显示提示信息
             # QtWidgets.QMessageBox.information(
             #     self,
@@ -923,30 +926,30 @@ class MainWindow(QtWidgets.QMainWindow):
         # 获取节点类型标识（type_是属性，不是方法）
         node_type = node.type_ if hasattr(node, 'type_') else str(type(node))
         
-        print(f"🔍 节点双击调试信息:")
-        print(f"   节点类型: {node_type}")
-        print(f"   节点名称: {node.name()}")
-        print(f"   是否有file_path属性: {hasattr(node, 'file_path')}")
-        print(f"   是否有save_path属性: {hasattr(node, 'save_path')}")
-        print(f"   是否有get_cached_image方法: {hasattr(node, 'get_cached_image')}")
+        utils.logger.info(f"🔍 节点双击调试信息:", module="main_window")
+        utils.logger.info(f"   节点类型: {node_type}", module="main_window")
+        utils.logger.info(f"   节点名称: {node.name()}", module="main_window")
+        utils.logger.info(f"   是否有file_path属性: {hasattr(node, 'file_path')}", module="main_window")
+        utils.logger.info(f"   是否有save_path属性: {hasattr(node, 'save_path')}", module="main_window")
+        utils.logger.info(f"   是否有get_cached_image方法: {hasattr(node, 'get_cached_image')}", module="main_window")
         
         # 处理图像加载节点 (ImageLoadNode)
         if "ImageLoadNode" in str(node_type) or hasattr(node, 'file_path'):
-            print(f"   ✅ 识别为 ImageLoadNode，打开文件选择对话框")
+            utils.logger.success(f"   ✅ 识别为 ImageLoadNode，打开文件选择对话框", module="main_window")
             self._on_browse_image_file(node)
             
         # 处理图像保存节点 (ImageSaveNode)
         elif "ImageSaveNode" in str(node_type) or hasattr(node, 'save_path'):
-            print(f"   ✅ 识别为 ImageSaveNode，打开保存路径选择对话框")
+            utils.logger.success(f"   ✅ 识别为 ImageSaveNode，打开保存路径选择对话框", module="main_window")
             self._on_select_save_path(node)
             
         # 处理图像显示节点 (ImageViewNode)
         elif "ImageViewNode" in str(node_type) or hasattr(node, 'get_cached_image'):
-            print(f"   ✅ 识别为 ImageViewNode，尝试打开预览窗口")
+            utils.logger.success(f"   ✅ 识别为 ImageViewNode，尝试打开预览窗口", module="main_window")
             if hasattr(node, 'get_cached_image'):
                 image = node.get_cached_image()
                 if image is not None:
-                    print(f"   ✅ 获取到缓存图像，形状: {image.shape}")
+                    utils.logger.success(f"   ✅ 获取到缓存图像，形状: {image.shape}", module="main_window")
                     # 检查是否已经打开了该节点的预览窗口
                     node_id = node.id  # id是属性，不是方法
                     
@@ -959,28 +962,28 @@ class MainWindow(QtWidgets.QMainWindow):
                             existing_dialog.raise_()
                             existing_dialog.activateWindow()
                             existing_dialog.refresh_preview()
-                            print(f"   🔄 刷新已存在的预览窗口")
+                            utils.logger.info(f"   🔄 刷新已存在的预览窗口", module="main_window")
                         else:
                             # 窗口存在但已隐藏/关闭，需要重新创建
-                            print(f"   🗑️ 窗口已关闭，删除旧引用并创建新窗口")
+                            utils.logger.info(f"   🗑️ 窗口已关闭，删除旧引用并创建新窗口", module="main_window")
                             del self.preview_windows[node_id]
                             self._create_new_preview_window(node, image, node_id)
                     else:
                         # 创建新的预览对话框（非模态）
                         self._create_new_preview_window(node, image, node_id)
                         
-                    print(f"✅ 成功打开预览窗口: {node.name()}")
+                    utils.logger.success(f"✅ 成功打开预览窗口: {node.name()}", module="main_window")
                 else:
-                    print(f"   ⚠️ 节点中没有缓存图像")
+                    utils.logger.warning(f"   ⚠️ 节点中没有缓存图像", module="main_window")
                     QtWidgets.QMessageBox.information(
                         self,
                         "提示",
                         "该节点尚未处理图像数据\n请先运行节点图"
                     )
             else:
-                print(f"   ❌ 节点没有get_cached_image方法")
+                utils.logger.error(f"   ❌ 节点没有get_cached_image方法", module="main_window")
         else:
-            print(f"   ℹ️ 未识别的节点类型，不执行任何操作")
+            utils.logger.info(f"   ℹ️ 未识别的节点类型，不执行任何操作", module="main_window")
 
     def _create_new_preview_window(self, node, image, node_id):
         """
@@ -1007,7 +1010,7 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 显示非模态窗口
         dialog.show()
-        print(f"   📷 打开新的预览窗口")
+        utils.logger.info(f"   📷 打开新的预览窗口", module="main_window")
 
     def _on_preview_window_closed(self, node_id):
         """
@@ -1015,7 +1018,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         if node_id in self.preview_windows:
             del self.preview_windows[node_id]
-            print(f"🗑️ 预览窗口已关闭，清理引用")
+            utils.logger.info(f"🗑️ 预览窗口已关闭，清理引用", module="main_window")
     
     def show_about(self):
         """

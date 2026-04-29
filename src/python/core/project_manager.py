@@ -1,3 +1,6 @@
+
+import utils
+from utils import logger
 """
 工程和工作流管理模块
 
@@ -384,7 +387,7 @@ class ProjectManager:
         # 自动添加一个默认工作流
         default_workflow = Workflow(name="工作流 1")
         self.current_project.add_workflow(default_workflow)
-        print(f"✅ 创建新工程: {name}")
+        utils.logger.success(f"✅ 创建新工程: {name}", module="project_manager")
         return self.current_project
         
     def open_project(self, proj_file: str) -> Optional[Project]:
@@ -411,13 +414,13 @@ class ProjectManager:
             bool: 是否保存成功
         """
         if self.current_project is None:
-            print("❌ 没有打开的工程")
+            utils.logger.error("❌ 没有打开的工程", module="project_manager")
             return False
         
         # 确定保存路径
         output_file = proj_file if proj_file else self.current_project.file_path
         if not output_file:
-            print("❌ 未指定保存路径")
+            utils.logger.error("❌ 未指定保存路径", module="project_manager")
             return False
         
         # 确保文件扩展名为.proj
@@ -430,7 +433,7 @@ class ProjectManager:
     def close_project(self):
         """关闭当前工程"""
         if self.current_project:
-            print(f"🗑️ 关闭工程: {self.current_project.name}")
+            utils.logger.info(f"🗑️ 关闭工程: {self.current_project.name}", module="project_manager")
             self.current_project = None
             
     def export_project(self, output_file: str) -> bool:
@@ -444,32 +447,32 @@ class ProjectManager:
             bool: 是否导出成功
         """
         if self.current_project is None:
-            print("❌ 没有打开的工程")
+            utils.logger.error("❌ 没有打开的工程", module="project_manager")
             return False
         
-        print(f"\n{'='*60}")
-        print(f"📦 开始导出工程: {self.current_project.name}")
-        print(f"   目标文件: {output_file}")
-        print(f"   工作流数量: {len(self.current_project.workflows)}")
-        print(f"{'='*60}\n")
+        utils.logger.info(f"\n{'='*60}", module="project_manager")
+        utils.logger.info(f"📦 开始导出工程: {self.current_project.name}", module="project_manager")
+        utils.logger.info(f"   目标文件: {output_file}", module="project_manager")
+        utils.logger.info(f"   工作流数量: {len(self.current_project.workflows)}", module="project_manager")
+        utils.logger.info(f"{'='*60}\n", module="project_manager")
         
         try:
             # 先保存到临时目录
             import tempfile
             temp_dir = tempfile.mkdtemp(prefix='proj_export_')
-            print(f"📁 创建临时目录: {temp_dir}")
+            utils.logger.info(f"📁 创建临时目录: {temp_dir}", module="project_manager")
             
             # === 在临时目录中保存工作流文件 ===
             workflows_dir = os.path.join(temp_dir, "workflows")
             os.makedirs(workflows_dir, exist_ok=True)
-            print(f"📁 创建工作流目录: {workflows_dir}")
+            utils.logger.info(f"📁 创建工作流目录: {workflows_dir}", module="project_manager")
             
             # 保存每个工作流
             for i, workflow in enumerate(self.current_project.workflows):
-                print(f"\n--- 处理工作流 {i+1}: {workflow.name} ---")
+                utils.logger.info(f"\n--- 处理工作流 {i+1}: {workflow.name} ---", module="project_manager")
                 
                 if workflow.node_graph is None:
-                    print(f"⚠️ 工作流 {workflow.name} 没有 NodeGraph，跳过")
+                    utils.logger.warning(f"⚠️ 工作流 {workflow.name} 没有 NodeGraph，跳过", module="project_manager")
                     continue
                 
                 wf_filename = f"workflow_{i+1}.json"
@@ -477,16 +480,16 @@ class ProjectManager:
                 
                 # 保存节点图数据
                 wf_full_path = os.path.join(temp_dir, workflow.file_path)
-                print(f"💾 保存节点图到: {wf_full_path}")
+                utils.logger.info(f"💾 保存节点图到: {wf_full_path}", module="project_manager")
                 
                 # 获取序列化数据并记录大小
                 session_data = workflow.node_graph.serialize_session()
                 data_size = len(json.dumps(session_data))
-                print(f"   📊 节点图数据大小: {data_size} bytes")
+                utils.logger.info(f"   📊 节点图数据大小: {data_size} bytes", module="project_manager")
                 
                 # 统计节点数量
                 node_count = len(workflow.node_graph.all_nodes())
-                print(f"   🔢 节点数量: {node_count}")
+                utils.logger.info(f"   🔢 节点数量: {node_count}", module="project_manager")
                 
                 # 实际保存
                 workflow.node_graph.save_session(wf_full_path)
@@ -494,30 +497,30 @@ class ProjectManager:
                 # 验证文件是否生成
                 if os.path.exists(wf_full_path):
                     file_size = os.path.getsize(wf_full_path)
-                    print(f"   ✅ 文件已生成，大小: {file_size} bytes")
+                    utils.logger.success(f"   ✅ 文件已生成，大小: {file_size} bytes", module="project_manager")
                 else:
-                    print(f"   ❌ 文件未生成！")
+                    utils.logger.error(f"   ❌ 文件未生成！", module="project_manager")
                     return False
                 
                 workflow.mark_saved()
             
             # 生成索引文件
-            print(f"\n📝 生成索引文件...")
+            utils.logger.info(f"\n📝 生成索引文件...", module="project_manager")
             index_data = ProjectIndexer.generate_index(self.current_project)
             index_file = os.path.join(temp_dir, "index.json")
             with open(index_file, 'w', encoding='utf-8') as f:
                 json.dump(index_data, f, indent=2, ensure_ascii=False)
-            print(f"   ✅ 索引文件已生成")
+            utils.logger.success(f"   ✅ 索引文件已生成", module="project_manager")
             
             # 保存工程配置文件
-            print(f"📝 保存工程配置...")
+            utils.logger.info(f"📝 保存工程配置...", module="project_manager")
             project_file = os.path.join(temp_dir, "project.json")
             with open(project_file, 'w', encoding='utf-8') as f:
                 json.dump(self.current_project.to_dict(), f, indent=2, ensure_ascii=False)
-            print(f"   ✅ 工程配置已保存")
+            utils.logger.success(f"   ✅ 工程配置已保存", module="project_manager")
             
             # 压缩为ZIP
-            print(f"\n🗜️  压缩为ZIP文件...")
+            utils.logger.info(f"\n🗜️  压缩为ZIP文件...", module="project_manager")
             with zipfile.ZipFile(output_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 file_count = 0
                 for root, dirs, files in os.walk(temp_dir):
@@ -526,31 +529,31 @@ class ProjectManager:
                         arcname = os.path.relpath(file_path, temp_dir)
                         zipf.write(file_path, arcname)
                         file_count += 1
-                        print(f"   📦 添加文件: {arcname}")
-                print(f"   ✅ 共压缩 {file_count} 个文件")
+                        utils.logger.info(f"   📦 添加文件: {arcname}", module="project_manager")
+                utils.logger.success(f"   ✅ 共压缩 {file_count} 个文件", module="project_manager")
             
             # 清理临时目录
             shutil.rmtree(temp_dir, ignore_errors=True)
-            print(f"🧹 清理临时目录")
+            utils.logger.info(f"🧹 清理临时目录", module="project_manager")
             
             # 更新工程元数据
             self.current_project.format_type = "single_file"
             self.current_project.file_path = output_file
             
             final_size = os.path.getsize(output_file)
-            print(f"\n{'='*60}")
-            print(f"✅ 工程导出成功!")
-            print(f"   文件: {output_file}")
-            print(f"   大小: {final_size} bytes ({final_size/1024:.2f} KB)")
-            print(f"{'='*60}\n")
+            utils.logger.info(f"\n{'='*60}", module="project_manager")
+            utils.logger.success(f"✅ 工程导出成功!", module="project_manager")
+            utils.logger.info(f"   文件: {output_file}", module="project_manager")
+            utils.logger.info(f"   大小: {final_size} bytes ({final_size/1024:.2f} KB)", module="project_manager")
+            utils.logger.info(f"{'='*60}\n", module="project_manager")
             return True
             
         except Exception as e:
-            print(f"\n{'='*60}")
-            print(f"❌ 导出工程失败!")
-            print(f"   错误类型: {type(e).__name__}")
-            print(f"   错误信息: {str(e)}")
-            print(f"{'='*60}\n")
+            utils.logger.info(f"\n{'='*60}", module="project_manager")
+            utils.logger.error(f"❌ 导出工程失败!", module="project_manager")
+            utils.logger.error(f"   错误类型: {type(e).__name__}", module="project_manager")
+            utils.logger.error(f"   错误信息: {str(e)}", module="project_manager")
+            utils.logger.info(f"{'='*60}\n", module="project_manager")
             import traceback
             traceback.print_exc()
             return False
@@ -565,43 +568,43 @@ class ProjectManager:
         Returns:
             Project or None: 导入的工程对象
         """
-        print(f"\n{'='*60}")
-        print(f"📂 开始导入工程")
-        print(f"   文件路径: {proj_file}")
-        print(f"{'='*60}\n")
+        utils.logger.info(f"\n{'='*60}", module="project_manager")
+        utils.logger.info(f"📂 开始导入工程", module="project_manager")
+        utils.logger.info(f"   文件路径: {proj_file}", module="project_manager")
+        utils.logger.info(f"{'='*60}\n", module="project_manager")
         
         try:
             # 验证文件是否存在
             if not os.path.exists(proj_file):
-                print(f"❌ 文件不存在: {proj_file}")
+                utils.logger.error(f"❌ 文件不存在: {proj_file}", module="project_manager")
                 return None
             
             file_size = os.path.getsize(proj_file)
-            print(f"📊 文件大小: {file_size} bytes ({file_size/1024:.2f} KB)")
+            utils.logger.info(f"📊 文件大小: {file_size} bytes ({file_size/1024:.2f} KB)", module="project_manager")
             
             # 创建临时目录解压
             import tempfile
             temp_dir = tempfile.mkdtemp(prefix='proj_import_')
-            print(f"📁 创建临时目录: {temp_dir}")
+            utils.logger.info(f"📁 创建临时目录: {temp_dir}", module="project_manager")
             
             # 解压ZIP
-            print(f"🗜️  解压ZIP文件...")
+            utils.logger.info(f"🗜️  解压ZIP文件...", module="project_manager")
             with zipfile.ZipFile(proj_file, 'r') as zipf:
                 file_list = zipf.namelist()
-                print(f"   📦 ZIP包含 {len(file_list)} 个文件:")
+                utils.logger.info(f"   📦 ZIP包含 {len(file_list)} 个文件:", module="project_manager")
                 for fname in file_list:
-                    print(f"      - {fname}")
+                    utils.logger.info(f"      - {fname}", module="project_manager")
                 zipf.extractall(temp_dir)
-            print(f"   ✅ 解压完成")
+            utils.logger.success(f"   ✅ 解压完成", module="project_manager")
             
             # === 直接从临时目录读取工程配置 ===
             project_file = os.path.join(temp_dir, "project.json")
             if not os.path.exists(project_file):
-                print(f"❌ 工程配置文件不存在: {project_file}")
+                utils.logger.error(f"❌ 工程配置文件不存在: {project_file}", module="project_manager")
                 shutil.rmtree(temp_dir, ignore_errors=True)
                 return None
             
-            print(f"\n📝 读取工程配置...")
+            utils.logger.info(f"\n📝 读取工程配置...", module="project_manager")
             # 读取工程配置
             with open(project_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -610,18 +613,18 @@ class ProjectManager:
             self.current_project.file_path = os.path.dirname(os.path.abspath(proj_file))
             self.current_project.format_type = "single_file"
             
-            print(f"   ✅ 工程名称: {self.current_project.name}")
-            print(f"   ✅ 工作流数量: {len(self.current_project.workflows)}")
+            utils.logger.success(f"   ✅ 工程名称: {self.current_project.name}", module="project_manager")
+            utils.logger.success(f"   ✅ 工作流数量: {len(self.current_project.workflows)}", module="project_manager")
             for i, wf in enumerate(self.current_project.workflows):
-                print(f"      [{i+1}] {wf.name}")
+                utils.logger.info(f"      [{i+1}] {wf.name}", module="project_manager")
             
             # === 关键修复：预加载工作流节点图数据到内存 ===
-            print(f"\n📦 预加载工作流节点图数据...")
+            utils.logger.info(f"\n📦 预加载工作流节点图数据...", module="project_manager")
             workflows_data = {}
             workflows_dir = os.path.join(temp_dir, "workflows")
             if os.path.exists(workflows_dir):
                 wf_files = [f for f in os.listdir(workflows_dir) if f.endswith('.json')]
-                print(f"   📁 找到 {len(wf_files)} 个工作流文件")
+                utils.logger.info(f"   📁 找到 {len(wf_files)} 个工作流文件", module="project_manager")
                 
                 for wf_file in wf_files:
                     wf_index = int(wf_file.replace('workflow_', '').replace('.json', '')) - 1
@@ -629,8 +632,8 @@ class ProjectManager:
                     
                     try:
                         file_size = os.path.getsize(wf_full_path)
-                        print(f"\n   --- 加载工作流 {wf_index+1}: {wf_file} ---")
-                        print(f"   📊 文件大小: {file_size} bytes")
+                        utils.logger.info(f"\n   --- 加载工作流 {wf_index+1}: {wf_file} ---", module="project_manager")
+                        utils.logger.info(f"   📊 文件大小: {file_size} bytes", module="project_manager")
                         
                         with open(wf_full_path, 'r', encoding='utf-8') as f:
                             wf_data = json.load(f)
@@ -638,7 +641,7 @@ class ProjectManager:
                         # 统计节点数量
                         if 'nodes' in wf_data:
                             node_count = len(wf_data['nodes'])
-                            print(f"   🔢 节点数量: {node_count}")
+                            utils.logger.info(f"   🔢 节点数量: {node_count}", module="project_manager")
                             
                             # 列出所有节点类型
                             if node_count > 0:
@@ -646,35 +649,35 @@ class ProjectManager:
                                 for node_id, node_info in wf_data['nodes'].items():
                                     if 'type_' in node_info:
                                         node_types.add(node_info['type_'])
-                                print(f"   🏷️  节点类型: {', '.join(sorted(node_types))}")
+                                utils.logger.info(f"   🏷️  节点类型: {', '.join(sorted(node_types))}", module="project_manager")
                         
                         workflows_data[wf_index] = wf_data
-                        print(f"   ✅ 预加载成功")
+                        utils.logger.success(f"   ✅ 预加载成功", module="project_manager")
                     except Exception as e:
-                        print(f"   ❌ 加载工作流数据失败 {wf_file}: {e}")
+                        utils.logger.error(f"   ❌ 加载工作流数据失败 {wf_file}: {e}", module="project_manager")
                         import traceback
                         traceback.print_exc()
             else:
-                print(f"   ⚠️ 未找到工作流目录: {workflows_dir}")
+                utils.logger.warning(f"   ⚠️ 未找到工作流目录: {workflows_dir}", module="project_manager")
             
             # 将预加载的数据附加到工程对象（供UI管理器使用）
             self.current_project._workflows_session_data = workflows_data
             self.current_project._import_temp_dir = temp_dir  # 保存临时目录引用
             
-            print(f"\n{'='*60}")
-            print(f"✅ 工程导入成功!")
-            print(f"   工作流数量: {len(self.current_project.workflows)}")
-            print(f"   预加载节点图数据: {len(workflows_data)} 个")
-            print(f"{'='*60}\n")
+            utils.logger.info(f"\n{'='*60}", module="project_manager")
+            utils.logger.success(f"✅ 工程导入成功!", module="project_manager")
+            utils.logger.info(f"   工作流数量: {len(self.current_project.workflows)}", module="project_manager")
+            utils.logger.info(f"   预加载节点图数据: {len(workflows_data)} 个", module="project_manager")
+            utils.logger.info(f"{'='*60}\n", module="project_manager")
             
             return self.current_project
             
         except Exception as e:
-            print(f"\n{'='*60}")
-            print(f"❌ 导入工程失败!")
-            print(f"   错误类型: {type(e).__name__}")
-            print(f"   错误信息: {str(e)}")
-            print(f"{'='*60}\n")
+            utils.logger.info(f"\n{'='*60}", module="project_manager")
+            utils.logger.error(f"❌ 导入工程失败!", module="project_manager")
+            utils.logger.error(f"   错误类型: {type(e).__name__}", module="project_manager")
+            utils.logger.error(f"   错误信息: {str(e)}", module="project_manager")
+            utils.logger.info(f"{'='*60}\n", module="project_manager")
             import traceback
             traceback.print_exc()
             return None
@@ -701,12 +704,12 @@ class ProjectManager:
             Workflow or None: 创建的工作流对象
         """
         if self.current_project is None:
-            print("❌ 没有打开的工程")
+            utils.logger.error("❌ 没有打开的工程", module="project_manager")
             return None
             
         workflow = Workflow(name=name)
         index = self.current_project.add_workflow(workflow)
-        print(f"✅ 添加工作流: {name} (索引: {index})")
+        utils.logger.success(f"✅ 添加工作流: {name} (索引: {index})", module="project_manager")
         return workflow
         
     def remove_workflow(self, index: int) -> bool:
@@ -720,14 +723,14 @@ class ProjectManager:
             bool: 是否成功移除
         """
         if self.current_project is None:
-            print("❌ 没有打开的工程")
+            utils.logger.error("❌ 没有打开的工程", module="project_manager")
             return False
             
         workflow = self.current_project.get_workflow(index)
         if workflow:
             result = self.current_project.remove_workflow(index)
             if result:
-                print(f"🗑️ 移除工作流: {workflow.name}")
+                utils.logger.info(f"🗑️ 移除工作流: {workflow.name}", module="project_manager")
             return result
         return False
         
@@ -864,7 +867,7 @@ class ProjectIndexer:
                         "modified": data.get("modified", "")
                     })
             except Exception as e:
-                print(f"⚠️ 读取工程失败 {proj_dir}: {e}")
+                utils.logger.error(f"⚠️ 读取工程失败 {proj_dir}: {e}", module="project_manager")
         
         # 按相关度排序
         results.sort(key=lambda x: x["score"], reverse=True)
