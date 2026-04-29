@@ -690,6 +690,19 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 "此预览窗口未关联节点\n无法自动刷新"
             )
     
+    def toggle_maximize(self):
+        """
+        切换窗口最大化/恢复
+        """
+        if self.isMaximized():
+            self.showNormal()
+            self.maximize_btn.setText("⬜ 最大化")
+            self.maximize_btn.setToolTip("切换窗口最大化")
+        else:
+            self.showMaximized()
+            self.maximize_btn.setText("🔲 恢复")
+            self.maximize_btn.setToolTip("恢复窗口大小")
+    
     def switch_mode(self, mode: str):
         """
         切换模式（绘图/ROI/Mask）
