@@ -1096,6 +1096,38 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     # === 标注功能方法 BEGIN ===
     
+    def show_color_picker(self):
+        """
+        显示颜色选择器对话框
+        """
+        # 获取当前颜色
+        current_color = QtGui.QColor(
+            self.current_pen_color[2],  # R
+            self.current_pen_color[1],  # G
+            self.current_pen_color[0]   # B
+        )
+        
+        # 打开颜色对话框
+        color = QtWidgets.QColorDialog.getColor(current_color, self, "选择画笔颜色")
+        
+        if color.isValid():
+            # 更新当前颜色（转换为BGR格式）
+            self.current_pen_color = (color.blue(), color.green(), color.red())
+            
+            # 更新按钮背景色
+            self.color_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgb({color.red()}, {color.green()}, {color.blue()});
+                    color: white;
+                    font-weight: bold;
+                }}
+            """)
+            
+            # 更新颜色标签
+            self.current_color_label.setText(f"RGB({color.red()},{color.green()},{color.blue()})")
+            
+            print(f"✅ 画笔颜色已更改为: RGB({color.red()}, {color.green()}, {color.blue()})")
+    
     def activate_tool(self, tool_name: str):
         """
         激活标注工具
