@@ -690,6 +690,56 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 "此预览窗口未关联节点\n无法自动刷新"
             )
     
+    def display_image(self):
+        """
+        显示图像到场景中
+        """
+        if self.image is None:
+            return
+        
+        # 清除场景中的所有内容
+        self.scene.clear()
+        
+        # 转换OpenCV图像(BGR)为Qt图像(RGB)
+        height, width = self.image.shape[:2]
+        
+        if len(self.image.shape) == 3:
+            # 彩色图像
+            bytes_per_line = 3 * width
+            qt_image = QtGui.QImage(
+                self.image.data,
+                width,
+                height,
+                bytes_per_line,
+                QtGui.QImage.Format_RGB888
+            ).rgbSwapped()  # BGR -> RGB
+        else:
+            # 灰度图像
+            bytes_per_line = width
+            qt_image = QtGui.QImage(
+                self.image.data,
+                width,
+                height,
+                bytes_per_line,
+                QtGui.QImage.Format_Grayscale8
+            )
+        
+        # 创建pixmap
+        pixmap = QtGui.QPixmap.fromImage(qt_image)
+        
+        # 添加到场景
+        self.pixmap_item = self.scene.addPixmap(pixmap)
+        
+        # 更新信息标签
+        channels = self.image.shape[2] if len(self.image.shape) == 3 else 1
+        self.info_label.setText(f"图像尺寸: {width}x{height} | 通道数: {channels}")
+        
+        # 适应窗口显示
+        self.fit_to_window()
+        
+        # 重绘所有图形
+        self.redraw_all_shapes()
+    
     def save_image(self):
         """
         保存当前显示的图像到文件
