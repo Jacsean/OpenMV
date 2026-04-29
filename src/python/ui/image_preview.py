@@ -217,6 +217,10 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.is_drawing_polygon = False  # 是否正在绘制多边形
         self.polygon_temp_lines = []  # 临时线段列表（用于橡皮筋效果）
         
+        # ROI移动状态（Phase 3新增）
+        self.is_moving_roi = False  # 是否正在移动ROI
+        self.roi_move_offset = None  # ROI移动的偏移量
+        
         # 画笔颜色设置（默认为绿色）
         self.current_pen_color = (0, 255, 0)  # BGR格式：绿色
         
@@ -1165,14 +1169,26 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     if clicked_roi:
                         # 选中ROI - 显示手型光标
                         self.selected_roi = clicked_roi
-                        self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
-                        print(f"✅ 选中ROI: {clicked_roi.id}")
+                        self.container.select_roi(clicked_roi)
+                        
+                        # 检查是否在ROI内部（用于移动）
+                        if self.is_point_in_roi(clicked_roi, scene_pos):
+                            self.is_moving_roi = True
+                            # 计算移动偏移量
+                            x1, y1 = clicked_roi.points[0]
+                            self.roi_move_offset = (scene_pos.x() - x1, scene_pos.y() - y1)
+                            self.graphics_view.setCursor(QtCore.Qt.ClosedHandCursor)
+                            print(f"✋ 开始移动ROI: {clicked_roi.name}")
+                        else:
+                            self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
+                        
                         self.redraw_annotations()
                         event.accept()
                         return
                     else:
                         # 取消选中 - 开始绘制，显示十字光标
                         self.selected_roi = None
+                        self.container.clear_selection()
                         self.drawing_start_pos = view_pos
                         self.graphics_view.setCursor(QtCore.Qt.CrossCursor)
                         print("🎨 开始绘制新ROI")
@@ -1230,7 +1246,28 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             
             # === ROI模式下的光标控制（兼容旧代码）===
             elif self.roi_mode:
-                if self.roi_resize_handle and self.selected_roi:
+                if self.is_moving_roi and self.selected_roi:
+                    # 正在移动ROI
+                    scene_pos = self.graphics_view.mapToScene(view_pos)
+                    offset_x = scene_pos.x() - self.roi_move_offset[0]
+                    offset_y = scene_pos.y() - self.roi_move_offset[1]
+                    
+                    # 计算新的位置
+                    x1, y1 = self.selected_roi.points[0]
+                    x2, y2 = self.selected_roi.points[1]
+                    
+                    width = abs(x2 - x1)
+                    height = abs(y2 - y1)
+                    
+                    # 更新ROI位置
+                    self.selected_roi.points[0] = (int(offset_x), int(offset_y))
+                    self.selected_roi.points[1] = (int(offset_x + width), int(offset_y + height))
+                    
+                    self.redraw_annotations()
+                    event.accept()
+                    return
+                
+                elif self.roi_resize_handle and self.selected_roi:
                     # 正在调整ROI大小 - 保持十字光标
                     delta_x = scene_pos.x() - self.resize_start_pos.x()
                     delta_y = scene_pos.y() - self.resize_start_pos.y()
@@ -1364,10 +1401,20 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def mouseReleaseEvent(self, event):
         """
-        鼠标释放事件：完成矩形/圆形绘制
+        鼠标释放事件：完成矩形/圆形绘制或ROI移动
         """
         # 注意：多边形绘制在 mouseDoubleClickEvent 中完成，此处不处理多边形逻辑
         
+        # === ROI移动完成 ===
+        if self.is_moving_roi and self.selected_roi:
+            self.is_moving_roi = False
+            self.roi_move_offset = None
+            self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
+            print(f"✅ ROI移动完成")
+            event.accept()
+            return
+        
+        # === 矩形/圆形绘制完成 ===
         if self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
             # 获取结束位置
             view_pos = self.graphics_view.mapFromGlobal(event.globalPos())
@@ -1392,6 +1439,14 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     points=points
                 )
                 self.container.add_roi(roi_shape)
+                
+                # 自动选中新创建的ROI
+                self.container.select_roi(roi_shape)
+                self.selected_roi = roi_shape
+                
+                # 弹出命名对话框
+                self.show_roi_name_dialog(roi_shape)
+                
                 print(f"✅ 已创建ROI: {roi_shape.name}")
                 
             elif mode == 'mask':
@@ -1492,3 +1547,47 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             return
         
         super(ImagePreviewDialog, self).keyPressEvent(event)
+
+    def show_roi_name_dialog(self, roi: ROIShape):
+        """
+        显示ROI命名对话框
+        
+        Args:
+            roi: ROI对象
+        """
+        default_name = roi.name or f"检测区域_{len(self.container.rois)}"
+        
+        name, ok = QtWidgets.QInputDialog.getText(
+            self,
+            "ROI命名",
+            "请输入ROI名称：",
+            QtWidgets.QLineEdit.Normal,
+            default_name
+        )
+        
+        if ok and name:
+            roi.name = name.strip()
+            print(f"✅ ROI已命名为: {roi.name}")
+        else:
+            # 使用默认名称
+            roi.name = default_name
+            print(f"✅ 使用默认名称: {roi.name}")
+    
+    def move_roi(self, roi: ROIShape, delta_x: float, delta_y: float):
+        """
+        移动ROI位置
+        
+        Args:
+            roi: ROI对象
+            delta_x: X轴偏移量
+            delta_y: Y轴偏移量
+        """
+        if len(roi.points) < 2:
+            return
+        
+        # 更新两个顶点的坐标
+        x1, y1 = roi.points[0]
+        x2, y2 = roi.points[1]
+        
+        roi.points[0] = (int(x1 + delta_x), int(y1 + delta_y))
+        roi.points[1] = (int(x2 + delta_x), int(y2 + delta_y))
