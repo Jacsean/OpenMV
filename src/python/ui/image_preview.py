@@ -482,9 +482,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         refresh_btn.setToolTip("从关联节点获取最新图像并刷新显示")
         button_layout.addWidget(refresh_btn)
         
-        export_roi_btn = QtWidgets.QPushButton("📐 导出ROI")
-        export_roi_btn.clicked.connect(self.export_roi_to_node)
-        export_roi_btn.setToolTip("将ROI数据导出到关联的ImageViewNode")
+        export_roi_btn = QtWidgets.QPushButton("📤 导出")
+        export_roi_btn.clicked.connect(self.export_to_node)
+        export_roi_btn.setToolTip("导出ROI和Mask数据到关联的ImageViewNode")
         export_roi_btn.setStyleSheet("color: #2196F3; font-weight: bold;")
         button_layout.addWidget(export_roi_btn)
         
@@ -689,6 +689,52 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 "提示",
                 "此预览窗口未关联节点\n无法自动刷新"
             )
+    
+    def save_image(self):
+        """
+        保存当前显示的图像到文件
+        """
+        if self.image is None:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "警告",
+                "没有可保存的图像"
+            )
+            return
+        
+        # 打开文件保存对话框
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "保存图像",
+            "",
+            "图像文件 (*.png *.jpg *.bmp *.tif);;PNG文件 (*.png);;JPEG文件 (*.jpg);;BMP文件 (*.bmp);;TIFF文件 (*.tif)"
+        )
+        
+        if file_path:
+            try:
+                # 使用OpenCV保存图像
+                success = cv2.imwrite(file_path, self.image)
+                
+                if success:
+                    QtWidgets.QMessageBox.information(
+                        self,
+                        "保存成功",
+                        f"图像已保存到：\n{file_path}"
+                    )
+                    print(f"✅ 图像已保存: {file_path}")
+                else:
+                    QtWidgets.QMessageBox.critical(
+                        self,
+                        "保存失败",
+                        "图像保存失败，请检查文件格式和路径"
+                    )
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "保存错误",
+                    f"保存图像时发生错误：\n{str(e)}"
+                )
+                print(f"❌ 保存图像失败: {e}")
     
     def toggle_maximize(self):
         """
