@@ -315,11 +315,17 @@ def set_log_level(level, debug_modules=None):
         env_modules = os.getenv('DEBUG_MODULES', '')
         debug_modules = [m.strip() for m in env_modules.split(',') if m.strip()] if env_modules else []
     
-    logger = Logger(level, debug_modules)
+    # 直接修改现有logger对象的属性，而不是创建新对象
+    logger.level = level
+    logger.debug_modules = debug_modules
+    
+    # 使用print直接输出，避免被过滤
+    timestamp = datetime.now().strftime('%H:%M:%S')
     if level == LogLevel.DEBUG:
-        logger.info(f"日志级别已设置为: DEBUG (调试模块: {', '.join(debug_modules) if debug_modules else '全部'})")
+        modules_str = ', '.join(debug_modules) if debug_modules else '全部'
+        print(f"[{timestamp}] [INFO] 日志级别已设置为: DEBUG (调试模块: {modules_str})")
     else:
-        logger.info(f"日志级别已设置为: NORMAL")
+        print(f"[{timestamp}] [INFO] 日志级别已设置为: NORMAL")
 
 
 # 便捷函数（向后兼容旧的print语句）

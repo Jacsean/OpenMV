@@ -7,6 +7,7 @@ Qt日志处理器
 用于在应用界面中实时显示日志
 """
 
+from typing import Optional
 from PySide2 import QtCore, QtWidgets
 from utils.logger import LogHandler
 
