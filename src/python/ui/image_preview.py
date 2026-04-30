@@ -1,4 +1,4 @@
-﻿"""
+"""
 图像预览对话框模块
 
 提供增强版的图像预览功能，支持：
@@ -12,308 +12,15 @@
 - ✨ ROI和Mask管理模式
 """
 
+
 import cv2
 import numpy as np
 import json
-import uuid
-from datetime import datetime
-from typing import List, Tuple, Optional
-from dataclasses import dataclass, field
 from PySide2 import QtWidgets, QtCore, QtGui
 from .image_annotation import Annotation, AnnotationLayer
 
-
-# === 图形数据结构定义 BEGIN ===
-
-@dataclass
-class BaseShape:
-    """图形基类"""
-    id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
-    type: str = ""  # 'rect', 'circle', 'polygon', 'point', 'line', 'text', 'arrow'
-    points: List[Tuple[int, int]] = field(default_factory=list)
-    
-    # 视觉属性
-    border_color: Tuple[int, int, int] = (0, 255, 0)  # BGR格式
-    fill_color: Optional[Tuple[int, int, int]] = None
-    thickness: int = 2
-    line_style: str = 'solid'  # 'solid', 'dashed', 'dotted'
-    
-    # 元数据
-    name: str = ""
-    visible: bool = True
-    locked: bool = False
-    created_at: datetime = field(default_factory=datetime.now)
-
-
-@dataclass
-class AnnotationShape(BaseShape):
-    """普通标注（不导出，仅视觉辅助）"""
-    pass
-
-
-@dataclass
-class ROIShape(BaseShape):
-    """ROI对象（仅矩形，可导出到节点）"""
-    def __post_init__(self):
-        if self.type and self.type != 'rect':
-            raise ValueError("ROI只能是矩形")
-        # ROI固定样式
-        self.border_color = (255, 100, 0)  # 橙色
-        self.thickness = 3
-        self.line_style = 'solid'
-        self.fill_color = None
-
-
-@dataclass
-class MaskShape(BaseShape):
-    """Mask对象（矩形/圆/多边形，可导出为灰度图）"""
-    def __post_init__(self):
-        if self.type and self.type not in ['rect', 'circle', 'polygon']:
-            raise ValueError("Mask支持矩形、圆形、多边形")
-        # Mask默认样式
-        self.border_color = (255, 0, 0)    # 红色边框
-        self.fill_color = (255, 0, 0)      # 红色填充（半透明）
-        self.thickness = 2
-        self.line_style = 'solid'
-
-
-class ShapeContainer:
-    """图形容器管理器"""
-    
-    def __init__(self):
-        # 三种图形容器
-        self.annotations = []  # List[AnnotationShape] - 普通标注
-        self.rois = []         # List[ROIShape] - ROI对象
-        self.masks = []        # List[MaskShape] - Mask对象
-        
-        # 当前状态
-        self.current_mode = 'annotation'  # 'annotation', 'roi', 'mask'
-        self.current_tool = None          # 当前激活的工具
-        
-        # 当前选中的对象（互斥）
-        self.selected_roi = None
-        self.selected_mask = None
-        
-        # === 新增：通用编辑状态 ===
-        self.selected_shape = None       # 当前选中的图形（任意类型）
-        self.is_moving_shape = False     # 是否正在移动图形
-        self.shape_move_offset = None    # 移动偏移量
-        self.resize_handle = None        # 当前激活的调整手柄
-        self.resize_start_pos = None     # 调整大小起始位置
-    
-    def switch_mode(self, mode: str):
-        """切换模式，清空互斥的选中状态"""
-        old_mode = self.current_mode
-        self.current_mode = mode
-        
-        if mode == 'roi':
-            self.selected_mask = None  # 取消Mask选中
-        elif mode == 'mask':
-            self.selected_roi = None  # 取消ROI选中
-        
-        print(f"✅ 切换到{self._get_mode_name(mode)}模式")
-    
-    def select_roi(self, roi: ROIShape):
-        """选中ROI，自动取消Mask选中"""
-        self.selected_roi = roi
-        self.selected_mask = None
-        print(f"✅ 选中ROI: {roi.name or roi.id}")
-    
-    def select_mask(self, mask: MaskShape):
-        """选中Mask，自动取消ROI选中"""
-        self.selected_mask = mask
-        self.selected_roi = None
-        print(f"✅ 选中Mask: {mask.name or mask.id}")
-    
-    def clear_selection(self):
-        """清除所有选中"""
-        self.selected_roi = None
-        self.selected_mask = None
-    
-    def add_annotation(self, shape: AnnotationShape):
-        """添加普通标注"""
-        self.annotations.append(shape)
-    
-    def add_roi(self, shape: ROIShape):
-        """添加ROI"""
-        if not shape.name:
-            shape.name = f"检测区域_{len(self.rois) + 1}"
-        self.rois.append(shape)
-    
-    def add_mask(self, shape: MaskShape):
-        """添加Mask"""
-        if not shape.name:
-            shape.name = f"Mask区域_{len(self.masks) + 1}"
-        self.masks.append(shape)
-    
-    def remove_annotation(self, shape_id: str):
-        """删除普通标注"""
-        self.annotations = [a for a in self.annotations if a.id != shape_id]
-    
-    def remove_roi(self, shape_id: str):
-        """删除ROI"""
-        self.rois = [r for r in self.rois if r.id != shape_id]
-        if self.selected_roi and self.selected_roi.id == shape_id:
-            self.selected_roi = None
-    
-    def remove_mask(self, shape_id: str):
-        """删除Mask"""
-        self.masks = [m for m in self.masks if m.id != shape_id]
-        if self.selected_mask and self.selected_mask.id == shape_id:
-            self.selected_mask = None
-    
-    def get_all_shapes(self):
-        """获取所有可见图形"""
-        shapes = []
-        shapes.extend([a for a in self.annotations if a.visible])
-        shapes.extend([r for r in self.rois if r.visible])
-        shapes.extend([m for m in self.masks if m.visible])
-        return shapes
-    
-    def _get_mode_name(self, mode: str) -> str:
-        """获取模式的中文名称"""
-        mode_names = {
-            'annotation': '绘图',
-            'roi': 'ROI',
-            'mask': 'Mask'
-        }
-        return mode_names.get(mode, mode)
-    
-    def select_shape(self, shape):
-        """通用图形选择方法（支持所有类型）"""
-        self.clear_selection()
-        
-        if isinstance(shape, ROIShape):
-            self.selected_roi = shape
-            self.selected_shape = shape
-        elif isinstance(shape, MaskShape):
-            self.selected_mask = shape
-            self.selected_shape = shape
-        elif isinstance(shape, AnnotationShape):
-            self.selected_shape = shape
-        
-        print(f"u2705 选中图形: {shape.name or shape.id} (类型: {shape.type})")
-    
-    def get_shape_at_position(self, scene_pos, shapes_list=None):
-        """获取指定位置的图形"""
-        if shapes_list is None:
-            shapes_list = self.get_all_shapes()
-        
-        for shape in reversed(shapes_list):
-            if self.is_point_in_shape(shape, scene_pos):
-                return shape
-        return None
-    
-    def is_point_in_shape(self, shape, scene_pos):
-        """判断点是否在图形内部"""
-        x, y = int(scene_pos.x()), int(scene_pos.y())
-        
-        if shape.type == 'rect' and len(shape.points) >= 2:
-            x1, y1 = shape.points[0]
-            x2, y2 = shape.points[1]
-            min_x, max_x = min(x1, x2), max(x1, x2)
-            min_y, max_y = min(y1, y2), max(y1, y2)
-            return min_x <= x <= max_x and min_y <= y <= max_y
-        
-        elif shape.type == 'circle' and len(shape.points) >= 2:
-            cx, cy = shape.points[0]
-            radius = shape.points[1]
-            distance = ((x - cx)**2 + (y - cy)**2)**0.5
-            return distance <= radius
-        
-        elif shape.type == 'polygon' and len(shape.points) >= 3:
-            n = len(shape.points)
-            inside = False
-            p1x, p1y = shape.points[0]
-            for i in range(1, n + 1):
-                p2x, p2y = shape.points[i % n]
-                if y > min(p1y, p2y):
-                    if y <= max(p1y, p2y):
-                        if x <= max(p1x, p2x):
-                            if p1y != p2y:
-                                xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                            if p1x == p2x or x <= xinters:
-                                inside = not inside
-                p1x, p1y = p2x, p2y
-            return inside
-        
-        return False
-    
-    def get_resize_handles(self, shape):
-        """获取图形的调整大小手柄位置"""
-        handles = {}
-        
-        if shape.type == 'rect' and len(shape.points) >= 2:
-            x1, y1 = shape.points[0]
-            x2, y2 = shape.points[1]
-            min_x, max_x = min(x1, x2), max(x1, x2)
-            min_y, max_y = min(y1, y2), max(y1, y2)
-            
-            handles['top-left'] = (min_x, min_y)
-            handles['top-right'] = (max_x, min_y)
-            handles['bottom-left'] = (min_x, max_y)
-            handles['bottom-right'] = (max_x, max_y)
-            handles['top'] = ((min_x + max_x) // 2, min_y)
-            handles['bottom'] = ((min_x + max_x) // 2, max_y)
-            handles['left'] = (min_x, (min_y + max_y) // 2)
-            handles['right'] = (max_x, (min_y + max_y) // 2)
-        
-        elif shape.type == 'circle' and len(shape.points) >= 2:
-            cx, cy = shape.points[0]
-            radius = shape.points[1]
-            handles['radius'] = (cx + radius, cy)
-        
-        return handles
-    
-    def get_handle_at_position(self, shape, scene_pos, handle_size=10):
-        """获取指定位置的手柄名称"""
-        handles = self.get_resize_handles(shape)
-        x, y = int(scene_pos.x()), int(scene_pos.y())
-        
-        for handle_name, (hx, hy) in handles.items():
-            if abs(x - hx) <= handle_size and abs(y - hy) <= handle_size:
-                return handle_name
-        
-        return None
-    
-    def move_shape(self, shape, delta_x, delta_y):
-        """移动图形位置"""
-        if shape.type in ['rect', 'circle', 'polygon', 'text']:
-            shape.points = [(int(x + delta_x), int(y + delta_y)) for x, y in shape.points]
-    
-    def resize_shape(self, shape, handle_name, new_pos):
-        """调整图形大小"""
-        x, y = int(new_pos.x()), int(new_pos.y())
-        
-        if shape.type == 'rect' and len(shape.points) >= 2:
-            if handle_name == 'top-left':
-                shape.points[0] = (x, y)
-            elif handle_name == 'top-right':
-                shape.points[1] = (x, shape.points[0][1])
-                shape.points[0] = (shape.points[1][0], y)
-            elif handle_name == 'bottom-left':
-                shape.points[0] = (x, shape.points[1][1])
-                shape.points[1] = (shape.points[0][0], y)
-            elif handle_name == 'bottom-right':
-                shape.points[1] = (x, y)
-            elif handle_name == 'top':
-                shape.points[0] = (shape.points[0][0], y)
-                shape.points[1] = (shape.points[1][0], shape.points[0][1])
-            elif handle_name == 'bottom':
-                shape.points[1] = (shape.points[1][0], y)
-            elif handle_name == 'left':
-                shape.points[0] = (x, shape.points[0][1])
-            elif handle_name == 'right':
-                shape.points[1] = (x, shape.points[1][1])
-        
-        elif shape.type == 'circle' and len(shape.points) >= 2:
-            if handle_name == 'radius':
-                cx, cy = shape.points[0]
-                radius = int(((x - cx)**2 + (y - cy)**2)**0.5)
-                shape.points[1] = radius
-
-
-# === 图形数据结构定义 END ===
+# 导入图形数据结构
+from core.shapes import BaseShape, AnnotationShape, ROIShape, MaskShape, ShapeContainer
 
 
 class ImagePreviewDialog(QtWidgets.QDialog):
@@ -346,34 +53,25 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         # === 图形容器管理 BEGIN ===
         self.container = ShapeContainer()
+        # === 图形容器管理 END ===
         
         # 兼容旧代码：保留annotation_layer引用（后续逐步迁移）
         self.annotation_layer = AnnotationLayer()
-        
-        # 当前绘制状态
-        self.drawing_start_pos = None  # 绘制起始位置（Qt坐标）
-        self.current_drawing_rect = None  # 当前正在绘制的形状（用于实时预览）
-        self.temp_text_dialog = None  # 文本输入对话框
-        
-        # 多边形绘制状态（Phase 2新增）
-        self.polygon_points = []  # 多边形顶点列表（场景坐标）
-        self.is_drawing_polygon = False  # 是否正在绘制多边形
-        self.polygon_temp_lines = []  # 临时线段列表（用于橡皮筋效果）
-        
-        # ROI移动状态（Phase 3新增）
-        self.is_moving_roi = False  # 是否正在移动ROI
-        self.roi_move_offset = None  # ROI移动的偏移量
-        
-        # 画笔颜色设置（默认为绿色）
-        self.current_pen_color = (0, 255, 0)  # BGR格式：绿色
-        
+
         # ROI相关状态（兼容旧代码，后续移除）
+        self.current_pen_color = (255, 0, 0)  # BGR格式：red
+        self.current_drawing_rect = None  # 当前正在绘制的形状（用于实时预览）
+        self.HANDLE_SIZE = 8  # 手柄大小（像素）（旧）
+        self.is_moving_roi = False  # 是否正在移动ROI
+        self.is_drawing_polygon = False  # 是否正在绘制多边形
         self.roi_mode = False  # 是否处于ROI模式（旧）
-        self.selected_roi = None  # 当前选中的ROI（旧）
         self.roi_resize_handle = None  # ROI调整手柄（旧）
         self.resize_start_pos = None  # 调整大小起始位置（旧）
-        self.HANDLE_SIZE = 8  # 手柄大小（像素）（旧）
-        # === 图形容器管理 END ===
+        self.selected_roi = None  # 当前选中的ROI（旧）
+        self.roi_move_offset = None  # ROI移动的偏移量
+        self.polygon_points = []  # 多边形顶点列表（场景坐标）
+        self.polygon_temp_lines = []  # 临时线段列表（用于橡皮筋效果）
+        self.temp_text_dialog = None  # 文本输入对话框
         
         # 设置窗口属性
         self.setMinimumSize(1024, 768)
@@ -381,9 +79,93 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # 设置为非模态窗口
         self.setModal(False)
         
-        # 创建主布局
-        main_layout = QtWidgets.QVBoxLayout(self)
+        # 创建主布局（保存为实例属性）
+        self.main_layout = QtWidgets.QVBoxLayout(self)
+
+        # 创建工具栏
+        self._Create_toolbar()
+
+        # 创建图像显示区域
+        self._Create_graphics_view()
+      
+        # 创建信息栏
+        self._Create_info_bar()
         
+        # 安装事件过滤器以捕获键盘事件
+        self.graphics_view.installEventFilter(self)
+
+        # 显示图像
+        self.display_image()
+    
+    def _Create_toolbar(self):
+        """
+        工具栏布局：缩放控制
+        """
+
+        # === 工具栏：缩放控制 BEGIN===
+        toolbar_layout = QtWidgets.QHBoxLayout()
+       
+        save_btn = QtWidgets.QPushButton("💾 保存图像")
+        save_btn.clicked.connect(self.save_image)
+        save_btn.setToolTip("保存当前图像")
+        toolbar_layout.addWidget(save_btn)
+
+        refresh_btn = QtWidgets.QPushButton("🔄 刷新预览")
+        refresh_btn.clicked.connect(self.refresh_preview)
+        refresh_btn.setToolTip("从关联节点获取最新图像并刷新显示")
+        toolbar_layout.addWidget(refresh_btn)
+                
+        # 适应窗口按钮
+        self.fit_btn = QtWidgets.QPushButton("⊞ 适应窗口")
+        self.fit_btn.clicked.connect(self.fit_to_window)
+        self.fit_btn.setToolTip("缩放图像以适应窗口大小")
+        toolbar_layout.addWidget(self.fit_btn)
+        
+        # 分隔线
+        separator_window = QtWidgets.QFrame()
+        separator_window.setFrameShape(QtWidgets.QFrame.VLine)
+        separator_window.setFrameShadow(QtWidgets.QFrame.Sunken)
+        toolbar_layout.addWidget(separator_window)
+       
+        # 原始大小按钮
+        self.original_btn = QtWidgets.QPushButton("📏 原始大小")
+        self.original_btn.clicked.connect(self.fit_original)
+        self.original_btn.setToolTip("显示图像原始尺寸 (100%)")
+        toolbar_layout.addWidget(self.original_btn)
+        
+        # 缩小按钮
+        self.zoom_out_btn = QtWidgets.QPushButton("➖ 缩小")
+        self.zoom_out_btn.clicked.connect(self.zoom_out)
+        self.zoom_out_btn.setToolTip("缩小视图 (快捷键: -)")
+        toolbar_layout.addWidget(self.zoom_out_btn)
+        
+        # 缩放比例显示
+        self.zoom_label = QtWidgets.QLabel("100%")
+        self.zoom_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.zoom_label.setMinimumWidth(60)
+        self.zoom_label.setStyleSheet("font-weight: bold; color: #4CAF50;")
+        toolbar_layout.addWidget(self.zoom_label)
+        
+        # 放大按钮
+        self.zoom_in_btn = QtWidgets.QPushButton("➕ 放大")
+        self.zoom_in_btn.clicked.connect(self.zoom_in)
+        self.zoom_in_btn.setToolTip("放大视图 (快捷键: +)")
+        toolbar_layout.addWidget(self.zoom_in_btn)
+          
+        # 添加一个可伸缩的空白空间，通常用来将其他控件推向布局的一端
+        toolbar_layout.addStretch()
+        
+        # 最大化按钮
+        self.maximize_btn = QtWidgets.QPushButton("⬜ 最大化")
+        self.maximize_btn.clicked.connect(self.toggle_maximize)
+        self.maximize_btn.setToolTip("切换窗口最大化/恢复")
+        toolbar_layout.addWidget(self.maximize_btn)
+        
+        # 主布局中加入工具栏：缩放控制
+        self.main_layout.addLayout(toolbar_layout)
+        # === 工具栏：缩放控制 END===
+
+
         # === 模式选择工具栏 BEGIN ===
         mode_toolbar = QtWidgets.QHBoxLayout()
         
@@ -448,12 +230,6 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         mode_toolbar.addStretch()
         
-        main_layout.addLayout(mode_toolbar)
-        # === 模式选择工具栏 END ===
-        
-        # === 属性工具栏 BEGIN ===
-        property_toolbar = QtWidgets.QHBoxLayout()
-        
         # 颜色选择器
         self.color_btn = QtWidgets.QPushButton("🎨 颜色")
         self.color_btn.clicked.connect(self.show_color_picker)
@@ -465,14 +241,29 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 font-weight: bold;
             }
         """)
-        property_toolbar.addWidget(self.color_btn)
+        mode_toolbar.addWidget(self.color_btn)
         
         # 当前颜色显示标签
         self.current_color_label = QtWidgets.QLabel("RGB(0,255,0)")
         self.current_color_label.setAlignment(QtCore.Qt.AlignCenter)
         self.current_color_label.setMinimumWidth(100)
         self.current_color_label.setStyleSheet("font-size: 10px; color: #888;")
-        property_toolbar.addWidget(self.current_color_label)
+        mode_toolbar.addWidget(self.current_color_label)
+
+        # 清除所有图形按钮
+        self.clear_all_btn = QtWidgets.QPushButton("🗑 清除")
+        self.clear_all_btn.clicked.connect(self.clear_all_shapes)
+        self.clear_all_btn.setToolTip("清除所有图形（标注/ROI/Mask）")
+        self.clear_all_btn.setStyleSheet("color: #f44336;")
+        mode_toolbar.addWidget(self.clear_all_btn)
+        
+        self.main_layout.addLayout(mode_toolbar)
+
+        # === 模式选择工具栏 END ===
+        
+        # === 属性工具栏 BEGIN ===
+        property_toolbar = QtWidgets.QHBoxLayout()
+        
         
         # 分隔线
         separator_prop = QtWidgets.QFrame()
@@ -502,12 +293,12 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.visibility_btn.setToolTip("控制各类图形的可见性")
         property_toolbar.addWidget(self.visibility_btn)
         
-        # 导出按钮
-        self.export_btn = QtWidgets.QPushButton("📤 导出")
-        self.export_btn.clicked.connect(self.export_to_node)
-        self.export_btn.setToolTip("将ROI和Mask数据导出到节点")
-        self.export_btn.setStyleSheet("color: #4CAF50; font-weight: bold;")
-        property_toolbar.addWidget(self.export_btn)
+        # # 导出按钮
+        # self.export_btn = QtWidgets.QPushButton("📤 导出")
+        # self.export_btn.clicked.connect(self.export_to_node)
+        # self.export_btn.setToolTip("将ROI和Mask数据导出到节点")
+        # self.export_btn.setStyleSheet("color: #4CAF50; font-weight: bold;")
+        # property_toolbar.addWidget(self.export_btn)
         
         # 清除所有图形按钮
         self.clear_all_btn = QtWidgets.QPushButton("🗑 清除")
@@ -518,60 +309,27 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         property_toolbar.addStretch()
         
-        main_layout.addLayout(property_toolbar)
+        self.main_layout.addLayout(property_toolbar)
         # === 属性工具栏 END ===
         
-        # === 工具栏：缩放控制 BEGIN===
-        toolbar_layout = QtWidgets.QHBoxLayout()
+        # === 底部按钮栏 ===
+        # button_layout = QtWidgets.QHBoxLayout()
         
-        # 原始大小按钮
-        self.original_btn = QtWidgets.QPushButton("📏 原始大小")
-        self.original_btn.clicked.connect(self.fit_original)
-        self.original_btn.setToolTip("显示图像原始尺寸 (100%)")
-        toolbar_layout.addWidget(self.original_btn)
         
-        # 适应窗口按钮
-        self.fit_btn = QtWidgets.QPushButton("⊞ 适应窗口")
-        self.fit_btn.clicked.connect(self.fit_to_window)
-        self.fit_btn.setToolTip("缩放图像以适应窗口大小")
-        toolbar_layout.addWidget(self.fit_btn)
+        # export_roi_btn = QtWidgets.QPushButton("📤 导出")
+        # export_roi_btn.clicked.connect(self.export_to_node)
+        # export_roi_btn.setToolTip("导出ROI和Mask数据到关联的ImageViewNode")
+        # export_roi_btn.setStyleSheet("color: #2196F3; font-weight: bold;")
+        # button_layout.addWidget(export_roi_btn)
         
-        # 分隔线
-        separator_window = QtWidgets.QFrame()
-        separator_window.setFrameShape(QtWidgets.QFrame.VLine)
-        separator_window.setFrameShadow(QtWidgets.QFrame.Sunken)
-        toolbar_layout.addWidget(separator_window)
+        # close_btn = QtWidgets.QPushButton("❌ 关闭")
+        # close_btn.clicked.connect(self.close)
+        # button_layout.addWidget(close_btn)
         
-        # 最大化按钮
-        self.maximize_btn = QtWidgets.QPushButton("⬜ 最大化")
-        self.maximize_btn.clicked.connect(self.toggle_maximize)
-        self.maximize_btn.setToolTip("切换窗口最大化/恢复")
-        toolbar_layout.addWidget(self.maximize_btn)
-        
-        toolbar_layout.addStretch()
-        
-        # 缩小按钮
-        self.zoom_out_btn = QtWidgets.QPushButton("➖ 缩小")
-        self.zoom_out_btn.clicked.connect(self.zoom_out)
-        self.zoom_out_btn.setToolTip("缩小视图 (快捷键: -)")
-        toolbar_layout.addWidget(self.zoom_out_btn)
-        
-        # 缩放比例显示
-        self.zoom_label = QtWidgets.QLabel("100%")
-        self.zoom_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.zoom_label.setMinimumWidth(60)
-        self.zoom_label.setStyleSheet("font-weight: bold; color: #4CAF50;")
-        toolbar_layout.addWidget(self.zoom_label)
-        
-        # 放大按钮
-        self.zoom_in_btn = QtWidgets.QPushButton("➕ 放大")
-        self.zoom_in_btn.clicked.connect(self.zoom_in)
-        self.zoom_in_btn.setToolTip("放大视图 (快捷键: +)")
-        toolbar_layout.addWidget(self.zoom_in_btn)
-        
-        main_layout.addLayout(toolbar_layout)
-        # === 工具栏：缩放控制 END===
-        
+        # self.main_layout.addLayout(button_layout)
+
+    def _Create_graphics_view(self):
+      
         # === 图像显示区域：QGraphicsView ===
         self.graphics_view = QtWidgets.QGraphicsView()
         self.graphics_view.setStyleSheet("background-color: #2b2b2b;")
@@ -595,7 +353,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # 创建图像项
         self.pixmap_item = None
         
-        main_layout.addWidget(self.graphics_view)
+        self.main_layout.addWidget(self.graphics_view)
+        
+    def _Create_info_bar(self):
         
         # === 信息栏 ===
         info_layout = QtWidgets.QHBoxLayout()
@@ -613,37 +373,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.hint_label.setStyleSheet("color: #888; font-size: 10px;")
         info_layout.addWidget(self.hint_label)
         
-        main_layout.addLayout(info_layout)
-        
-        # === 底部按钮栏 ===
-        button_layout = QtWidgets.QHBoxLayout()
-        
-        refresh_btn = QtWidgets.QPushButton("🔄 刷新预览")
-        refresh_btn.clicked.connect(self.refresh_preview)
-        refresh_btn.setToolTip("从关联节点获取最新图像并刷新显示")
-        button_layout.addWidget(refresh_btn)
-        
-        export_roi_btn = QtWidgets.QPushButton("📤 导出")
-        export_roi_btn.clicked.connect(self.export_to_node)
-        export_roi_btn.setToolTip("导出ROI和Mask数据到关联的ImageViewNode")
-        export_roi_btn.setStyleSheet("color: #2196F3; font-weight: bold;")
-        button_layout.addWidget(export_roi_btn)
-        
-        save_btn = QtWidgets.QPushButton("💾 保存图像")
-        save_btn.clicked.connect(self.save_image)
-        button_layout.addWidget(save_btn)
-        
-        close_btn = QtWidgets.QPushButton("❌ 关闭")
-        close_btn.clicked.connect(self.close)
-        button_layout.addWidget(close_btn)
-        
-        main_layout.addLayout(button_layout)
-        
-        # 显示图像
-        self.display_image()
-        
-        # 安装事件过滤器以捕获键盘事件
-        self.graphics_view.installEventFilter(self)
+        self.main_layout.addLayout(info_layout)
     
     def eventFilter(self, obj, event):
         """

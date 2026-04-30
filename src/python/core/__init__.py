@@ -1,18 +1,29 @@
 """
-图形化视觉编程系统 - 核心引擎模块
+图形数据结构模块
+
+提供统一的图形数据模型，支持标注、ROI和Mask三种类型的图形对象。
+
+使用示例:
+    from core.shapes import BaseShape, AnnotationShape, ROIShape, MaskShape, ShapeContainer
+    
+    # 创建图形容器
+    container = ShapeContainer()
+    
+    # 添加ROI
+    roi = ROIShape(type='rect', points=[(10, 10), (100, 100)])
+    container.add_roi(roi)
+    
+    # 添加Mask
+    mask = MaskShape(type='circle', points=[(50, 50), 30])
+    container.add_mask(mask)
 """
 
-from .graph_engine import GraphEngine
-from .project_manager import Workflow, Project, ProjectManager, project_manager
-from .project_ui_manager import ProjectUIManager
-from .execution_ui_manager import ExecutionUIManager
+from .shapes import BaseShape, AnnotationShape, ROIShape, MaskShape, ShapeContainer
 
 __all__ = [
-    'GraphEngine', 
-    'Workflow', 
-    'Project', 
-    'ProjectManager', 
-    'project_manager',
-    'ProjectUIManager',
-    'ExecutionUIManager'
+    'BaseShape',
+    'AnnotationShape', 
+    'ROIShape',
+    'MaskShape',
+    'ShapeContainer'
 ]
