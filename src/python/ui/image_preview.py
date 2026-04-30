@@ -114,19 +114,19 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         refresh_btn.clicked.connect(self.refresh_preview)
         refresh_btn.setToolTip("从关联节点获取最新图像并刷新显示")
         toolbar_layout.addWidget(refresh_btn)
-                
+     
+        # 分隔线
+        separator_window = QtWidgets.QFrame()
+        separator_window.setFrameShape(QtWidgets.QFrame.VLine)
+        separator_window.setFrameShadow(QtWidgets.QFrame.Sunken)
+        toolbar_layout.addWidget(separator_window)
+                  
         # 适应窗口按钮
         self.fit_btn = QtWidgets.QPushButton("⊞ 适应窗口")
         self.fit_btn.clicked.connect(self.fit_to_window)
         self.fit_btn.setToolTip("缩放图像以适应窗口大小")
         toolbar_layout.addWidget(self.fit_btn)
         
-        # 分隔线
-        separator_window = QtWidgets.QFrame()
-        separator_window.setFrameShape(QtWidgets.QFrame.VLine)
-        separator_window.setFrameShadow(QtWidgets.QFrame.Sunken)
-        toolbar_layout.addWidget(separator_window)
-       
         # 原始大小按钮
         self.original_btn = QtWidgets.QPushButton("📏 原始大小")
         self.original_btn.clicked.connect(self.fit_original)
@@ -160,7 +160,13 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.maximize_btn.clicked.connect(self.toggle_maximize)
         self.maximize_btn.setToolTip("切换窗口最大化/恢复")
         toolbar_layout.addWidget(self.maximize_btn)
-        
+      
+        # 分隔线
+        separator_window = QtWidgets.QFrame()
+        separator_window.setFrameShape(QtWidgets.QFrame.VLine)
+        separator_window.setFrameShadow(QtWidgets.QFrame.Sunken)
+        toolbar_layout.addWidget(separator_window)
+         
         # 主布局中加入工具栏：缩放控制
         self.main_layout.addLayout(toolbar_layout)
         # === 工具栏：缩放控制 END===
@@ -262,36 +268,36 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # === 模式选择工具栏 END ===
         
         # === 属性工具栏 BEGIN ===
-        property_toolbar = QtWidgets.QHBoxLayout()
+        # property_toolbar = QtWidgets.QHBoxLayout()
         
         
-        # 分隔线
-        separator_prop = QtWidgets.QFrame()
-        separator_prop.setFrameShape(QtWidgets.QFrame.VLine)
-        separator_prop.setFrameShadow(QtWidgets.QFrame.Sunken)
-        property_toolbar.addWidget(separator_prop)
+        # # 分隔线
+        # separator_prop = QtWidgets.QFrame()
+        # separator_prop.setFrameShape(QtWidgets.QFrame.VLine)
+        # separator_prop.setFrameShadow(QtWidgets.QFrame.Sunken)
+        # property_toolbar.addWidget(separator_prop)
         
         # 显示控制下拉菜单
-        self.visibility_btn = QtWidgets.QPushButton("👁 显示")
-        self.visibility_menu = QtWidgets.QMenu()
-        self.show_annotations_action = self.visibility_menu.addAction("☑ 标注")
-        self.show_annotations_action.setCheckable(True)
-        self.show_annotations_action.setChecked(True)
-        self.show_annotations_action.triggered.connect(lambda: self.toggle_visibility('annotations'))
+        # self.visibility_btn = QtWidgets.QPushButton("👁 显示")
+        # self.visibility_menu = QtWidgets.QMenu()
+        # self.show_annotations_action = self.visibility_menu.addAction("☑ 标注")
+        # self.show_annotations_action.setCheckable(True)
+        # self.show_annotations_action.setChecked(True)
+        # self.show_annotations_action.triggered.connect(lambda: self.toggle_visibility('annotations'))
         
-        self.show_rois_action = self.visibility_menu.addAction("☑ ROI")
-        self.show_rois_action.setCheckable(True)
-        self.show_rois_action.setChecked(True)
-        self.show_rois_action.triggered.connect(lambda: self.toggle_visibility('rois'))
+        # self.show_rois_action = self.visibility_menu.addAction("☑ ROI")
+        # self.show_rois_action.setCheckable(True)
+        # self.show_rois_action.setChecked(True)
+        # self.show_rois_action.triggered.connect(lambda: self.toggle_visibility('rois'))
         
-        self.show_masks_action = self.visibility_menu.addAction("☑ Mask")
-        self.show_masks_action.setCheckable(True)
-        self.show_masks_action.setChecked(True)
-        self.show_masks_action.triggered.connect(lambda: self.toggle_visibility('masks'))
+        # self.show_masks_action = self.visibility_menu.addAction("☑ Mask")
+        # self.show_masks_action.setCheckable(True)
+        # self.show_masks_action.setChecked(True)
+        # self.show_masks_action.triggered.connect(lambda: self.toggle_visibility('masks'))
         
-        self.visibility_btn.setMenu(self.visibility_menu)
-        self.visibility_btn.setToolTip("控制各类图形的可见性")
-        property_toolbar.addWidget(self.visibility_btn)
+        # self.visibility_btn.setMenu(self.visibility_menu)
+        # self.visibility_btn.setToolTip("控制各类图形的可见性")
+        # property_toolbar.addWidget(self.visibility_btn)
         
         # # 导出按钮
         # self.export_btn = QtWidgets.QPushButton("📤 导出")
@@ -300,16 +306,16 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # self.export_btn.setStyleSheet("color: #4CAF50; font-weight: bold;")
         # property_toolbar.addWidget(self.export_btn)
         
-        # 清除所有图形按钮
-        self.clear_all_btn = QtWidgets.QPushButton("🗑 清除")
-        self.clear_all_btn.clicked.connect(self.clear_all_shapes)
-        self.clear_all_btn.setToolTip("清除所有图形（标注/ROI/Mask）")
-        self.clear_all_btn.setStyleSheet("color: #f44336;")
-        property_toolbar.addWidget(self.clear_all_btn)
+        # # 清除所有图形按钮
+        # self.clear_all_btn = QtWidgets.QPushButton("🗑 清除")
+        # self.clear_all_btn.clicked.connect(self.clear_all_shapes)
+        # self.clear_all_btn.setToolTip("清除所有图形（标注/ROI/Mask）")
+        # self.clear_all_btn.setStyleSheet("color: #f44336;")
+        # property_toolbar.addWidget(self.clear_all_btn)
         
-        property_toolbar.addStretch()
+        # property_toolbar.addStretch()
         
-        self.main_layout.addLayout(property_toolbar)
+        # self.main_layout.addLayout(property_toolbar)
         # === 属性工具栏 END ===
         
         # === 底部按钮栏 ===
@@ -408,14 +414,18 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # 处理scene的鼠标事件（ROI和标注工具）
         if obj == self.scene:
             if event.type() == QtCore.QEvent.GraphicsSceneMousePress:
-                # 将QGraphicsSceneMouseEvent转换为QMouseEvent并调用mousePressEvent
-                screen_pos = event.screenPos()
-                # 安全转换：如果已经是QPoint则直接使用，否则调用toPoint()
-                pos_point = screen_pos.toPoint() if hasattr(screen_pos, 'toPoint') else screen_pos
+                # 🔍 调试日志
+                print(f"\n🔍 [EVENT FILTER] GraphicsSceneMousePress")
+                scene_pos = event.scenePos()
+                print(f"   scenePos: ({scene_pos.x():.1f}, {scene_pos.y():.1f})")
+                
+                # ✅ 将场景坐标转换为视图坐标
+                view_pos = self.graphics_view.mapFromScene(scene_pos)
+                print(f"   viewPos: ({view_pos.x()}, {view_pos.y()})")
                 
                 mouse_event = QtGui.QMouseEvent(
                     QtCore.QEvent.MouseButtonPress,
-                    pos_point,
+                    view_pos,
                     event.button(),
                     event.buttons(),
                     event.modifiers()
@@ -424,13 +434,20 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 return True
             
             elif event.type() == QtCore.QEvent.GraphicsSceneMouseMove:
-                screen_pos = event.screenPos()
-                pos_point = screen_pos.toPoint() if hasattr(screen_pos, 'toPoint') else screen_pos
+                # 🔍 调试日志
+                print(f"\n🔍 [EVENT FILTER] GraphicsSceneMouseMove")
+                scene_pos = event.scenePos()
+                print(f"   scenePos: ({scene_pos.x():.1f}, {scene_pos.y():.1f})")
                 
+                # ✅ 将场景坐标转换为视图坐标
+                view_pos = self.graphics_view.mapFromScene(scene_pos)
+                print(f"   viewPos: ({view_pos.x()}, {view_pos.y()})")
+                
+                # 构造 QMouseEvent，使用视图坐标作为 local position
                 mouse_event = QtGui.QMouseEvent(
                     QtCore.QEvent.MouseMove,
-                    pos_point,
-                    QtCore.Qt.NoButton,
+                    view_pos,  # local position (view coordinates)
+                    QtCore.Qt.LeftButton if event.buttons() & QtCore.Qt.LeftButton else QtCore.Qt.NoButton,
                     event.buttons(),
                     event.modifiers()
                 )
@@ -438,12 +455,18 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 return True
             
             elif event.type() == QtCore.QEvent.GraphicsSceneMouseRelease:
-                screen_pos = event.screenPos()
-                pos_point = screen_pos.toPoint() if hasattr(screen_pos, 'toPoint') else screen_pos
+                # 🔍 调试日志
+                print(f"\n🔍 [EVENT FILTER] GraphicsSceneMouseRelease")
+                scene_pos = event.scenePos()
+                print(f"   scenePos: ({scene_pos.x():.1f}, {scene_pos.y():.1f})")
+                
+                # ✅ 将场景坐标转换为视图坐标
+                view_pos = self.graphics_view.mapFromScene(scene_pos)
+                print(f"   viewPos: ({view_pos.x()}, {view_pos.y()})")
                 
                 mouse_event = QtGui.QMouseEvent(
                     QtCore.QEvent.MouseButtonRelease,
-                    pos_point,
+                    view_pos,
                     event.button(),
                     event.buttons(),
                     event.modifiers()
@@ -1325,14 +1348,20 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 # 检查是否在图形内部（用于移动）
                 if self.container.is_point_in_shape(clicked_shape, scene_pos):
                     self.container.is_moving_shape = True
-                    # 计算移动偏移量
-                    if clicked_shape.type in ['rect', 'circle']:
-                        x1, y1 = clicked_shape.points[0]
-                        self.container.shape_move_offset = (scene_pos.x() - x1, scene_pos.y() - y1)
+                    # 记录初始鼠标位置（不是偏移量）
+                    self.container.shape_move_offset = (scene_pos.x(), scene_pos.y())
                     self.graphics_view.setCursor(QtCore.Qt.ClosedHandCursor)
-                    print(f"✋ 开始移动图形: {clicked_shape.name or clicked_shape.id}")
+                    
+                    # 🔍 调试日志
+                    print(f"\n🖱️ [MOUSE PRESS] 开始移动图形")
+                    print(f"   图形ID: {clicked_shape.name or clicked_shape.id}")
+                    print(f"   图形类型: {clicked_shape.type}")
+                    print(f"   当前points: {clicked_shape.points}")
+                    print(f"   鼠标场景坐标: ({scene_pos.x():.1f}, {scene_pos.y():.1f})")
+                    print(f"   shape_move_offset: {self.container.shape_move_offset}")
+                    print(f"   is_moving_shape: {self.container.is_moving_shape}")
                 
-                self.redraw_annotations()
+                self.redraw_all_shapes()  # ✅ 修复：重绘所有图形（包括container中的）
                 event.accept()
                 return
             else:
@@ -1373,21 +1402,33 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         # === 移动图形 ===
         elif self.container.is_moving_shape and self.container.selected_shape:
-            offset_x = scene_pos.x() - self.container.shape_move_offset[0]
-            offset_y = scene_pos.y() - self.container.shape_move_offset[1]
-            
-            # 计算新位置
+            # 计算本次移动的增量（相对于上一次位置）
             if self.container.selected_shape.type in ['rect', 'circle']:
-                x1, y1 = self.container.selected_shape.points[0]
-                delta_x = offset_x - x1
-                delta_y = offset_y - y1
+                prev_offset_x, prev_offset_y = self.container.shape_move_offset
+                current_x, current_y = scene_pos.x(), scene_pos.y()
                 
+                # 计算增量
+                delta_x = current_x - prev_offset_x
+                delta_y = current_y - prev_offset_y
+                
+                # 🔍 调试日志：移动前状态
+                print(f"\n🖱️ [MOUSE MOVE] 拖动中...")
+                print(f"   上次offset: ({prev_offset_x:.1f}, {prev_offset_y:.1f})")
+                print(f"   当前鼠标: ({current_x:.1f}, {current_y:.1f})")
+                print(f"   计算delta: ({delta_x:.1f}, {delta_y:.1f})")
+                print(f"   移动前points: {self.container.selected_shape.points}")
+                
+                # 应用增量移动
                 self.container.move_shape(self.container.selected_shape, delta_x, delta_y)
                 
-                # 更新偏移量
-                self.container.shape_move_offset = (offset_x, offset_y)
+                print(f"   移动后points: {self.container.selected_shape.points}")
+                
+                # 更新偏移量为当前位置
+                self.container.shape_move_offset = (current_x, current_y)
+                print(f"   新offset: {self.container.shape_move_offset}")
             
-            self.redraw_annotations()
+            # 立即重绘
+            self.redraw_all_shapes()  # ✅ 修复：重绘所有图形（包括container中的）
             event.accept()
             return
         
@@ -1467,12 +1508,6 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 self.graphics_view.setCursor(QtCore.Qt.ArrowCursor)
         
         super(ImagePreviewDialog, self).mouseMoveEvent(event)
-        # 重置状态
-        self.is_drawing_polygon = False
-        self.polygon_points.clear()
-        
-        # 重绘
-        self.redraw_all_shapes()
     
     def cancel_polygon_drawing(self):
         """
@@ -1502,10 +1537,15 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         # === 结束移动 ===
         elif self.container.is_moving_shape:
+            # 🔍 调试日志：移动结束状态
+            print(f"\n🖱️ [MOUSE RELEASE] 移动完成")
+            print(f"   最终points: {self.container.selected_shape.points if self.container.selected_shape else 'None'}")
+            print(f"   is_moving_shape: {self.container.is_moving_shape}")
+            
             self.container.is_moving_shape = False
             self.container.shape_move_offset = None
             self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
-            print("✅ 移动完成")
+            print("✅ 移动完成，状态已重置")
         
         # === 结束矩形/圆形绘制 ===
         elif self.drawing_start_pos is not None and self.current_tool in ['rect', 'circle']:
@@ -1518,10 +1558,6 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 if hasattr(item, 'is_temp_preview'):
                     self.scene.removeItem(item)
             
-            # 创建新图形
-            from core.node_base import generate_id
-            shape_id = generate_id()
-            
             points = [
                 (int(start_scene_pos.x()), int(start_scene_pos.y())),
                 (int(scene_pos.x()), int(scene_pos.y()))
@@ -1530,7 +1566,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             mode = self.container.current_mode
             
             if mode == 'roi' and self.current_tool == 'rect':
-                # 创建ROI对象
+                # 创建ROI对象（ID自动生成）
                 roi_shape = ROIShape(type='rect', points=points)
                 self.container.add_roi(roi_shape)
                 self.container.select_roi(roi_shape)
@@ -1538,7 +1574,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 print(f"✅ 已创建ROI: {roi_shape.name}")
                 
             elif mode == 'mask':
-                # 创建Mask对象
+                # 创建Mask对象（ID自动生成）
                 mask_shape = MaskShape(
                     type=self.current_tool,
                     points=points,
@@ -1550,7 +1586,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 print(f"✅ 已创建Mask{self.current_tool}: {mask_shape.name}")
                 
             else:
-                # 创建普通标注
+                # 创建普通标注（ID自动生成）
                 annotation = AnnotationShape(
                     type=self.current_tool,
                     points=points,
@@ -1563,51 +1599,3 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             # 重置绘制状态
             self.drawing_start_pos = None
             self.redraw_all_shapes()
-        
-        super(ImagePreviewDialog, self).mouseReleaseEvent(event)
-    
-    def keyPressEvent(self, event):
-        """键盘事件处理"""
-        if event.key() in [QtCore.Qt.Key_Delete, QtCore.Qt.Key_Backspace]:
-            # 删除选中的图形
-            if self.container.selected_roi:
-                roi_id = self.container.selected_roi.id
-                self.container.remove_roi(roi_id)
-                print(f"🗑 已删除ROI")
-                self.redraw_all_shapes()
-            
-            elif self.container.selected_mask:
-                mask_id = self.container.selected_mask.id
-                self.container.remove_mask(mask_id)
-                print(f"🗑 已删除Mask")
-                self.redraw_all_shapes()
-            
-            event.accept()
-            return
-        
-        super(ImagePreviewDialog, self).keyPressEvent(event)
-    
-    def show_roi_name_dialog(self, roi: ROIShape):
-        """
-        显示ROI命名对话框
-        
-        Args:
-            roi: ROI对象
-        """
-        default_name = roi.name or f"检测区域_{len(self.container.rois)}"
-        
-        name, ok = QtWidgets.QInputDialog.getText(
-            self,
-            "ROI命名",
-            "请输入ROI名称:",
-            QtWidgets.QLineEdit.Normal,
-            default_name
-        )
-        
-        if ok and name:
-            roi.name = name.strip()
-            print(f"✅ ROI已命名为: {roi.name}")
-        else:
-            # 使用默认名称
-            roi.name = default_name
-            print(f"✅ 使用默认名称: {roi.name}")
