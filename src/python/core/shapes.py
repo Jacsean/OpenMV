@@ -329,7 +329,9 @@ class ShapeContainer:
         
         elif shape.type == 'circle' and len(shape.points) >= 2:
             cx, cy = shape.points[0]
-            radius = shape.points[1]
+            # points[1] 是边缘点坐标，需要计算半径
+            edge_x, edge_y = shape.points[1]
+            radius = ((edge_x - cx)**2 + (edge_y - cy)**2)**0.5
             distance = ((x - cx)**2 + (y - cy)**2)**0.5
             return distance <= radius
         
@@ -382,8 +384,14 @@ class ShapeContainer:
         
         elif shape.type == 'circle' and len(shape.points) >= 2:
             cx, cy = shape.points[0]
-            radius = shape.points[1]
-            handles['radius'] = (cx + radius, cy)
+            # points[1] 是边缘点坐标，需要计算半径
+            edge_x, edge_y = shape.points[1]
+            radius = int(((edge_x - cx)**2 + (edge_y - cy)**2)**0.5)
+            # 圆形显示4个控制点（上下左右）
+            handles['top'] = (cx, cy - radius)
+            handles['bottom'] = (cx, cy + radius)
+            handles['left'] = (cx - radius, cy)
+            handles['right'] = (cx + radius, cy)
         
         return handles
     
@@ -450,7 +458,14 @@ class ShapeContainer:
                 shape.points[1] = (x, shape.points[1][1])
         
         elif shape.type == 'circle' and len(shape.points) >= 2:
-            if handle_name == 'radius':
-                cx, cy = shape.points[0]
-                radius = int(((x - cx)**2 + (y - cy)**2)**0.5)
-                shape.points[1] = radius
+            cx, cy = shape.points[0]
+            # 根据拖动手柄的位置更新边缘点坐标
+            if handle_name == 'top':
+                shape.points[1] = (cx, y)
+            elif handle_name == 'bottom':
+                shape.points[1] = (cx, y)
+            elif handle_name == 'left':
+                shape.points[1] = (x, cy)
+            elif handle_name == 'right':
+                shape.points[1] = (x, cy)
+        return None

@@ -58,20 +58,19 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # 兼容旧代码：保留annotation_layer引用（后续逐步迁移）
         self.annotation_layer = AnnotationLayer()
 
-        # ROI相关状态（兼容旧代码，后续移除）
+        # 绘图与交互状态
         self.current_pen_color = (255, 0, 0)  # BGR格式：red
         self.current_drawing_rect = None  # 当前正在绘制的形状（用于实时预览）
-        self.HANDLE_SIZE = 8  # 手柄大小（像素）（旧）
-        self.is_moving_roi = False  # 是否正在移动ROI
+        self.HANDLE_SIZE = 8  # 手柄大小（像素）
         self.is_drawing_polygon = False  # 是否正在绘制多边形
-        self.roi_mode = False  # 是否处于ROI模式（旧）
-        self.roi_resize_handle = None  # ROI调整手柄（旧）
-        self.resize_start_pos = None  # 调整大小起始位置（旧）
-        self.selected_roi = None  # 当前选中的ROI（旧）
-        self.roi_move_offset = None  # ROI移动的偏移量
         self.polygon_points = []  # 多边形顶点列表（场景坐标）
         self.polygon_temp_lines = []  # 临时线段列表（用于橡皮筋效果）
         self.temp_text_dialog = None  # 文本输入对话框
+        
+        # === 工具状态管理 BEGIN ===
+        self.current_tool = None  # 当前激活的工具: 'rect', 'circle', 'polygon', 'text'
+        self.current_mode = 'annotations'  # 当前模式: 'annotations', 'rois', 'masks'
+        # === 工具状态管理 END ===
         
         # 设置窗口属性
         self.setMinimumSize(1024, 768)
@@ -151,7 +150,13 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.zoom_in_btn.clicked.connect(self.zoom_in)
         self.zoom_in_btn.setToolTip("放大视图 (快捷键: +)")
         toolbar_layout.addWidget(self.zoom_in_btn)
-          
+     
+        # 分隔线
+        separator_window = QtWidgets.QFrame()
+        separator_window.setFrameShape(QtWidgets.QFrame.VLine)
+        separator_window.setFrameShadow(QtWidgets.QFrame.Sunken)
+        toolbar_layout.addWidget(separator_window)
+               
         # 添加一个可伸缩的空白空间，通常用来将其他控件推向布局的一端
         toolbar_layout.addStretch()
         
@@ -160,13 +165,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.maximize_btn.clicked.connect(self.toggle_maximize)
         self.maximize_btn.setToolTip("切换窗口最大化/恢复")
         toolbar_layout.addWidget(self.maximize_btn)
-      
-        # 分隔线
-        separator_window = QtWidgets.QFrame()
-        separator_window.setFrameShape(QtWidgets.QFrame.VLine)
-        separator_window.setFrameShadow(QtWidgets.QFrame.Sunken)
-        toolbar_layout.addWidget(separator_window)
-         
+     
         # 主布局中加入工具栏：缩放控制
         self.main_layout.addLayout(toolbar_layout)
         # === 工具栏：缩放控制 END===
@@ -175,34 +174,34 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # === 模式选择工具栏 BEGIN ===
         mode_toolbar = QtWidgets.QHBoxLayout()
         
-        # 模式按钮组（单选互斥）
-        self.mode_button_group = QtWidgets.QButtonGroup(self)
+        # 显示控制下拉菜单（唯一的模式选择方式）
+        self.visibility_btn = QtWidgets.QPushButton("✏️ 标注")
+        self.visibility_menu = QtWidgets.QMenu()
         
-        # 绘图模式按钮
-        self.annotation_mode_btn = QtWidgets.QPushButton("✏️ 绘图")
-        self.annotation_mode_btn.setCheckable(True)
-        self.annotation_mode_btn.setChecked(True)  # 默认选中
-        self.annotation_mode_btn.clicked.connect(lambda: self.switch_mode('annotation'))
-        self.annotation_mode_btn.setToolTip("普通绘图模式：自由绘制标注（不导出）")
-        self.mode_button_group.addButton(self.annotation_mode_btn, 0)
-        mode_toolbar.addWidget(self.annotation_mode_btn)
+        # 使用 QActionGroup 实现单选互斥
+        self.mode_action_group = QtWidgets.QActionGroup(self)
+        self.mode_action_group.setExclusive(True)
         
-        # ROI模式按钮
-        self.roi_mode_btn = QtWidgets.QPushButton("📐 ROI")
-        self.roi_mode_btn.setCheckable(True)
-        self.roi_mode_btn.clicked.connect(lambda: self.switch_mode('roi'))
-        self.roi_mode_btn.setToolTip("ROI模式：仅矩形工具，生成可导出的ROI")
-        self.mode_button_group.addButton(self.roi_mode_btn, 1)
-        mode_toolbar.addWidget(self.roi_mode_btn)
+        self.show_annotations_action = self.visibility_menu.addAction("✏️ 标注")
+        self.show_annotations_action.setCheckable(True)
+        self.show_annotations_action.setChecked(True)
+        self.show_annotations_action.setActionGroup(self.mode_action_group)
+        self.show_annotations_action.triggered.connect(lambda: self.switch_mode('annotations'))
         
-        # Mask模式按钮
-        self.mask_mode_btn = QtWidgets.QPushButton("🎭 Mask")
-        self.mask_mode_btn.setCheckable(True)
-        self.mask_mode_btn.clicked.connect(lambda: self.switch_mode('mask'))
-        self.mask_mode_btn.setToolTip("Mask模式：矩形/圆/多边形，生成可导出的Mask")
-        self.mode_button_group.addButton(self.mask_mode_btn, 2)
-        mode_toolbar.addWidget(self.mask_mode_btn)
+        self.show_rois_action = self.visibility_menu.addAction("📐 ROI")
+        self.show_rois_action.setCheckable(True)
+        self.show_rois_action.setActionGroup(self.mode_action_group)
+        self.show_rois_action.triggered.connect(lambda: self.switch_mode('rois'))
         
+        self.show_masks_action = self.visibility_menu.addAction("🎭 Mask")
+        self.show_masks_action.setCheckable(True)
+        self.show_masks_action.setActionGroup(self.mode_action_group)
+        self.show_masks_action.triggered.connect(lambda: self.switch_mode('masks'))
+        
+        self.visibility_btn.setMenu(self.visibility_menu)
+        self.visibility_btn.setToolTip("选择绘图模式（标注/ROI/Mask）")
+        mode_toolbar.addWidget(self.visibility_btn)
+
         # 分隔线
         separator_mode = QtWidgets.QFrame()
         separator_mode.setFrameShape(QtWidgets.QFrame.VLine)
@@ -410,18 +409,20 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 else:
                     self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
                 return True
+            elif event.key() == QtCore.Qt.Key_Escape:
+                # Esc 键取消多边形绘制或关闭工具
+                if self.is_drawing_polygon:
+                    self.cancel_polygon_drawing()
+                else:
+                    self.deactivate_current_tool()
+                return True
         
         # 处理scene的鼠标事件（ROI和标注工具）
         if obj == self.scene:
             if event.type() == QtCore.QEvent.GraphicsSceneMousePress:
-                # 🔍 调试日志
-                print(f"\n🔍 [EVENT FILTER] GraphicsSceneMousePress")
-                scene_pos = event.scenePos()
-                print(f"   scenePos: ({scene_pos.x():.1f}, {scene_pos.y():.1f})")
-                
                 # ✅ 将场景坐标转换为视图坐标
+                scene_pos = event.scenePos()
                 view_pos = self.graphics_view.mapFromScene(scene_pos)
-                print(f"   viewPos: ({view_pos.x()}, {view_pos.y()})")
                 
                 mouse_event = QtGui.QMouseEvent(
                     QtCore.QEvent.MouseButtonPress,
@@ -434,14 +435,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 return True
             
             elif event.type() == QtCore.QEvent.GraphicsSceneMouseMove:
-                # 🔍 调试日志
-                print(f"\n🔍 [EVENT FILTER] GraphicsSceneMouseMove")
-                scene_pos = event.scenePos()
-                print(f"   scenePos: ({scene_pos.x():.1f}, {scene_pos.y():.1f})")
-                
                 # ✅ 将场景坐标转换为视图坐标
+                scene_pos = event.scenePos()
                 view_pos = self.graphics_view.mapFromScene(scene_pos)
-                print(f"   viewPos: ({view_pos.x()}, {view_pos.y()})")
                 
                 # 构造 QMouseEvent，使用视图坐标作为 local position
                 mouse_event = QtGui.QMouseEvent(
@@ -455,14 +451,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 return True
             
             elif event.type() == QtCore.QEvent.GraphicsSceneMouseRelease:
-                # 🔍 调试日志
-                print(f"\n🔍 [EVENT FILTER] GraphicsSceneMouseRelease")
-                scene_pos = event.scenePos()
-                print(f"   scenePos: ({scene_pos.x():.1f}, {scene_pos.y():.1f})")
-                
                 # ✅ 将场景坐标转换为视图坐标
+                scene_pos = event.scenePos()
                 view_pos = self.graphics_view.mapFromScene(scene_pos)
-                print(f"   viewPos: ({view_pos.x()}, {view_pos.y()})")
                 
                 mouse_event = QtGui.QMouseEvent(
                     QtCore.QEvent.MouseButtonRelease,
@@ -718,28 +709,53 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         切换模式（绘图/ROI/Mask）
         
         Args:
-            mode: 'annotation', 'roi', 'mask'
+            mode: 'annotations', 'rois', 'masks'
         """
-        # 更新容器模式
-        self.container.switch_mode(mode)
+        # 统一模式名称：将旧格式转换为新格式
+        mode_map = {
+            'annotation': 'annotations',
+            'roi': 'rois',
+            'mask': 'masks'
+        }
+        normalized_mode = mode_map.get(mode, mode)
         
-        # 更新按钮状态
-        self.annotation_mode_btn.setChecked(mode == 'annotation')
-        self.roi_mode_btn.setChecked(mode == 'roi')
-        self.mask_mode_btn.setChecked(mode == 'mask')
+        # 更新容器模式
+        self.container.switch_mode(normalized_mode)
+        self.current_mode = normalized_mode
+        
+        # 更新下拉菜单选中状态
+        if hasattr(self, 'show_annotations_action'):
+            self.show_annotations_action.setChecked(normalized_mode == 'annotations')
+        if hasattr(self, 'show_rois_action'):
+            self.show_rois_action.setChecked(normalized_mode == 'rois')
+        if hasattr(self, 'show_masks_action'):
+            self.show_masks_action.setChecked(normalized_mode == 'masks')
+        
+        # 更新按钮文本显示当前模式
+        if hasattr(self, 'visibility_btn'):
+            mode_labels = {
+                'annotations': '✏️ 标注',
+                'rois': '📐 ROI',
+                'masks': '🎭 Mask'
+            }
+            self.visibility_btn.setText(mode_labels.get(normalized_mode, '✏️ 标注'))
         
         # 清除当前选中的对象
         self.container.clear_selection()
         
         # 关闭当前激活的工具
         self.current_tool = None
-        self.rect_tool_btn.setChecked(False)
-        self.circle_tool_btn.setChecked(False)
-        self.polygon_tool_btn.setChecked(False)
-        self.text_tool_btn.setChecked(False)
+        if hasattr(self, 'rect_tool_btn'):
+            self.rect_tool_btn.setChecked(False)
+        if hasattr(self, 'circle_tool_btn'):
+            self.circle_tool_btn.setChecked(False)
+        if hasattr(self, 'polygon_tool_btn'):
+            self.polygon_tool_btn.setChecked(False)
+        if hasattr(self, 'text_tool_btn'):
+            self.text_tool_btn.setChecked(False)
         
         # 根据模式更新工具可用性
-        self.update_tool_availability(mode)
+        self.update_tool_availability(normalized_mode)
         
         # 恢复拖拽模式和光标
         self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
@@ -753,23 +769,27 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         根据模式更新工具按钮的可用性
         
         Args:
-            mode: 'annotation', 'roi', 'mask'
+            mode: 'annotations', 'rois', 'masks'
         """
-        if mode == 'annotation':
+        # 确保按钮存在
+        if not hasattr(self, 'rect_tool_btn'):
+            return
+            
+        if mode == 'annotations':
             # 绘图模式：所有工具可用
             self.rect_tool_btn.setEnabled(True)
             self.circle_tool_btn.setEnabled(True)
             self.polygon_tool_btn.setEnabled(True)
             self.text_tool_btn.setEnabled(True)
             
-        elif mode == 'roi':
+        elif mode == 'rois':
             # ROI模式：仅矩形可用
             self.rect_tool_btn.setEnabled(True)
             self.circle_tool_btn.setEnabled(False)
             self.polygon_tool_btn.setEnabled(False)
             self.text_tool_btn.setEnabled(False)
             
-        elif mode == 'mask':
+        elif mode == 'masks':
             # Mask模式：矩形、圆形、多边形可用
             self.rect_tool_btn.setEnabled(True)
             self.circle_tool_btn.setEnabled(True)
@@ -956,7 +976,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # 清除场景中的所有图形项（保留背景图像）
         items_to_remove = []
         for item in self.scene.items():
-            if hasattr(item, 'is_shape'):
+            if hasattr(item, 'is_shape') or hasattr(item, 'is_handle'):
                 items_to_remove.append(item)
         
         for item in items_to_remove:
@@ -996,6 +1016,10 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             rect_item.is_shape = True
             rect_item.shape_id = annotation.id
             
+            # ✅ 如果选中，添加控制点
+            if self.container.selected_shape and self.container.selected_shape.id == annotation.id:
+                self.draw_shape_handles(annotation)
+            
         elif annotation.type == 'circle' and len(annotation.points) >= 2:
             center = QtCore.QPointF(*annotation.points[0])
             edge = QtCore.QPointF(*annotation.points[1])
@@ -1008,11 +1032,19 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             circle_item.is_shape = True
             circle_item.shape_id = annotation.id
             
+            # ✅ 如果选中，添加控制点
+            if self.container.selected_shape and self.container.selected_shape.id == annotation.id:
+                self.draw_shape_handles(annotation)
+            
         elif annotation.type == 'polygon' and len(annotation.points) >= 3:
             polygon = QtGui.QPolygonF([QtCore.QPointF(*p) for p in annotation.points])
             polygon_item = self.scene.addPolygon(polygon, pen)
             polygon_item.is_shape = True
             polygon_item.shape_id = annotation.id
+            
+            # ✅ 如果选中，添加控制点
+            if self.container.selected_shape and self.container.selected_shape.id == annotation.id:
+                self.draw_shape_handles(annotation)
     
     def draw_roi(self, roi: ROIShape):
         """绘制ROI（橙色粗线框）"""
@@ -1063,6 +1095,10 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             rect_item.shape_id = mask.id
             rect_item.shape_type = 'mask'
             
+            # ✅ 如果选中，添加控制点
+            if self.container.selected_mask and self.container.selected_mask.id == mask.id:
+                self.draw_shape_handles(mask)
+            
         elif mask.type == 'circle' and len(mask.points) >= 2:
             center = QtCore.QPointF(*mask.points[0])
             edge = QtCore.QPointF(*mask.points[1])
@@ -1076,12 +1112,78 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             circle_item.shape_id = mask.id
             circle_item.shape_type = 'mask'
             
+            # ✅ 如果选中，添加控制点
+            if self.container.selected_mask and self.container.selected_mask.id == mask.id:
+                self.draw_shape_handles(mask)
+            
         elif mask.type == 'polygon' and len(mask.points) >= 3:
             polygon = QtGui.QPolygonF([QtCore.QPointF(*p) for p in mask.points])
             polygon_item = self.scene.addPolygon(polygon, pen, brush)
             polygon_item.is_shape = True
             polygon_item.shape_id = mask.id
             polygon_item.shape_type = 'mask'
+            
+            # ✅ 如果选中，添加控制点
+            if self.container.selected_mask and self.container.selected_mask.id == mask.id:
+                self.draw_shape_handles(mask)
+    
+    def draw_shape_handles(self, shape):
+        """
+        通用图形手柄绘制方法（支持 rect、circle、polygon）
+        
+        Args:
+            shape: 图形对象（AnnotationShape/ROIShape/MaskShape）
+        """
+        if shape.type == 'rect' and len(shape.points) >= 2:
+            x1, y1 = shape.points[0]
+            x2, y2 = shape.points[1]
+            
+            # 计算8个控制点位置
+            handles = {
+                'top-left': (min(x1, x2), min(y1, y2)),
+                'top-right': (max(x1, x2), min(y1, y2)),
+                'bottom-left': (min(x1, x2), max(y1, y2)),
+                'bottom-right': (max(x1, x2), max(y1, y2)),
+                'top': ((x1 + x2) / 2, min(y1, y2)),
+                'bottom': ((x1 + x2) / 2, max(y1, y2)),
+                'left': (min(x1, x2), (y1 + y2) / 2),
+                'right': (max(x1, x2), (y1 + y2) / 2),
+            }
+            
+        elif shape.type == 'circle' and len(shape.points) >= 2:
+            cx, cy = shape.points[0]
+            edge_x, edge_y = shape.points[1]
+            radius = ((edge_x - cx)**2 + (edge_y - cy)**2)**0.5
+            
+            # 圆形只有4个控制点（上下左右）
+            handles = {
+                'top': (cx, cy - radius),
+                'bottom': (cx, cy + radius),
+                'left': (cx - radius, cy),
+                'right': (cx + radius, cy),
+            }
+            
+        elif shape.type == 'polygon' and len(shape.points) >= 3:
+            # 多边形在每个顶点处显示控制点
+            handles = {}
+            for i, (px, py) in enumerate(shape.points):
+                handles[f'vertex_{i}'] = (px, py)
+        else:
+            return
+        
+        handle_color = QtGui.QColor(255, 255, 0)  # 黄色
+        handle_pen = QtGui.QPen(handle_color, 2)
+        handle_brush = QtGui.QBrush(handle_color)
+        
+        for handle_name, (hx, hy) in handles.items():
+            handle_size = self.HANDLE_SIZE / self.zoom_factor
+            handle_rect = QtCore.QRectF(
+                hx - handle_size/2, hy - handle_size/2,
+                handle_size, handle_size
+            )
+            handle_item = self.scene.addRect(handle_rect, handle_pen, handle_brush)
+            handle_item.is_handle = True
+            handle_item.handle_name = handle_name
     
     def draw_roi_handles(self, roi: ROIShape):
         """绘制ROI的控制点手柄"""
@@ -1153,21 +1255,22 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def activate_tool(self, tool_name: str):
         """
-        激活标注工具
+        激活绘图工具
         
         Args:
-            tool_name: 工具名称 ('rect', 'circle', 'polygon', 'text')
+            tool_name: 'rect', 'circle', 'polygon', 'text'
         """
-        # 检查工具是否在当前模式下可用
-        mode = self.container.current_mode
-        if mode == 'roi' and tool_name != 'rect':
+        # 检查当前模式是否允许使用该工具
+        mode = self.current_mode
+        
+        if mode == 'rois' and tool_name != 'rect':
             QtWidgets.QMessageBox.warning(
                 self,
                 "提示",
                 "ROI模式下仅支持矩形工具"
             )
             return
-        elif mode == 'mask' and tool_name not in ['rect', 'circle', 'polygon']:
+        elif mode == 'masks' and tool_name not in ['rect', 'circle', 'polygon']:
             QtWidgets.QMessageBox.warning(
                 self,
                 "提示",
@@ -1178,10 +1281,14 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # 如果点击已激活的工具，则取消激活
         if self.current_tool == tool_name:
             self.current_tool = None
-            self.rect_tool_btn.setChecked(False)
-            self.circle_tool_btn.setChecked(False)
-            self.polygon_tool_btn.setChecked(False)
-            self.text_tool_btn.setChecked(False)
+            if hasattr(self, 'rect_tool_btn'):
+                self.rect_tool_btn.setChecked(False)
+            if hasattr(self, 'circle_tool_btn'):
+                self.circle_tool_btn.setChecked(False)
+            if hasattr(self, 'polygon_tool_btn'):
+                self.polygon_tool_btn.setChecked(False)
+            if hasattr(self, 'text_tool_btn'):
+                self.text_tool_btn.setChecked(False)
             # 恢复拖拽模式和光标
             self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
             self.graphics_view.setCursor(QtCore.Qt.ArrowCursor)
@@ -1189,10 +1296,14 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         else:
             # 激活新工具
             self.current_tool = tool_name
-            self.rect_tool_btn.setChecked(tool_name == 'rect')
-            self.circle_tool_btn.setChecked(tool_name == 'circle')
-            self.polygon_tool_btn.setChecked(tool_name == 'polygon')
-            self.text_tool_btn.setChecked(tool_name == 'text')
+            if hasattr(self, 'rect_tool_btn'):
+                self.rect_tool_btn.setChecked(tool_name == 'rect')
+            if hasattr(self, 'circle_tool_btn'):
+                self.circle_tool_btn.setChecked(tool_name == 'circle')
+            if hasattr(self, 'polygon_tool_btn'):
+                self.polygon_tool_btn.setChecked(tool_name == 'polygon')
+            if hasattr(self, 'text_tool_btn'):
+                self.text_tool_btn.setChecked(tool_name == 'text')
             # 禁用拖拽模式，允许绘制
             self.graphics_view.setDragMode(QtWidgets.QGraphicsView.NoDrag)
             
@@ -1204,6 +1315,32 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             
             mode_name = self.container._get_mode_name(mode)
             print(f"✅ 已激活工具: {tool_name} ({mode_name}模式)")
+    
+    def deactivate_current_tool(self):
+        """
+        取消当前激活的工具，进入空闲模式（可拖动图形）
+        """
+        if self.current_tool is None:
+            return
+        
+        tool_name = self.current_tool
+        self.current_tool = None
+        
+        # 更新按钮状态
+        if hasattr(self, 'rect_tool_btn'):
+            self.rect_tool_btn.setChecked(False)
+        if hasattr(self, 'circle_tool_btn'):
+            self.circle_tool_btn.setChecked(False)
+        if hasattr(self, 'polygon_tool_btn'):
+            self.polygon_tool_btn.setChecked(False)
+        if hasattr(self, 'text_tool_btn'):
+            self.text_tool_btn.setChecked(False)
+        
+        # 恢复拖拽模式和光标
+        self.graphics_view.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
+        self.graphics_view.setCursor(QtCore.Qt.ArrowCursor)
+        
+        print(f"✅ 工具已关闭，进入空闲模式（可拖动图形）")
     
     def clear_all_annotations(self):
         """清除所有标注"""
@@ -1316,6 +1453,12 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     print(f"   添加顶点: ({int(scene_pos.x())}, {int(scene_pos.y())})")
                 event.accept()
                 return
+            elif event.button() == QtCore.Qt.RightButton:
+                # 右键结束多边形绘制
+                if self.is_drawing_polygon and len(self.polygon_points) >= 3:
+                    self.finish_polygon_drawing()
+                    event.accept()
+                    return
         
         # === 文字工具逻辑 ===
         elif self.current_tool == 'text':
@@ -1342,6 +1485,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             # 检查是否点击了现有图形
             clicked_shape = self.container.get_shape_at_position(scene_pos)
             if clicked_shape:
+                print(f"🔍 点击到图形: {clicked_shape.type} (ID: {clicked_shape.id})")
                 # 选中图形
                 self.container.select_shape(clicked_shape)
                 
@@ -1351,15 +1495,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                     # 记录初始鼠标位置（不是偏移量）
                     self.container.shape_move_offset = (scene_pos.x(), scene_pos.y())
                     self.graphics_view.setCursor(QtCore.Qt.ClosedHandCursor)
-                    
-                    # 🔍 调试日志
-                    print(f"\n🖱️ [MOUSE PRESS] 开始移动图形")
-                    print(f"   图形ID: {clicked_shape.name or clicked_shape.id}")
-                    print(f"   图形类型: {clicked_shape.type}")
-                    print(f"   当前points: {clicked_shape.points}")
-                    print(f"   鼠标场景坐标: ({scene_pos.x():.1f}, {scene_pos.y():.1f})")
-                    print(f"   shape_move_offset: {self.container.shape_move_offset}")
-                    print(f"   is_moving_shape: {self.container.is_moving_shape}")
+                    print(f"   → 开始移动图形")
                 
                 self.redraw_all_shapes()  # ✅ 修复：重绘所有图形（包括container中的）
                 event.accept()
@@ -1411,21 +1547,11 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 delta_x = current_x - prev_offset_x
                 delta_y = current_y - prev_offset_y
                 
-                # 🔍 调试日志：移动前状态
-                print(f"\n🖱️ [MOUSE MOVE] 拖动中...")
-                print(f"   上次offset: ({prev_offset_x:.1f}, {prev_offset_y:.1f})")
-                print(f"   当前鼠标: ({current_x:.1f}, {current_y:.1f})")
-                print(f"   计算delta: ({delta_x:.1f}, {delta_y:.1f})")
-                print(f"   移动前points: {self.container.selected_shape.points}")
-                
                 # 应用增量移动
                 self.container.move_shape(self.container.selected_shape, delta_x, delta_y)
                 
-                print(f"   移动后points: {self.container.selected_shape.points}")
-                
                 # 更新偏移量为当前位置
                 self.container.shape_move_offset = (current_x, current_y)
-                print(f"   新offset: {self.container.shape_move_offset}")
             
             # 立即重绘
             self.redraw_all_shapes()  # ✅ 修复：重绘所有图形（包括container中的）
@@ -1525,6 +1651,60 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         print("❌ 已取消多边形绘制")
     
+    def finish_polygon_drawing(self):
+        """
+        完成多边形绘制（右键触发）
+        """
+        if len(self.polygon_points) < 3:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "提示",
+                "多边形至少需要3个顶点"
+            )
+            return
+        
+        # 清除临时线
+        for line in self.polygon_temp_lines:
+            if line.scene() == self.scene:
+                self.scene.removeItem(line)
+        self.polygon_temp_lines.clear()
+        
+        # 转换点坐标为整数
+        points = [(int(p.x()), int(p.y())) for p in self.polygon_points]
+        
+        mode = self.container.current_mode
+        
+        if mode == 'masks':
+            # 创建Mask对象
+            mask_shape = MaskShape(
+                type='polygon',
+                points=points,
+                border_color=(255, 0, 0),
+                fill_color=(255, 0, 0),
+                thickness=2
+            )
+            self.container.add_mask(mask_shape)
+            print(f"✅ 已创建Mask多边形: {mask_shape.name}")
+        else:
+            # 创建普通标注
+            annotation = AnnotationShape(
+                type='polygon',
+                points=points,
+                border_color=self.current_pen_color,
+                thickness=2
+            )
+            self.container.add_annotation(annotation)
+            print(f"✅ 已创建标注多边形")
+        
+        # 重置状态
+        self.is_drawing_polygon = False
+        self.polygon_points.clear()
+        
+        # ✅ 关键改进：绘制完成后自动取消工具选择
+        self.deactivate_current_tool()
+        
+        self.redraw_all_shapes()
+    
     def mouseReleaseEvent(self, event):
         """
         鼠标释放事件：结束拖动、调整或绘制操作
@@ -1537,11 +1717,6 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         
         # === 结束移动 ===
         elif self.container.is_moving_shape:
-            # 🔍 调试日志：移动结束状态
-            print(f"\n🖱️ [MOUSE RELEASE] 移动完成")
-            print(f"   最终points: {self.container.selected_shape.points if self.container.selected_shape else 'None'}")
-            print(f"   is_moving_shape: {self.container.is_moving_shape}")
-            
             self.container.is_moving_shape = False
             self.container.shape_move_offset = None
             self.graphics_view.setCursor(QtCore.Qt.OpenHandCursor)
@@ -1565,15 +1740,22 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             
             mode = self.container.current_mode
             
-            if mode == 'roi' and self.current_tool == 'rect':
+            if mode == 'rois' and self.current_tool == 'rect':
                 # 创建ROI对象（ID自动生成）
                 roi_shape = ROIShape(type='rect', points=points)
                 self.container.add_roi(roi_shape)
                 self.container.select_roi(roi_shape)
+                
+                # ✅ 先重绘，再显示对话框
+                self.redraw_all_shapes()
+                
+                # ✅ 关键改进：在显示对话框前先取消工具，避免阻塞
+                self.deactivate_current_tool()
+                
                 self.show_roi_name_dialog(roi_shape)
                 print(f"✅ 已创建ROI: {roi_shape.name}")
                 
-            elif mode == 'mask':
+            elif mode == 'masks':
                 # 创建Mask对象（ID自动生成）
                 mask_shape = MaskShape(
                     type=self.current_tool,
@@ -1598,4 +1780,8 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             
             # 重置绘制状态
             self.drawing_start_pos = None
+            
+            # ✅ 关键改进：绘制完成后自动取消工具选择，进入空闲模式
+            self.deactivate_current_tool()
+            
             self.redraw_all_shapes()
