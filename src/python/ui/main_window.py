@@ -933,15 +933,13 @@ class MainWindow(QtWidgets.QMainWindow):
         utils.logger.info(f"   是否有save_path属性: {hasattr(node, 'save_path')}", module="main_window")
         utils.logger.info(f"   是否有get_cached_image方法: {hasattr(node, 'get_cached_image')}", module="main_window")
         
-        # 处理图像加载节点 (ImageLoadNode)
-        if "ImageLoadNode" in str(node_type) or hasattr(node, 'file_path'):
-            utils.logger.success(f"   ✅ 识别为 ImageLoadNode，打开文件选择对话框", module="main_window")
-            self._on_browse_image_file(node)
+        # 处理工业相机采集节点 (CameraCaptureNode) - 必须在ImageViewNode之前检查
+        elif "CameraCaptureNode" in str(node_type) or (hasattr(node, '__class__') and 'CameraCaptureNode' in node.__class__.__name__):
+            utils.logger.success(f"   ✅ 识别为 CameraCaptureNode", module="main_window")
+            utils.logger.info(f"   📋 节点完整类型: {type(node).__module__}.{type(node).__name__}", module="main_window")
             
-        # 处理图像保存节点 (ImageSaveNode)
-        elif "ImageSaveNode" in str(node_type) or hasattr(node, 'save_path'):
-            utils.logger.success(f"   ✅ 识别为 ImageSaveNode，打开保存路径选择对话框", module="main_window")
-            self._on_select_save_path(node)
+            # 直接打开预览窗口（集成相机控制功能）
+            self._open_camera_preview(node, None)
             
         # 处理图像显示节点 (ImageViewNode)
         elif "ImageViewNode" in str(node_type) or hasattr(node, 'get_cached_image'):
@@ -983,13 +981,15 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 utils.logger.error(f"   ❌ 节点没有get_cached_image方法", module="main_window")
         
-        # 处理工业相机采集节点 (CameraCaptureNode)
-        elif "CameraCaptureNode" in str(node_type) or (hasattr(node, '__class__') and 'CameraCaptureNode' in node.__class__.__name__):
-            utils.logger.success(f"   ✅ 识别为 CameraCaptureNode", module="main_window")
-            utils.logger.info(f"   📋 节点完整类型: {type(node).__module__}.{type(node).__name__}", module="main_window")
+        # 处理图像加载节点 (ImageLoadNode)
+        if "ImageLoadNode" in str(node_type) or hasattr(node, 'file_path'):
+            utils.logger.success(f"   ✅ 识别为 ImageLoadNode，打开文件选择对话框", module="main_window")
+            self._on_browse_image_file(node)
             
-            # 直接打开预览窗口（集成相机控制功能）
-            self._open_camera_preview(node, None)
+        # 处理图像保存节点 (ImageSaveNode)
+        elif "ImageSaveNode" in str(node_type) or hasattr(node, 'save_path'):
+            utils.logger.success(f"   ✅ 识别为 ImageSaveNode，打开保存路径选择对话框", module="main_window")
+            self._on_select_save_path(node)
         else:
             utils.logger.info(f"   ℹ️ 未识别的节点类型，不执行任何操作", module="main_window")
 
