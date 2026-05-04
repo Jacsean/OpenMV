@@ -62,8 +62,8 @@ class SimulatedCamera:
     
     def _generate_test_pattern(self) -> np.ndarray:
         """生成彩色条纹测试图（类似电视测试卡）"""
-        height, width = self.resolution
-        frame = np.zeros((height, width, 3), dtype=np.uint8)
+        width, height = self.resolution  # 注意：resolution是(width, height)
+        frame = np.zeros((height, width, 3), dtype=np.uint8)  # NumPy形状是(height, width, channels)
         
         # 定义8种标准颜色（BGR格式）
         colors = [
@@ -94,12 +94,12 @@ class SimulatedCamera:
     
     def _generate_noise_image(self) -> np.ndarray:
         """生成随机噪声图像"""
-        height, width = self.resolution
+        width, height = self.resolution
         return np.random.randint(0, 256, (height, width, 3), dtype=np.uint8)
     
     def _generate_gradient(self) -> np.ndarray:
         """生成灰度渐变图像"""
-        height, width = self.resolution
+        width, height = self.resolution
         gradient = np.linspace(0, 255, width, dtype=np.uint8)
         frame = np.tile(gradient, (height, 1))
         import cv2

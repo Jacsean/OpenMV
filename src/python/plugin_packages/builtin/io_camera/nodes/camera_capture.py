@@ -15,7 +15,11 @@ from typing import Dict, Any, Optional
 import numpy as np
 
 from shared_libs.node_base import BaseNode
-from .camera_manager import CameraManager
+# 修正导入路径：从上层目录导入camera_manager
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from camera_manager import CameraManager
 
 
 class CameraCaptureNode(BaseNode):
