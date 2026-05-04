@@ -120,8 +120,8 @@ class RealCamera:
     """
     真实相机包装类
     
-    封装DLL驱动调用，提供统一的相机接口
-    （当前为占位实现，待集成实际SDK）
+    封装DLL驱动调用，提供统一的相机接口。
+    支持海康威视、巴斯勒等品牌（通过驱动适配器）。
     """
     
     def __init__(self, config: dict, seat_config: dict):
@@ -137,8 +137,44 @@ class RealCamera:
         self.serial_number = seat_config.get('sn', '')
         self.is_initialized = False
         self.is_opened = False
-        self.handle = None
+        self.driver = None
         
+        # 自动检测并加载合适的驱动
+        self._load_driver()
+    
+    def _load_driver(self):
+        """根据配置自动加载合适的相机驱动"""
+        classname = self.config.get('classname', '')
+        
+        # 尝试加载海康威视驱动
+        if 'HIKROBOT' in self.config.get('supplier', '').upper() or \
+           'HIK' in classname.upper() or \
+           'MVC' in classname.upper():
+            try:
+                from .camera_drivers import HikRobotDriver
+                if HikRobotDriver:
+                    self.driver = HikRobotDriver(self.config, self.seat_config)
+                    print(f"[RealCamera] 加载海康威视驱动: {classname}")
+                    return
+            except ImportError as e:
+                print(f"[RealCamera] 海康威视驱动导入失败: {e}")
+        
+        # 尝试加载巴斯勒驱动
+        elif 'BASLER' in self.config.get('supplier', '').upper() or \
+             'acA' in classname.upper():
+            try:
+                from .camera_drivers import BaslerDriver
+                if BaslerDriver:
+                    self.driver = BaslerDriver(self.config, self.seat_config)
+                    print(f"[RealCamera] 加载巴斯勒驱动: {classname}")
+                    return
+            except ImportError as e:
+                print(f"[RealCamera] 巴斯勒驱动导入失败: {e}")
+        
+        # 未知品牌，记录警告
+        print(f"[RealCamera] 警告: 未识别的相机品牌: {classname}")
+        print(f"[RealCamera] 将使用占位实现（返回黑色图像）")
+    
     def initialize(self) -> bool:
         """
         初始化相机设备（加载DLL、枚举设备）
@@ -146,10 +182,20 @@ class RealCamera:
         Returns:
             bool: 是否成功
         """
-        # TODO: 实现真实的DLL加载和设备枚举
-        # 当前返回True作为占位
-        self.is_initialized = True
-        return True
+        if self.driver:
+            # 使用真实驱动
+            success = self.driver.initialize()
+            if success:
+                self.is_initialized = True
+                print(f"[RealCamera] 相机初始化成功: SN={self.serial_number}")
+            else:
+                print(f"[RealCamera] 相机初始化失败: SN={self.serial_number}")
+            return success
+        else:
+            # 占位实现
+            print(f"[RealCamera] 使用占位实现（无真实驱动）")
+            self.is_initialized = True
+            return True
     
     def open(self) -> bool:
         """
@@ -159,16 +205,45 @@ class RealCamera:
             bool: 是否成功
         """
         if not self.is_initialized:
+            print("[RealCamera] 错误: 相机未初始化")
             return False
         
-        # TODO: 实现真实的相机打开逻辑
-        self.is_opened = True
-        return True
+        if self.driver:
+            # 使用真实驱动
+            success = self.driver.open()
+            if success:
+                self.is_opened = True
+                
+                # 应用配置参数
+                exposure = self.seat_config.get('custom_params', {}).get(
+                    'exposure_us', 
+                    int(self.config.get('exposure', {}).get('default', '10000'))
+                )
+                gain = self.seat_config.get('custom_params', {}).get(
+                    'gain', 
+                    0.0
+                )
+                
+                self.driver.set_exposure(exposure)
+                self.driver.set_gain(gain)
+                
+                print(f"[RealCamera] 相机已打开: SN={self.serial_number}")
+            else:
+                print(f"[RealCamera] 打开相机失败: SN={self.serial_number}")
+            return success
+        else:
+            # 占位实现
+            self.is_opened = True
+            print(f"[RealCamera] 相机已打开（占位）: SN={self.serial_number}")
+            return True
     
     def close(self):
         """关闭相机，释放资源"""
+        if self.driver:
+            self.driver.close()
+        
         self.is_opened = False
-        # TODO: 释放相机句柄
+        print(f"[RealCamera] 相机已关闭: SN={self.serial_number}")
     
     def grab_frame(self) -> Optional[np.ndarray]:
         """
@@ -178,24 +253,38 @@ class RealCamera:
             numpy.ndarray or None: BGR格式图像
         """
         if not self.is_opened:
+            print("[RealCamera] 错误: 相机未打开")
             return None
         
-        # TODO: 实现真实的图像采集
-        # 临时返回黑色图像
-        resolution = self.config.get('resolution', {'width': '640', 'height': '480'})
-        width = int(resolution['width'])
-        height = int(resolution['height'])
-        return np.zeros((height, width, 3), dtype=np.uint8)
+        if self.driver:
+            # 使用真实驱动采集
+            frame = self.driver.grab_frame()
+            if frame is not None:
+                return frame
+            else:
+                print("[RealCamera] 采集失败")
+                return None
+        else:
+            # 占位实现：返回黑色图像
+            resolution = self.config.get('resolution', {'width': '640', 'height': '480'})
+            width = int(resolution['width'])
+            height = int(resolution['height'])
+            return np.zeros((height, width, 3), dtype=np.uint8)
     
     def get_info(self) -> dict:
         """获取相机信息"""
-        return {
+        info = {
             'type': 'real',
             'serial_number': self.serial_number,
             'model': self.config.get('classname', ''),
             'is_initialized': self.is_initialized,
             'is_opened': self.is_opened
         }
+        
+        if self.driver:
+            info.update(self.driver.get_info())
+        
+        return info
 
 
 class CameraManager:
