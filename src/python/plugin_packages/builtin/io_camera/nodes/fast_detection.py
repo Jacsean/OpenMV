@@ -61,19 +61,17 @@ class FastDetectionNode(BaseNode):
             tab='检测配置'
         )
         
-        self.add_slider(
+        self.add_text_input(
             'threshold_low',
             '低阈值',
-            start=50,
-            range=(0, 255),
+            text='50',
             tab='检测配置'
         )
         
-        self.add_slider(
+        self.add_text_input(
             'threshold_high',
             '高阈值',
-            start=150,
-            range=(0, 255),
+            text='150',
             tab='检测配置'
         )
         

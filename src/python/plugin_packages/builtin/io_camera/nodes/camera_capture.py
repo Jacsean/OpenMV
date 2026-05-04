@@ -78,10 +78,10 @@ class CameraCaptureNode(BaseNode):
             tab='基本配置'
         )
         
-        self.add_float_input(
+        self.add_text_input(
             'magnification', 
             '镜头倍率', 
-            value=1.0,
+            text='1.0',
             tab='基本配置'
         )
         
@@ -93,19 +93,17 @@ class CameraCaptureNode(BaseNode):
         )
         
         # === 图像参数标签页 ===
-        self.add_slider(
+        self.add_text_input(
             'exposure_us', 
             '曝光时间(μs)', 
-            start=10000, 
-            range=(100, 100000),
+            text='10000',
             tab='图像参数'
         )
         
-        self.add_slider(
+        self.add_text_input(
             'gain', 
             '增益', 
-            start=0, 
-            range=(0, 100),
+            text='0',
             tab='图像参数'
         )
         
