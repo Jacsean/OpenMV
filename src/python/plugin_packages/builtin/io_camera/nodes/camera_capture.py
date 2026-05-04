@@ -46,7 +46,7 @@ class CameraCaptureNode(BaseNode):
     """
     
     __identifier__ = 'io_camera'
-    NODE_NAME = '工业相机采集'
+    NODE_NAME = '相机采集'
     
     resource_level = "light"
     hardware_requirements = {
@@ -327,7 +327,13 @@ class CameraCaptureNode(BaseNode):
     def open_preview_window(self):
         """打开实时预览窗口"""
         if self._preview_window is None or not self._preview_window.isVisible():
-            from .camera_preview_dialog import CameraPreviewDialog
+            # 使用绝对导入避免相对导入路径问题
+            try:
+                from plugin_packages.builtin.io_camera.camera_preview_dialog import CameraPreviewDialog
+            except ImportError:
+                # 兼容旧版本或测试环境
+                from .camera_preview_dialog import CameraPreviewDialog
+            
             self._preview_window = CameraPreviewDialog(self, parent=None)
             self._preview_window.show()
             self.log_info("预览窗口已打开")
