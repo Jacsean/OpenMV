@@ -43,6 +43,7 @@ class PermissionChecker:
         'os', 'sys', 'json', 'pathlib', 're', 'math', 'time',
         'datetime', 'collections', 'itertools', 'functools',
         'typing', 'abc', 'enum', 'dataclasses',
+        'threading', 'queue',  # 多线程和队列（用于实时采集）
         'cv2', 'numpy', 'PIL', 'torch', 'ultralytics',  # 第三方库
         'paddleocr', 'paddle',  # PaddleOCR 相关
     }
@@ -51,7 +52,7 @@ class PermissionChecker:
     FORBIDDEN_MODULES = {
         'subprocess', 'socket', 'requests', 'urllib.request',
         'ctypes', 'pickle', 'shelve', 'marshal',
-        'multiprocessing', 'threading',  # 并发控制由框架管理
+        'multiprocessing',  # 多进程由框架管理
     }
     
     # 允许的文件操作函数
