@@ -1293,37 +1293,38 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _open_camera_preview(self, node, option_dialog=None):
         """打开相机预览窗口"""
-        # 检查相机是否正在采集
+        # 检查相机是否正在采集，如果未采集则尝试自动启动
         if hasattr(node, '_is_acquiring') and not node._is_acquiring:
-            from PySide2.QtWidgets import QMessageBox
-            reply = QMessageBox.question(
-                self,
-                "提示",
-                "相机尚未开始采集！\n\n是否要自动执行以下操作？\n① 初始化相机 → ② 打开相机 → ③ 开始采集",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.Yes
-            )
+            utils.logger.info("   🔄 相机未启动，尝试自动初始化...", module="main_window")
             
-            if reply == QMessageBox.Yes:
-                # 自动执行初始化、打开、开始采集
-                try:
-                    if hasattr(node, 'initialize_camera'):
-                        if not node.initialize_camera():
-                            QMessageBox.warning(self, "失败", "相机初始化失败！")
-                            return
+            try:
+                # 步骤1: 初始化相机
+                if hasattr(node, 'initialize_camera'):
+                    if node.initialize_camera():
+                        utils.logger.success("   ✅ 相机初始化成功", module="main_window")
+                    else:
+                        utils.logger.warning("   ⚠️ 相机初始化失败，请手动检查Seat配置", module="main_window")
+                
+                # 步骤2: 打开相机
+                if hasattr(node, 'open_camera'):
+                    if node.open_camera():
+                        utils.logger.success("   ✅ 相机已打开", module="main_window")
+                    else:
+                        utils.logger.warning("   ⚠️ 打开相机失败", module="main_window")
+                
+                # 步骤3: 开始采集
+                if hasattr(node, 'start_acquisition'):
+                    node.start_acquisition()
+                    utils.logger.success("   ✅ 开始连续采集", module="main_window")
                     
-                    if hasattr(node, 'open_camera'):
-                        if not node.open_camera():
-                            QMessageBox.warning(self, "失败", "打开相机失败！")
-                            return
-                    
-                    if hasattr(node, 'start_acquisition'):
-                        node.start_acquisition()
-                        
-                except Exception as e:
-                    utils.logger.error(f"   ❌ 自动启动相机失败: {e}", module="main_window")
-                    QMessageBox.critical(self, "错误", f"自动启动相机失败:\n{str(e)}")
-                    return
+            except Exception as e:
+                utils.logger.error(f"   ❌ 自动启动相机失败: {e}", module="main_window")
+                from PySide2.QtWidgets import QMessageBox
+                QMessageBox.critical(
+                    self,
+                    "错误",
+                    f"自动启动相机失败:\n{str(e)}\n\n请在预览窗口中手动操作。"
+                )
         
         # 打开预览窗口
         if hasattr(node, 'open_preview_window'):
