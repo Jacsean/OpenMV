@@ -67,7 +67,7 @@ class CameraCaptureNode(BaseNode):
         self.add_combo_menu(
             'seat_index', 
             'Seat索引', 
-            items=['0', '1', '2', '3', '4'],  # 动态加载
+            items=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],  # 支持最多10个Seat
             tab='基本配置'
         )
         
@@ -139,20 +139,21 @@ class CameraCaptureNode(BaseNode):
             self._pubsub = None
             print(f"[CameraCaptureNode] 发布-订阅管理器不可用")
         
-        # 初始化Seat列表
-        self._update_seat_list()
-    
-    def _update_seat_list(self):
-        """更新Seat索引下拉列表"""
-        seat_count = self._camera_manager.get_seat_count()
-        items = [str(i) for i in range(seat_count)]
-        if items:
-            self.set_property('seat_index_items', items)
+        # 初始化Seat列表（已移除动态更新，使用固定选项）
+        # self._update_seat_list()  # NodeGraphQt不支持动态修改combo_menu items
     
     def _on_seat_index_changed(self):
         """Seat索引变化时的回调"""
         try:
             seat_index = int(self.get_property('seat_index'))
+            seat_count = self._camera_manager.get_seat_count()
+            
+            # 验证索引是否有效
+            if seat_index >= seat_count:
+                self.log_warning(f"Seat索引 {seat_index} 超出范围 (可用: 0-{seat_count-1})")
+                self.set_property('serial_number', '无效索引')
+                return
+            
             seat_info = self._camera_manager.get_seat_info(seat_index)
             
             if seat_info:
@@ -160,7 +161,7 @@ class CameraCaptureNode(BaseNode):
                 mag = float(seat_info.get('Magnification', '1.0'))
                 
                 self.set_property('serial_number', sn)
-                self.set_property('magnification', mag)
+                self.set_property('magnification', str(mag))
                 
                 self.log_info(f"已选择 Seat {seat_index}: SN={sn}")
             else:
