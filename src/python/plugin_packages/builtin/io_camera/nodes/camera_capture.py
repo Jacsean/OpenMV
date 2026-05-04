@@ -7,11 +7,12 @@
 - 单帧触发 + 连续流双输出模式
 - 模拟相机支持（无硬件时测试）
 - 实时预览窗口（双击节点打开）
+- 【Phase 3】环形缓冲区 + 发布-订阅机制（>15fps高速处理）
 """
 
 import threading
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 import numpy as np
 
 from shared_libs.node_base import BaseNode
@@ -20,6 +21,15 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from camera_manager import CameraManager
+
+# Phase 3: 导入环形缓冲区和发布-订阅管理器
+try:
+    from ..circular_buffer import CircularBuffer
+    from ..pubsub_manager import PubSubManager
+except ImportError:
+    # 降级方案：如果模块不存在，使用None占位
+    CircularBuffer = None
+    PubSubManager = None
 
 
 class CameraCaptureNode(BaseNode):
@@ -114,6 +124,22 @@ class CameraCaptureNode(BaseNode):
         self._latest_frame = None
         self._frame_lock = threading.Lock()
         self._preview_window = None
+        
+        # === Phase 3: 环形缓冲区（支持高速采集）===
+        if CircularBuffer:
+            self._frame_buffer = CircularBuffer(capacity=10, max_age_seconds=5.0)
+            print(f"[CameraCaptureNode] 环形缓冲区已启用 (capacity=10)")
+        else:
+            self._frame_buffer = None
+            print(f"[CameraCaptureNode] 环形缓冲区不可用（降级到简单缓存）")
+        
+        # === Phase 3: 发布-订阅管理器 ===
+        if PubSubManager:
+            self._pubsub = PubSubManager()
+            print(f"[CameraCaptureNode] 发布-订阅管理器已启用")
+        else:
+            self._pubsub = None
+            print(f"[CameraCaptureNode] 发布-订阅管理器不可用")
         
         # 初始化Seat列表
         self._update_seat_list()
@@ -234,8 +260,30 @@ class CameraCaptureNode(BaseNode):
                 frame = camera.grab_frame()
                 
                 if frame is not None:
+                    # === Phase 1: 更新简单缓存（兼容旧代码）===
                     with self._frame_lock:
-                        self._latest_frame = frame.copy()  # 深拷贝避免竞争
+                        self._latest_frame = frame.copy()
+                    
+                    # === Phase 3: 放入环形缓冲区 ===
+                    if self._frame_buffer:
+                        self._frame_buffer.put(frame)
+                    
+                    # === Phase 3: 发布给所有订阅者 ===
+                    if self._pubsub:
+                        subscriber_count = self._pubsub.publish(frame)
+                        if subscriber_count > 0 and self._is_acquiring:
+                            # 每100帧打印一次统计
+                            if self._frame_buffer.total_produced % 100 == 0:
+                                stats = self._frame_buffer.get_stats()
+                                pubsub_stats = self._pubsub.get_all_stats()
+                                self.log_info(
+                                    f"采集统计: "
+                                    f"生产={stats['total_produced']}, "
+                                    f"消费={stats['total_consumed']}, "
+                                    f"丢帧={stats['total_dropped']} "
+                                    f"({stats['drop_rate']:.1f}%), "
+                                    f"订阅者={pubsub_stats['active_subscribers']}"
+                                )
                 
                 # 控制帧率
                 time.sleep(1.0 / framerate)
@@ -318,6 +366,70 @@ class CameraCaptureNode(BaseNode):
                 '连续图像流': None
             }
     
+    def subscribe(self, subscriber_id: str, callback: Callable[[np.ndarray], None], 
+                  max_fps: float = 30.0) -> bool:
+        """
+        注册订阅者
+        
+        Args:
+            subscriber_id: 订阅者唯一标识
+            callback: 回调函数，接收一帧图像
+            max_fps: 最大处理帧率
+            
+        Returns:
+            bool: 是否成功注册
+        """
+        if not self._pubsub:
+            self.log_warning("发布-订阅管理器不可用")
+            return False
+        
+        success = self._pubsub.subscribe(subscriber_id, callback, max_fps)
+        if success:
+            self.log_info(f"订阅者已注册: {subscriber_id} (max_fps={max_fps})")
+        return success
+    
+    def unsubscribe(self, subscriber_id: str) -> bool:
+        """
+        取消订阅
+        
+        Args:
+            subscriber_id: 订阅者标识
+            
+        Returns:
+            bool: 是否成功取消
+        """
+        if not self._pubsub:
+            return False
+        
+        success = self._pubsub.unsubscribe(subscriber_id)
+        if success:
+            self.log_info(f"订阅者已取消: {subscriber_id}")
+        return success
+    
+    def get_pubsub_stats(self) -> dict:
+        """
+        获取发布-订阅统计信息
+        
+        Returns:
+            dict: 统计信息
+        """
+        if not self._pubsub:
+            return {}
+        
+        return self._pubsub.get_all_stats()
+    
+    def get_buffer_stats(self) -> dict:
+        """
+        获取环形缓冲区统计信息
+        
+        Returns:
+            dict: 统计信息
+        """
+        if not self._frame_buffer:
+            return {}
+        
+        return self._frame_buffer.get_stats()
+
     def on_delete(self):
         """节点删除时的清理"""
         self.close_camera()
