@@ -984,8 +984,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 utils.logger.error(f"   ❌ 节点没有get_cached_image方法", module="main_window")
         
         # 处理工业相机采集节点 (CameraCaptureNode)
-        elif "CameraCaptureNode" in str(node_type):
+        elif "CameraCaptureNode" in str(node_type) or (hasattr(node, '__class__') and 'CameraCaptureNode' in node.__class__.__name__):
             utils.logger.success(f"   ✅ 识别为 CameraCaptureNode", module="main_window")
+            utils.logger.info(f"   📋 节点完整类型: {type(node).__module__}.{type(node).__name__}", module="main_window")
             
             # 直接打开预览窗口（集成相机控制功能）
             self._open_camera_preview(node, None)
