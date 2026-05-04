@@ -108,7 +108,7 @@
     },
     {
       "class": "CameraCaptureNode",
-      "display_name": "工业相机采集",
+      "display_name": "相机采集",
       "category": "设备采集",
       "color": [
         100,

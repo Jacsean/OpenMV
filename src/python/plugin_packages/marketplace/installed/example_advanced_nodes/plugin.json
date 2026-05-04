@@ -25,48 +25,6 @@
         "opencv-python>=4.5.0"
       ],
       "optional_dependencies": {}
-    },
-    {
-      "class": "AdaptiveThresholdNode",
-      "display_name": "自适应阈值",
-      "category": "二值化",
-      "color": [
-        255,
-        200,
-        150
-      ],
-      "resource_level": "light",
-      "hardware_requirements": {
-        "cpu_cores": 1,
-        "memory_gb": 1,
-        "gpu_required": false,
-        "gpu_memory_gb": 0
-      },
-      "dependencies": [
-        "opencv-python>=4.5.0"
-      ],
-      "optional_dependencies": {}
-    },
-    {
-      "class": "HistogramEqualizationNode",
-      "display_name": "直方图均衡化",
-      "category": "增强",
-      "color": [
-        150,
-        255,
-        200
-      ],
-      "resource_level": "light",
-      "hardware_requirements": {
-        "cpu_cores": 1,
-        "memory_gb": 1,
-        "gpu_required": false,
-        "gpu_memory_gb": 0
-      },
-      "dependencies": [
-        "opencv-python>=4.5.0"
-      ],
-      "optional_dependencies": {}
     }
   ],
   "dependencies": [
