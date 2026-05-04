@@ -982,6 +982,24 @@ class MainWindow(QtWidgets.QMainWindow):
                     )
             else:
                 utils.logger.error(f"   ❌ 节点没有get_cached_image方法", module="main_window")
+        
+        # 处理工业相机采集节点 (CameraCaptureNode)
+        elif "CameraCaptureNode" in str(node_type):
+            utils.logger.success(f"   ✅ 识别为 CameraCaptureNode，打开相机预览窗口", module="main_window")
+            if hasattr(node, 'open_preview_window'):
+                try:
+                    node.open_preview_window()
+                    utils.logger.success(f"✅ 成功打开相机预览窗口: {node.name()}", module="main_window")
+                except Exception as e:
+                    utils.logger.error(f"   ❌ 打开预览窗口失败: {e}", module="main_window")
+                    QtWidgets.QMessageBox.critical(
+                        self,
+                        "错误",
+                        f"打开预览窗口失败:\n{str(e)}"
+                    )
+            else:
+                utils.logger.error(f"   ❌ 节点没有open_preview_window方法", module="main_window")
+                
         else:
             utils.logger.info(f"   ℹ️ 未识别的节点类型，不执行任何操作", module="main_window")
 
