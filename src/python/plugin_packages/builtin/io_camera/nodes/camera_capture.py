@@ -429,6 +429,125 @@ class CameraCaptureNode(BaseNode):
             return {}
         
         return self._frame_buffer.get_stats()
+    
+    # === UI集成：订阅者管理对话框 ===
+    
+    def show_subscriber_manager(self):
+        """
+        显示订阅者管理对话框
+        
+        允许用户注册/取消订阅者节点
+        """
+        from PySide2.QtWidgets import QDialog, QVBoxLayout, QListWidget, QPushButton, QLabel, QHBoxLayout
+        from PySide2.QtCore import Qt
+        
+        dialog = QDialog(None)
+        dialog.setWindowTitle("订阅者管理")
+        dialog.setMinimumSize(400, 300)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # 标题
+        title_label = QLabel("已注册的订阅者:")
+        layout.addWidget(title_label)
+        
+        # 订阅者列表
+        subscriber_list = QListWidget()
+        
+        if self._pubsub:
+            stats = self._pubsub.get_all_stats()
+            for sub_id, sub_info in stats.get('subscribers', {}).items():
+                item_text = f"{sub_id} (FPS: {sub_info['max_fps']}, 帧数: {sub_info['frame_count']})"
+                subscriber_list.addItem(item_text)
+        else:
+            subscriber_list.addItem("发布-订阅管理器不可用")
+        
+        layout.addWidget(subscriber_list)
+        
+        # 按钮区域
+        button_layout = QHBoxLayout()
+        
+        register_btn = QPushButton("➕ 注册新订阅者")
+        register_btn.clicked.connect(lambda: self._show_register_dialog(dialog))
+        button_layout.addWidget(register_btn)
+        
+        unregister_btn = QPushButton("➖ 取消选中订阅")
+        unregister_btn.clicked.connect(lambda: self._unselected_subscriber(subscriber_list, dialog))
+        button_layout.addWidget(unregister_btn)
+        
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(dialog.close)
+        button_layout.addWidget(close_btn)
+        
+        layout.addLayout(button_layout)
+        
+        dialog.exec_()
+    
+    def _show_register_dialog(self, parent_dialog):
+        """显示注册订阅者对话框"""
+        from PySide2.QtWidgets import QDialog, QVBoxLayout, QComboBox, QPushButton, QLabel, QHBoxLayout
+        from PySide2.QtCore import Qt
+        
+        reg_dialog = QDialog(parent_dialog)
+        reg_dialog.setWindowTitle("注册订阅者")
+        reg_dialog.setMinimumSize(350, 200)
+        
+        layout = QVBoxLayout(reg_dialog)
+        
+        # 说明
+        info_label = QLabel("注意：此功能需要在画布上创建对应的订阅者节点后使用。\n当前版本支持手动调用节点的 on_subscribed_by 方法。")
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
+        
+        # 可用订阅者类型
+        type_label = QLabel("可用的订阅者节点类型:")
+        layout.addWidget(type_label)
+        
+        type_combo = QComboBox()
+        type_combo.addItem("RealTimePreviewNode - 实时预览 (30fps)")
+        type_combo.addItem("FastDetectionNode - 快速检测 (15fps)")
+        type_combo.addItem("VideoRecorderNode - 视频录制 (25fps)")
+        layout.addWidget(type_combo)
+        
+        # 按钮
+        button_layout = QHBoxLayout()
+        
+        ok_btn = QPushButton("确定")
+        ok_btn.clicked.connect(lambda: self._register_selected_subscriber(type_combo, reg_dialog))
+        button_layout.addWidget(ok_btn)
+        
+        cancel_btn = QPushButton("取消")
+        cancel_btn.clicked.connect(reg_dialog.close)
+        button_layout.addWidget(cancel_btn)
+        
+        layout.addLayout(button_layout)
+        
+        reg_dialog.exec_()
+    
+    def _register_selected_subscriber(self, type_combo, dialog):
+        """注册选中的订阅者类型（占位实现）"""
+        selected_type = type_combo.currentText()
+        self.log_info(f"请从节点库拖拽 '{selected_type.split(' - ')[0]}' 到画布，然后双击该节点进行配置。")
+        dialog.close()
+    
+    def _unselected_subscriber(self, subscriber_list, dialog):
+        """取消选中的订阅者"""
+        current_item = subscriber_list.currentItem()
+        if not current_item:
+            self.log_warning("请先选择一个订阅者")
+            return
+        
+        sub_id = current_item.text().split(' (')[0]
+        
+        if self._pubsub:
+            success = self._pubsub.unsubscribe(sub_id)
+            if success:
+                self.log_success(f"已取消订阅: {sub_id}")
+                dialog.accept()  # 关闭并刷新
+            else:
+                self.log_error(f"取消订阅失败: {sub_id}")
+        else:
+            self.log_warning("发布-订阅管理器不可用")
 
     def on_delete(self):
         """节点删除时的清理"""

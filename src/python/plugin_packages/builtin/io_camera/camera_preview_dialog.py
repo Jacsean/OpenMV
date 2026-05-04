@@ -118,12 +118,21 @@ class CameraPreviewDialog(QDialog):
         
         status_bar.addStretch()
         
+        # Phase 3: 性能监控标签
+        self.buffer_size_label = QLabel("缓冲: 0/10")
+        self.buffer_size_label.setStyleSheet("color: purple;")
+        status_bar.addWidget(self.buffer_size_label)
+        
+        self.drop_rate_label = QLabel("丢帧: 0.0%")
+        self.drop_rate_label.setStyleSheet("color: green;")
+        status_bar.addWidget(self.drop_rate_label)
+        
         self.fps_label = QLabel("FPS: 0.0")
         self.fps_label.setStyleSheet("color: blue;")
         status_bar.addWidget(self.fps_label)
         
         self.frame_count_label = QLabel("帧数: 0")
-        frame_count_label.setStyleSheet("color: green;")
+        self.frame_count_label.setStyleSheet("color: green;")
         status_bar.addWidget(self.frame_count_label)
         
         main_layout.addLayout(status_bar)
@@ -190,6 +199,27 @@ class CameraPreviewDialog(QDialog):
         
         # 帧数
         self.frame_count_label.setText(f"帧数: {self.frame_count}")
+        
+        # Phase 3: 更新性能统计
+        if hasattr(self.camera_node, 'get_buffer_stats'):
+            buffer_stats = self.camera_node.get_buffer_stats()
+            if buffer_stats:
+                # 缓冲区大小
+                current_size = buffer_stats.get('current_size', 0)
+                capacity = buffer_stats.get('capacity', 10)
+                self.buffer_size_label.setText(f"缓冲: {current_size}/{capacity}")
+                
+                # 丢帧率
+                drop_rate = buffer_stats.get('drop_rate', 0.0)
+                self.drop_rate_label.setText(f"丢帧: {drop_rate:.1f}%")
+                
+                # 丢帧率警告（>10%时红色）
+                if drop_rate > 10.0:
+                    self.drop_rate_label.setStyleSheet("color: red; font-weight: bold;")
+                elif drop_rate > 5.0:
+                    self.drop_rate_label.setStyleSheet("color: orange;")
+                else:
+                    self.drop_rate_label.setStyleSheet("color: green;")
         
         # 连接状态（简化版，实际应从相机节点获取）
         if self.camera_node._is_acquiring:

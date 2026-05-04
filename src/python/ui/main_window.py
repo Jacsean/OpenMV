@@ -985,21 +985,40 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 处理工业相机采集节点 (CameraCaptureNode)
         elif "CameraCaptureNode" in str(node_type):
-            utils.logger.success(f"   ✅ 识别为 CameraCaptureNode，打开相机预览窗口", module="main_window")
-            if hasattr(node, 'open_preview_window'):
-                try:
-                    node.open_preview_window()
-                    utils.logger.success(f"✅ 成功打开相机预览窗口: {node.name()}", module="main_window")
-                except Exception as e:
-                    utils.logger.error(f"   ❌ 打开预览窗口失败: {e}", module="main_window")
-                    QtWidgets.QMessageBox.critical(
-                        self,
-                        "错误",
-                        f"打开预览窗口失败:\n{str(e)}"
-                    )
-            else:
-                utils.logger.error(f"   ❌ 节点没有open_preview_window方法", module="main_window")
-                
+            utils.logger.success(f"   ✅ 识别为 CameraCaptureNode", module="main_window")
+            
+            # 显示选项对话框
+            from PySide2.QtWidgets import QDialog, QVBoxLayout, QPushButton, QLabel
+            from PySide2.QtCore import Qt
+            
+            option_dialog = QDialog(self)
+            option_dialog.setWindowTitle("相机节点操作")
+            option_dialog.setMinimumSize(300, 200)
+            
+            layout = QVBoxLayout(option_dialog)
+            
+            # 标题
+            title_label = QLabel(f"相机: {node.name()}")
+            title_label.setAlignment(Qt.AlignCenter)
+            layout.addWidget(title_label)
+            
+            # 打开预览窗口按钮
+            preview_btn = QPushButton("📷 打开实时预览")
+            preview_btn.clicked.connect(lambda: self._open_camera_preview(node, option_dialog))
+            layout.addWidget(preview_btn)
+            
+            # 订阅者管理按钮
+            subscriber_btn = QPushButton("👥 管理订阅者")
+            subscriber_btn.clicked.connect(lambda: self._open_subscriber_manager(node, option_dialog))
+            layout.addWidget(subscriber_btn)
+            
+            # 关闭按钮
+            close_btn = QPushButton("关闭")
+            close_btn.clicked.connect(option_dialog.close)
+            layout.addWidget(close_btn)
+            
+            option_dialog.exec_()
+
         else:
             utils.logger.info(f"   ℹ️ 未识别的节点类型，不执行任何操作", module="main_window")
 
@@ -1207,3 +1226,41 @@ class MainWindow(QtWidgets.QMainWindow):
                 return
         
         event.accept()
+
+    def _open_camera_preview(self, node, option_dialog):
+        """打开相机预览窗口"""
+        if hasattr(node, 'open_preview_window'):
+            try:
+                node.open_preview_window()
+                utils.logger.success(f"✅ 成功打开相机预览窗口: {node.name()}", module="main_window")
+            except Exception as e:
+                utils.logger.error(f"   ❌ 打开预览窗口失败: {e}", module="main_window")
+                from PySide2.QtWidgets import QMessageBox
+                QMessageBox.critical(
+                    self,
+                    "错误",
+                    f"打开预览窗口失败:\n{str(e)}"
+                )
+        else:
+            utils.logger.error(f"   ❌ 节点没有open_preview_window方法", module="main_window")
+        
+        option_dialog.close()
+    
+    def _open_subscriber_manager(self, node, option_dialog):
+        """打开订阅者管理对话框"""
+        if hasattr(node, 'show_subscriber_manager'):
+            try:
+                node.show_subscriber_manager()
+                utils.logger.success(f"✅ 打开订阅者管理器: {node.name()}", module="main_window")
+            except Exception as e:
+                utils.logger.error(f"   ❌ 打开订阅者管理器失败: {e}", module="main_window")
+                from PySide2.QtWidgets import QMessageBox
+                QMessageBox.critical(
+                    self,
+                    "错误",
+                    f"打开订阅者管理器失败:\n{str(e)}"
+                )
+        else:
+            utils.logger.error(f"   ❌ 节点没有show_subscriber_manager方法", module="main_window")
+        
+        option_dialog.close()
