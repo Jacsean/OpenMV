@@ -131,6 +131,81 @@
         "numpy"
       ],
       "optional_dependencies": {}
+    },
+    {
+      "class": "RealTimePreviewNode",
+      "display_name": "实时预览",
+      "category": "高频订阅",
+      "color": [
+        255,
+        100,
+        100
+      ],
+      "icon": "⚡",
+      "width": 180,
+      "height": 100,
+      "description": "通过订阅相机节点实现高频实时预览（30fps），支持缩放、平移、保存",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {}
+    },
+    {
+      "class": "FastDetectionNode",
+      "display_name": "快速检测",
+      "category": "高频订阅",
+      "color": [
+        255,
+        150,
+        100
+      ],
+      "icon": "🔍",
+      "width": 180,
+      "height": 100,
+      "description": "通过订阅相机节点执行快速目标检测（Canny边缘/颜色分割/阈值）",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {}
+    },
+    {
+      "class": "VideoRecorderNode",
+      "display_name": "视频录制",
+      "category": "高频订阅",
+      "color": [
+        255,
+        100,
+        150
+      ],
+      "icon": "🎥",
+      "width": 180,
+      "height": 100,
+      "description": "通过订阅相机节点录制视频文件（MP4/AVI），支持开始/停止控制",
+      "resource_level": "medium",
+      "hardware_requirements": {
+        "cpu_cores": 2,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {}
     }
   ],
   "dependencies": [
