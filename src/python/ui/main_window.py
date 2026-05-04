@@ -987,93 +987,8 @@ class MainWindow(QtWidgets.QMainWindow):
         elif "CameraCaptureNode" in str(node_type):
             utils.logger.success(f"   ✅ 识别为 CameraCaptureNode", module="main_window")
             
-            # 显示选项对话框
-            from PySide2.QtWidgets import QDialog, QVBoxLayout, QPushButton, QLabel, QHBoxLayout
-            from PySide2.QtCore import Qt
-            
-            option_dialog = QDialog(self)
-            option_dialog.setWindowTitle("相机节点操作")
-            option_dialog.setMinimumSize(350, 280)
-            
-            layout = QVBoxLayout(option_dialog)
-            
-            # 标题
-            title_label = QLabel(f"📷 相机: {node.name()}")
-            title_label.setAlignment(Qt.AlignCenter)
-            title_label.setStyleSheet("font-size: 14px; font-weight: bold; margin: 10px;")
-            layout.addWidget(title_label)
-            
-            # === 相机控制组 ===
-            control_label = QLabel("🔧 相机控制")
-            control_label.setStyleSheet("font-weight: bold; color: #2196F3; margin-top: 5px;")
-            layout.addWidget(control_label)
-            
-            # 初始化相机按钮
-            init_btn = QPushButton("① 初始化相机")
-            init_btn.clicked.connect(lambda: self._camera_init(node))
-            init_btn.setStyleSheet("padding: 8px;")
-            layout.addWidget(init_btn)
-            
-            # 打开/关闭相机按钮
-            open_close_layout = QHBoxLayout()
-            open_btn = QPushButton("② 打开相机")
-            open_btn.clicked.connect(lambda: self._camera_open(node))
-            open_btn.setStyleSheet("padding: 8px;")
-            
-            close_btn = QPushButton("关闭相机")
-            close_btn.clicked.connect(lambda: self._camera_close(node))
-            close_btn.setStyleSheet("padding: 8px;")
-            
-            open_close_layout.addWidget(open_btn)
-            open_close_layout.addWidget(close_btn)
-            layout.addLayout(open_close_layout)
-            
-            # 开始/停止采集按钮
-            start_stop_layout = QHBoxLayout()
-            start_btn = QPushButton("③ 开始采集")
-            start_btn.clicked.connect(lambda: self._camera_start(node))
-            start_btn.setStyleSheet("padding: 8px; background-color: #4CAF50; color: white;")
-            
-            stop_btn = QPushButton("停止采集")
-            stop_btn.clicked.connect(lambda: self._camera_stop(node))
-            stop_btn.setStyleSheet("padding: 8px; background-color: #f44336; color: white;")
-            
-            start_stop_layout.addWidget(start_btn)
-            start_stop_layout.addWidget(stop_btn)
-            layout.addLayout(start_stop_layout)
-            
-            # 分隔线
-            from PySide2.QtWidgets import QFrame
-            line = QFrame()
-            line.setFrameShape(QFrame.HLine)
-            line.setFrameShadow(QFrame.Sunken)
-            layout.addWidget(line)
-            
-            # === 视图与管理组 ===
-            view_label = QLabel("👁️ 视图与管理")
-            view_label.setStyleSheet("font-weight: bold; color: #FF9800; margin-top: 5px;")
-            layout.addWidget(view_label)
-            
-            # 打开预览窗口按钮
-            preview_btn = QPushButton("📺 打开实时预览")
-            preview_btn.clicked.connect(lambda: self._open_camera_preview(node, option_dialog))
-            preview_btn.setStyleSheet("padding: 8px; font-weight: bold;")
-            layout.addWidget(preview_btn)
-            
-            # 订阅者管理按钮
-            subscriber_btn = QPushButton("👥 管理订阅者")
-            subscriber_btn.clicked.connect(lambda: self._open_subscriber_manager(node, option_dialog))
-            subscriber_btn.setStyleSheet("padding: 8px;")
-            layout.addWidget(subscriber_btn)
-            
-            # 关闭按钮
-            close_dialog_btn = QPushButton("关闭")
-            close_dialog_btn.clicked.connect(option_dialog.close)
-            close_dialog_btn.setStyleSheet("padding: 8px; margin-top: 10px;")
-            layout.addWidget(close_dialog_btn)
-            
-            option_dialog.exec_()
-
+            # 直接打开预览窗口（集成相机控制功能）
+            self._open_camera_preview(node, None)
         else:
             utils.logger.info(f"   ℹ️ 未识别的节点类型，不执行任何操作", module="main_window")
 
@@ -1376,7 +1291,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             utils.logger.error(f"   ❌ 节点没有stop_acquisition方法", module="main_window")
     
-    def _open_camera_preview(self, node, option_dialog):
+    def _open_camera_preview(self, node, option_dialog=None):
         """打开相机预览窗口"""
         # 检查相机是否正在采集
         if hasattr(node, '_is_acquiring') and not node._is_acquiring:
@@ -1426,9 +1341,11 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             utils.logger.error(f"   ❌ 节点没有open_preview_window方法", module="main_window")
         
-        option_dialog.close()
+        # 关闭选项对话框（如果存在）
+        if option_dialog is not None:
+            option_dialog.close()
     
-    def _open_subscriber_manager(self, node, option_dialog):
+    def _open_subscriber_manager(self, node, option_dialog=None):
         """打开订阅者管理对话框"""
         if hasattr(node, 'show_subscriber_manager'):
             try:
@@ -1445,4 +1362,6 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             utils.logger.error(f"   ❌ 节点没有show_subscriber_manager方法", module="main_window")
         
-        option_dialog.close()
+        # 关闭选项对话框（如果存在）
+        if option_dialog is not None:
+            option_dialog.close()
