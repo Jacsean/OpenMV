@@ -105,6 +105,32 @@
       },
       "dependencies": [],
       "optional_dependencies": {}
+    },
+    {
+      "class": "CameraCaptureNode",
+      "display_name": "工业相机采集",
+      "category": "设备采集",
+      "color": [
+        100,
+        150,
+        255
+      ],
+      "icon": "📷",
+      "width": 200,
+      "height": 120,
+      "description": "从工业相机采集图像，支持多相机同时工作、连续采集、实时预览",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0",
+        "numpy"
+      ],
+      "optional_dependencies": {}
     }
   ],
   "dependencies": [
