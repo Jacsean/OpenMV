@@ -7,7 +7,7 @@
   "nodes": [
     {
       "class": "YOLODetectNode",
-      "display_name": "YOLO 目标检测",
+      "display_name": "目标检测",
       "category": "AI推理",
       "resource_level": "light",
       "color": [
@@ -27,7 +27,7 @@
     },
     {
       "class": "YOLOClassifyNode",
-      "display_name": "YOLO 图像分类",
+      "display_name": "图像分类",
       "category": "AI推理",
       "resource_level": "light",
       "color": [
@@ -47,7 +47,7 @@
     },
     {
       "class": "YOLOSegmentNode",
-      "display_name": "YOLO 实例分割",
+      "display_name": "实例分割",
       "category": "AI推理",
       "resource_level": "light",
       "color": [
@@ -67,7 +67,7 @@
     },
     {
       "class": "YOLOPoseNode",
-      "display_name": "YOLO 姿态估计",
+      "display_name": "姿态估计",
       "category": "AI推理",
       "resource_level": "light",
       "color": [
@@ -87,7 +87,7 @@
     },
     {
       "class": "YOLOAnnotatorNode",
-      "display_name": "YOLO 标注辅助",
+      "display_name": "标注辅助",
       "category": "标注工具",
       "resource_level": "medium",
       "color": [
@@ -108,7 +108,7 @@
     },
     {
       "class": "YOLOTrainerNode",
-      "display_name": "YOLO 模型训练",
+      "display_name": "模型训练",
       "category": "模型训练",
       "resource_level": "heavy",
       "color": [
@@ -135,7 +135,7 @@
     },
     {
       "class": "YOLOQuantizerNode",
-      "display_name": "YOLO 模型量化",
+      "display_name": "模型量化",
       "category": "模型优化",
       "resource_level": "heavy",
       "color": [

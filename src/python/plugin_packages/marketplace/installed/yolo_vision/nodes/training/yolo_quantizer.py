@@ -55,7 +55,7 @@ class YOLOQuantizerNode(BaseNode):
     """
     
     __identifier__ = 'yolo_vision'
-    NODE_NAME = 'YOLO 模型量化'
+    NODE_NAME = '模型量化'
     
     def __init__(self):
         super(YOLOQuantizerNode, self).__init__()

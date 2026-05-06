@@ -56,7 +56,7 @@ class YOLOAnnotatorNode(BaseNode):
     """
     
     __identifier__ = 'yolo_vision'
-    NODE_NAME = 'YOLO 标注辅助'
+    NODE_NAME = '标注辅助'
     
     def __init__(self):
         super(YOLOAnnotatorNode, self).__init__()

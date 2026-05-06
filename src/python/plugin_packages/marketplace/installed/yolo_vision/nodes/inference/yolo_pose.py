@@ -42,7 +42,7 @@ class YOLOPoseNode(BaseNode):
     """
     
     __identifier__ = 'yolo_vision'
-    NODE_NAME = 'YOLO 姿态估计'
+    NODE_NAME = '姿态估计'
     
     def __init__(self):
         super(YOLOPoseNode, self).__init__()

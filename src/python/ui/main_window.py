@@ -44,6 +44,9 @@ from plugins.plugin_ui_manager import PluginUIManager
 # 导入图像预览对话框
 from ui.image_preview import ImagePreviewDialog
 
+# 导入事件总线
+from core.event_bus import event_bus, Events
+
 
 class MainWindow(QtWidgets.QMainWindow):
     """
@@ -97,6 +100,18 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 创建默认工程和工作流（此时 UI 已就绪）
         self.project_ui.initialize_default_project()
+
+        self._setup_event_subscriptions()
+
+    def _setup_event_subscriptions(self):
+        """
+        设置事件订阅 - 响应全局事件变化
+        """
+        event_bus.subscribe(Events.WORKFLOW_SELECTED, self._on_workflow_selected)
+        event_bus.subscribe(Events.WORKFLOW_EXECUTED, self._on_workflow_executed)
+        event_bus.subscribe(Events.WORKFLOW_EXECUTION_ERROR, self._on_workflow_execution_error)
+        event_bus.subscribe(Events.PREVIEW_REFRESH, self._on_preview_refresh)
+        event_bus.subscribe(Events.PLUGIN_LOADED, self._on_plugin_loaded)
    
         
     def _load_plugins(self):
@@ -1346,6 +1361,55 @@ class MainWindow(QtWidgets.QMainWindow):
         # 关闭选项对话框（如果存在）
         if option_dialog is not None:
             option_dialog.close()
+
+    def _on_workflow_selected(self, **kwargs):
+        """
+        响应工作流选中事件
+        """
+        workflow = kwargs.get('workflow')
+        if workflow:
+            self.status_label.setText(f"📂 {workflow.name}")
+
+    def _on_workflow_executed(self, **kwargs):
+        """
+        响应工作流执行完成事件
+        """
+        workflow = kwargs.get('workflow')
+        results = kwargs.get('results', {})
+        if workflow:
+            self.status_label.setText(f"✅ {workflow.name} 执行完成")
+        if results:
+            utils.logger.success(f"执行结果: {len(results)} 个节点输出", module="main_window")
+
+    def _on_workflow_execution_error(self, **kwargs):
+        """
+        响应工作流执行错误事件
+        """
+        workflow = kwargs.get('workflow')
+        error = kwargs.get('error')
+        if workflow:
+            self.status_label.setText(f"❌ {workflow.name} 执行失败")
+        if error:
+            utils.logger.error(f"执行错误: {error}", module="main_window")
+
+    def _on_preview_refresh(self, **kwargs):
+        """
+        响应预览刷新事件 - 刷新所有打开的预览窗口
+        """
+        for node_id, preview_window in list(self.preview_windows.items()):
+            if hasattr(preview_window, 'refresh'):
+                try:
+                    preview_window.refresh()
+                except Exception as e:
+                    utils.logger.error(f"刷新预览窗口失败: {e}", module="main_window")
+
+    def _on_plugin_loaded(self, **kwargs):
+        """
+        响应插件加载完成事件
+        """
+        plugins = kwargs.get('plugins', [])
+        categories = kwargs.get('categories', set())
+        utils.logger.success(f"✅ 插件加载完成: {len(plugins)} 个插件, {len(categories)} 个分类", module="main_window")
     
     def _open_subscriber_manager(self, node, option_dialog=None):
         """打开订阅者管理对话框"""

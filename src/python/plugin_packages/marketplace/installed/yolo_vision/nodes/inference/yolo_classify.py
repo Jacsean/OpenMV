@@ -41,7 +41,7 @@ class YOLOClassifyNode(BaseNode):
     """
     
     __identifier__ = 'yolo_vision'
-    NODE_NAME = 'YOLO 图像分类'
+    NODE_NAME = '图像分类'
     
     def __init__(self):
         super(YOLOClassifyNode, self).__init__()

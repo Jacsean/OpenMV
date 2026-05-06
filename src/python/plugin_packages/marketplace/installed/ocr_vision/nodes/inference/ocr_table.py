@@ -46,7 +46,7 @@ class OCRTableRecognitionNode(BaseNode):
     """
     
     __identifier__ = 'ocr_vision'
-    NODE_NAME = 'OCR 表格识别'
+    NODE_NAME = '表格识别'
     
     # 资源等级声明
     resource_level = "medium"
