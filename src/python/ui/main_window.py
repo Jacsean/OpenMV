@@ -143,19 +143,6 @@ class MainWindow(QtWidgets.QMainWindow):
             f"📦 待加载插件: {', '.join([p.name for p in plugins])}", module="main_window")
         utils.logger.info("=" * 60 + "\n", module="main_window")
 
-    def _register_nodes(self, node_graph):
-        """
-        为指定的NodeGraph注册节点类型（已废弃，改用插件系统）
-
-        Args:
-            node_graph: NodeGraph实例
-
-        Note:
-            所有节点现在通过插件系统动态加载
-            此方法保留仅用于兼容性，不再注册任何节点
-        """
-        pass
-
     def _add_workflow_tab(self, workflow):
         """
         添加工作流标签页（委托给ProjectUIManager）
