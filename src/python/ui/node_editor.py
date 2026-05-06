@@ -185,7 +185,12 @@ class NodeEditorDialog(QtWidgets.QDialog):
         # === 主内容区（左右分割）===
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
 
-        splitter.setAnimated(False)  # 禁用 QSplitter 动画
+        # 禁用 QSplitter 动画（兼容 PySide2）
+        try:
+            splitter.setAnimated(False)
+        except AttributeError:
+            # PySide2 不支持 setAnimated，使用其他方式禁用动画
+            pass
         
         # 左侧：节点包树形视图
         left_panel = self._create_left_panel()

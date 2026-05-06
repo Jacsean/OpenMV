@@ -323,12 +323,16 @@ class PluginManager:
             
             # 5. 提取节点类并注册
             registered_count = 0
+            
             for node_def in plugin_info.nodes:
                 class_name = node_def.class_name
                 
                 # 从模块中获取节点类
                 if hasattr(module, class_name):
                     node_class = getattr(module, class_name)
+                    
+                    # 保留节点原有的 __identifier__（用于工作流序列化/反序列化）
+                    # 节点库面板的标签名称由 NodeGraphQt 根据 __identifier__ 自动生成
                     
                     # 注册到NodeGraph
                     node_graph.register_node(node_class)

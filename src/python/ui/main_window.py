@@ -1344,16 +1344,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def _customize_node_palette(self):
         """
         自定义节点库面板：
-        1. 隐藏 nodeGraphQt.nodes 默认标签（BackdropNode由NodeGraphQt自动注册）
+        1. 根据 plugin.json 的 category_group 重命名标签页
+        2. 隐藏 nodeGraphQt.nodes 默认标签（BackdropNode由NodeGraphQt自动注册）
         """
         if not self.nodes_palette:
             return
 
         try:
-            # 隐藏 nodeGraphQt.nodes 标签页
             tab_widget = self.nodes_palette.tab_widget()
             if tab_widget:
-                # 查找并移除 nodeGraphQt.nodes 标签
+                # 1. 根据 category_group 重命名标签页
+                self._rename_palette_tabs_by_category(tab_widget)
+                
+                # 2. 查找并移除 nodeGraphQt.nodes 标签
                 for i in range(tab_widget.count()):
                     tab_text = tab_widget.tabText(i)
                     if tab_text == 'nodeGraphQt.nodes':
@@ -1363,6 +1366,35 @@ class MainWindow(QtWidgets.QMainWindow):
 
         except Exception as e:
             utils.logger.error(f"❌ 自定义节点库失败: {e}", module="main_window")
+    
+    def _rename_palette_tabs_by_category(self, tab_widget):
+        """
+        根据 plugin.json 的 category_group 重命名节点库面板的标签页
+        
+        Args:
+            tab_widget: QTabWidget 实例
+        """
+        if not hasattr(self, 'plugin_manager') or not self.plugin_manager:
+            return
+        
+        # 构建插件名称到 category_group 的映射
+        plugin_category_map = {}
+        for plugin_name, plugin_info in self.plugin_manager.plugins.items():
+            if hasattr(plugin_info, 'category_group') and plugin_info.category_group:
+                plugin_category_map[plugin_name] = plugin_info.category_group
+            else:
+                plugin_category_map[plugin_name] = plugin_name
+        
+        # 更新标签名称
+        for i in range(tab_widget.count()):
+            tab_text = tab_widget.tabText(i)
+            
+            # 如果标签名称是插件名称，则替换为 category_group
+            if tab_text in plugin_category_map:
+                new_name = plugin_category_map[tab_text]
+                if new_name != tab_text:
+                    tab_widget.setTabText(i, new_name)
+                    utils.logger.info(f"🔄 节点库标签重命名: '{tab_text}' -> '{new_name}'", module="main_window")
 
     def closeEvent(self, event):
         """
