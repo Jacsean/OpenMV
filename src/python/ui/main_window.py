@@ -228,6 +228,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.nodes_palette.tab_widget.setTabPosition(
                     QtWidgets.QTabWidget.East)
 
+        # === 自定义节点分类和隐藏默认标签 ===
+        self._customize_node_palette()
+
         # === 左侧下方：节点说明面板 ===
         self.node_info_panel = self._create_node_info_panel()
 
@@ -1222,6 +1225,29 @@ class MainWindow(QtWidgets.QMainWindow):
         重新扫描并加载插件（委托给PluginUIManager）
         """
         self.plugin_ui.reload_plugins_from_ui()
+
+    def _customize_node_palette(self):
+        """
+        自定义节点库面板：
+        1. 隐藏 nodeGraphQt.nodes 默认标签（BackdropNode由NodeGraphQt自动注册）
+        """
+        if not self.nodes_palette:
+            return
+
+        try:
+            # 隐藏 nodeGraphQt.nodes 标签页
+            tab_widget = self.nodes_palette.tab_widget()
+            if tab_widget:
+                # 查找并移除 nodeGraphQt.nodes 标签
+                for i in range(tab_widget.count()):
+                    tab_text = tab_widget.tabText(i)
+                    if tab_text == 'nodeGraphQt.nodes':
+                        tab_widget.removeTab(i)
+                        utils.logger.info("✅ nodeGraphQt.nodes 标签已隐藏", module="main_window")
+                        break
+
+        except Exception as e:
+            utils.logger.error(f"❌ 自定义节点库失败: {e}", module="main_window")
 
     def closeEvent(self, event):
         """
