@@ -16,6 +16,8 @@ import weakref
 from typing import Dict, List, Callable, Optional, Any
 from abc import ABC, abstractmethod
 
+from utils.logger import logger
+
 
 class NodeState(enum.Enum):
     """
@@ -179,7 +181,7 @@ class NodeLifecycleManager:
                 try:
                     listener(new_state)
                 except Exception as e:
-                    print(f"❌ 状态监听器调用失败: {e}")
+                    logger.error(f"状态监听器调用失败: {e}", module="lifecycle")
     
     def transition_state(self, node, new_state: NodeState):
         """
@@ -196,7 +198,7 @@ class NodeLifecycleManager:
         
         # 状态转换验证
         if not self._is_valid_transition(current_state, new_state):
-            print(f"⚠️ 无效的状态转换: {current_state} -> {new_state}")
+            logger.warning(f"无效的状态转换: {current_state} -> {new_state}", module="lifecycle")
             return False
         
         # 执行状态转换
@@ -258,7 +260,7 @@ class NodeLifecycleManager:
             elif state == NodeState.DESTROYED:
                 hook.on_destroy()
         except Exception as e:
-            print(f"❌ 生命周期钩子调用失败: {e}")
+            logger.error(f"生命周期钩子调用失败: {e}", module="lifecycle")
     
     def destroy_node(self, node):
         """
@@ -283,7 +285,7 @@ class NodeLifecycleManager:
             try:
                 self.destroy_node(node)
             except Exception as e:
-                print(f"❌ 销毁节点失败: {e}")
+                logger.error(f"销毁节点失败: {e}", module="lifecycle")
 
 
 class LifecycleMixin:

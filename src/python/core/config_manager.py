@@ -18,7 +18,7 @@
     config_manager.set('system.recent_projects', ['project1', 'project2'])
 
     # 订阅配置变更
-    config_manager.subscribe('system.recent_projects', lambda key, value: print(f"配置变更: {value}"))
+    config_manager.subscribe('system.recent_projects', lambda key, value: logger.info(f"配置变更: {value}", module="config"))
 
     # 热重载
     config_manager.reload()
@@ -31,6 +31,8 @@ from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 import threading
+
+from utils.logger import logger
 
 
 class ConfigCategory(Enum):
@@ -206,7 +208,7 @@ class ConfigManager:
                 loaded = json.load(f)
                 self._configs.update(loaded)
         except Exception as e:
-            print(f"⚠️ 加载配置文件失败: {e}")
+            logger.warning(f"加载配置文件失败: {e}", module="config")
 
     def _save_configs(self):
         """保存配置到JSON文件"""
@@ -214,7 +216,7 @@ class ConfigManager:
             with open(self._json_storage, 'w', encoding='utf-8') as f:
                 json.dump(self._configs, f, indent=4, ensure_ascii=False)
         except Exception as e:
-            print(f"❌ 保存配置文件失败: {e}")
+            logger.error(f"保存配置文件失败: {e}", module="config")
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -281,17 +283,17 @@ class ConfigManager:
         """
         # 类型检查
         if not isinstance(value, schema.type):
-            print(f"⚠️ 配置 {key} 类型错误，期望 {schema.type.__name__}，实际 {type(value).__name__}，使用默认值")
+            logger.warning(f"配置 {key} 类型错误，期望 {schema.type.__name__}，实际 {type(value).__name__}，使用默认值", module="config")
             return schema.default
 
         # 选项验证
         if schema.options and value not in schema.options:
-            print(f"⚠️ 配置 {key} 值不在选项范围内，使用默认值")
+            logger.warning(f"配置 {key} 值不在选项范围内，使用默认值", module="config")
             return schema.default
 
         # 自定义验证
         if schema.validator and not schema.validator(value):
-            print(f"⚠️ 配置 {key} 验证失败，使用默认值")
+            logger.warning(f"配置 {key} 验证失败，使用默认值", module="config")
             return schema.default
 
         return value
@@ -333,14 +335,14 @@ class ConfigManager:
                 try:
                     callback(key, new_value)
                 except Exception as e:
-                    print(f"❌ 配置变更通知失败: {e}")
+                    logger.error(f"配置变更通知失败: {e}", module="config")
 
     def reload(self):
         """重新加载配置（热重载）"""
         self._configs.clear()
         self._load_configs()
         self._setup_system_config()
-        print("✅ 配置已热重载")
+        logger.info("配置已热重载", module="config")
 
     def get_category(self, category: ConfigCategory) -> Dict[str, Any]:
         """
@@ -442,9 +444,9 @@ class ConfigManager:
             imported = json.loads(data)
             self._configs.update(imported)
             self._save_configs()
-            print("✅ 配置导入成功")
+            logger.info("配置导入成功", module="config")
         except Exception as e:
-            print(f"❌ 配置导入失败: {e}")
+            logger.error(f"配置导入失败: {e}", module="config")
 
     # === 便捷方法 ===
 
