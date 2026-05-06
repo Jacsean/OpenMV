@@ -17,6 +17,7 @@
     event_bus.publish(Events.WORKFLOW_EXECUTED, workflow_name="默认工作流", results={})
 """
 
+import threading
 from enum import Enum, auto
 from typing import Callable, Dict, List, Any
 from collections import defaultdict
@@ -28,7 +29,7 @@ from utils import logger
 
 class EventBus:
     """
-    事件总线（单例）
+    事件总线（线程安全单例）
 
     支持：
     - 事件订阅/取消订阅
@@ -38,11 +39,13 @@ class EventBus:
     """
 
     _instance = None
+    _lock = threading.Lock()
 
     def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
         return cls._instance
 
     def __init__(self):
