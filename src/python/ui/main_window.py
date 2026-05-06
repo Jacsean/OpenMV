@@ -58,8 +58,7 @@ class MainWindow(QtWidgets.QMainWindow):
     """
 
     def __init__(self):
-        QtCore.QVariantAnimation.setDefaultDuration(0)
-        
+
         super(MainWindow, self).__init__()
     
         # 设置窗口属性
@@ -195,7 +194,11 @@ class MainWindow(QtWidgets.QMainWindow):
         main_layout = QtWidgets.QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # === 标签页容器 ===
+        # === 顶部：日志和状态面板（位置交换）===
+        self.log_panel = self._create_log_panel()
+        main_layout.addWidget(self.log_panel)
+
+        # === 标签页容器（位置交换 - 现在在日志面板下方）===
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.setTabsClosable(True)  # 允许关闭标签页
         self.tab_widget.setMovable(True)       # 允许拖动排序
@@ -272,36 +275,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # 创建菜单栏
         self._create_menu_bar()
-
-        # === 底部：日志和状态面板 ===
-        self.log_panel = self._create_log_panel()
-
-        # 将日志面板添加到主布局底部
-        main_layout.addWidget(self.log_panel)
-    
-    def _toggleLayout(self):
-        """
-        切换布局高度（无动画版本）
-        """
-        # 获取中央部件的布局
-        central_widget = self.centralWidget()
-        if not central_widget:
-            return
-            
-        layout = central_widget.layout()
-        if not layout:
-            return
-            
-        # 获取当前布局的最大高度
-        current_height = layout.maximumHeight()
-        
-        # 直接设置目标高度，无动画
-        if current_height == 0:
-            # 展开：设置为 sizeHint 的高度
-            layout.setMaximumHeight(layout.sizeHint().height())
-        else:
-            # 折叠：设置为 0
-            layout.setMaximumHeight(0)
 
     def _create_node_info_panel(self):
         """
