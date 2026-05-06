@@ -7,6 +7,7 @@ from core.execution_ui_manager import ExecutionUIManager
 from core.project_ui_manager import ProjectUIManager
 from core.project_manager import project_manager
 from core.graph_engine import GraphEngine
+from core.node_lifecycle import lifecycle_manager
 from NodeGraphQt import NodeGraph, NodesPaletteWidget, PropertiesBinWidget
 from PySide2 import QtWidgets, QtCore, QtGui
 import utils
@@ -181,6 +182,55 @@ class MainWindow(QtWidgets.QMainWindow):
             index: 新的标签页索引
         """
         self.project_ui.on_tab_changed(index)
+        
+        # 更新共享组件的 NodeGraph 引用
+        self._update_shared_components()
+    
+    def _update_shared_components(self):
+        """
+        更新共享组件（节点库、属性面板）指向当前工作流的 NodeGraph
+        
+        解决临时 Graph 实例问题：确保节点库和属性面板始终引用
+        当前激活工作流的 NodeGraph，而不是过时的 temp_graph
+        """
+        if not hasattr(self, 'current_node_graph') or self.current_node_graph is None:
+            return
+        
+        # 如果共享组件还未初始化，跳过
+        if not self._shared_components_initialized:
+            return
+        
+        # 检查是否是临时 Graph
+        if hasattr(self, 'temp_graph') and self.current_node_graph == self.temp_graph:
+            return
+        
+        # 尝试更新 nodes_palette
+        if self.nodes_palette:
+            try:
+                if hasattr(self.nodes_palette, 'set_node_graph'):
+                    self.nodes_palette.set_node_graph(self.current_node_graph)
+                elif hasattr(self.nodes_palette, '_node_graph'):
+                    self.nodes_palette._node_graph = self.current_node_graph
+            except Exception as e:
+                utils.logger.warning(f"更新 nodes_palette 失败: {e}", module="main_window")
+        
+        # 尝试更新 properties_bin
+        if self.properties_bin:
+            try:
+                if hasattr(self.properties_bin, 'set_node_graph'):
+                    self.properties_bin.set_node_graph(self.current_node_graph)
+                elif hasattr(self.properties_bin, '_node_graph'):
+                    self.properties_bin._node_graph = self.current_node_graph
+            except Exception as e:
+                utils.logger.warning(f"更新 properties_bin 失败: {e}", module="main_window")
+        
+        # 更新事件过滤器
+        if hasattr(self.current_node_graph, 'widget'):
+            try:
+                self.current_node_graph.widget.removeEventFilter(self)
+                self.current_node_graph.widget.installEventFilter(self)
+            except Exception as e:
+                utils.logger.warning(f"更新事件过滤器失败: {e}", module="main_window")
 
     def _setup_ui(self):
         """
@@ -208,76 +258,114 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tab_widget.currentChanged.connect(self._on_tab_changed)
         main_layout.addWidget(self.tab_widget)
 
-        # 创建临时NodeGraph用于初始化共享组件
-        temp_graph = NodeGraph()
-
-        # 保存临时Graph引用，用于后续插件节点注册
-        self.temp_graph = temp_graph
+        # === 共享组件延迟初始化 ===
+        # 不再创建临时Graph，避免后续切换工作流时的引用混乱
+        self.nodes_palette = None
+        self.properties_bin = None
+        self._shared_components_initialized = False
 
         # === 左侧：节点库面板（共享）===
-        self.nodes_palette = NodesPaletteWidget(node_graph=temp_graph)
-        self.nodes_palette.setWindowTitle("节点库")
-
-        # 设置标签位置为右侧显示
-        try:
-            tab_widget = self.nodes_palette.tab_widget()
-            if hasattr(tab_widget, 'setTabPosition'):
-                tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
-        except (AttributeError, TypeError):
-            if hasattr(self.nodes_palette, 'tab_widget'):
-                self.nodes_palette.tab_widget.setTabPosition(
-                    QtWidgets.QTabWidget.East)
-
-        # === 自定义节点分类和隐藏默认标签 ===
-        self._customize_node_palette()
+        # 暂时创建空的占位符，稍后初始化
+        self._init_shared_components_placeholder()
 
         # === 左侧下方：节点说明面板 ===
         self.node_info_panel = self._create_node_info_panel()
 
         # 创建左侧垂直布局容器，实现节点说明固定在底部
-        left_container = QtWidgets.QWidget()
-        left_layout = QtWidgets.QVBoxLayout(left_container)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(0)
+        self._left_container = QtWidgets.QWidget()
+        self._left_layout = QtWidgets.QVBoxLayout(self._left_container)
+        self._left_layout.setContentsMargins(0, 0, 0, 0)
+        self._left_layout.setSpacing(0)
 
-        # 添加节点库（占据主要空间）
-        left_layout.addWidget(self.nodes_palette)
-
-        # 添加节点说明面板（固定高度）
-        self.node_info_panel.setMaximumHeight(250)  # 设置最大高度
-        self.node_info_panel.setMinimumHeight(200)  # 设置最小高度
-        left_layout.addWidget(self.node_info_panel)
+        # 节点库将在初始化后添加
+        self.node_info_panel.setMaximumHeight(250)
+        self.node_info_panel.setMinimumHeight(200)
+        self._left_layout.addWidget(self.node_info_panel)
 
         # 将整个左侧容器作为一个DockWidget
         dock_left = QtWidgets.QDockWidget("节点库", self)
-        dock_left.setWidget(left_container)
+        dock_left.setWidget(self._left_container)
         dock_left.setFeatures(
-            QtWidgets.QDockWidget.NoDockWidgetFeatures)  # 禁用浮动和关闭
-        dock_left.setProperty("animated", False)  # 禁用 QDockWidget 动画（需要设置属性）
+            QtWidgets.QDockWidget.NoDockWidgetFeatures)
+        dock_left.setProperty("animated", False)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_left)
 
-        # 连接节点库的选择信号到说明面板
-        self._connect_node_selection_signal()
-
-        # === 右侧：属性面板（共享）===
-        self.properties_bin = PropertiesBinWidget(node_graph=temp_graph)
-        self.properties_bin.setWindowTitle("属性面板")
-        dock_properties = QtWidgets.QDockWidget("属性面板", self)
-        dock_properties.setWidget(self.properties_bin)
-        dock_properties.setProperty("animated", False)  # 禁用 QDockWidget 动画
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_properties)
-
-        # 设置当前NodeGraph
-        self.current_node_graph = temp_graph
-
-        # 为 NodeGraph widget 安装事件过滤器（拦截节点删除）
-        temp_graph.widget.installEventFilter(self)
+        # === 右侧：属性面板 ===
+        # 暂时创建空的占位符
+        self._init_right_dock_placeholder()
 
         # 创建工具栏
         self._create_toolbar()
 
         # 创建菜单栏
         self._create_menu_bar()
+    
+    def _init_shared_components_placeholder(self):
+        """
+        初始化共享组件占位符
+        
+        在首次工作流创建时会调用 _initialize_shared_components 进行真正的初始化
+        """
+        pass
+    
+    def _init_right_dock_placeholder(self):
+        """
+        初始化右侧 Dock 占位符
+        """
+        pass
+    
+    def _initialize_shared_components(self, node_graph):
+        """
+        初始化共享组件（节点库、属性面板）
+        
+        在首次工作流创建时调用，确保共享组件与工作流的 NodeGraph 正确关联
+        
+        Args:
+            node_graph: NodeGraph 实例
+        """
+        if self._shared_components_initialized:
+            return
+        
+        self._shared_components_initialized = True
+        
+        # 初始化节点库面板
+        self.nodes_palette = NodesPaletteWidget(node_graph=node_graph)
+        self.nodes_palette.setWindowTitle("节点库")
+        
+        try:
+            tab_widget = self.nodes_palette.tab_widget()
+            if hasattr(tab_widget, 'setTabPosition'):
+                tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
+        except (AttributeError, TypeError):
+            if hasattr(self.nodes_palette, 'tab_widget'):
+                self.nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
+        
+        self._customize_node_palette()
+        
+        # 将节点库面板添加到左侧布局（在节点说明面板之前）
+        if hasattr(self, '_left_layout') and self._left_layout:
+            # 在索引0位置插入节点库（节点说明面板之前）
+            self._left_layout.insertWidget(0, self.nodes_palette)
+        
+        # 初始化属性面板
+        self.properties_bin = PropertiesBinWidget(node_graph=node_graph)
+        self.properties_bin.setWindowTitle("属性面板")
+        
+        dock_properties = QtWidgets.QDockWidget("属性面板", self)
+        dock_properties.setWidget(self.properties_bin)
+        dock_properties.setProperty("animated", False)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_properties)
+        
+        # 设置当前 NodeGraph
+        self.current_node_graph = node_graph
+        
+        # 为 NodeGraph widget 安装事件过滤器
+        node_graph.widget.installEventFilter(self)
+        
+        # 连接节点库的选择信号到说明面板
+        self._connect_node_selection_signal()
+        
+        utils.logger.success("共享组件初始化完成", module="main_window")
 
     def _create_node_info_panel(self):
         """
@@ -385,8 +473,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 padding: 8px;
             }
         """)
-        self.log_text_browser.setMinimumHeight(150)  # 最小高度
-        self.log_text_browser.setMaximumHeight(300)  # 最大高度
+        self.log_text_browser.setMinimumHeight(50)  # 最小高度
+        self.log_text_browser.setMaximumHeight(150)  # 最大高度
 
         # 设置为只读
         self.log_text_browser.setReadOnly(True)
@@ -729,6 +817,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
         toolbar.addSeparator()
 
+        # === 调试控制 ===
+        self.debug_mode_action = QtWidgets.QAction("🐛 调试模式", self)
+        self.debug_mode_action.setStatusTip("启用/禁用节点调试模式")
+        self.debug_mode_action.setCheckable(True)
+        self.debug_mode_action.triggered.connect(self._toggle_debug_mode)
+        toolbar.addAction(self.debug_mode_action)
+
+        toolbar.addSeparator()
+
         # === 视图控制 ===
         fit_all_action = QtWidgets.QAction("⊞ 适应", self)
         fit_all_action.setStatusTip("适应所有节点")
@@ -873,6 +970,24 @@ class MainWindow(QtWidgets.QMainWindow):
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
+    def _toggle_debug_mode(self, checked):
+        """
+        切换调试模式
+        
+        Args:
+            checked: 是否启用调试模式
+        """
+        from core.node_debugger import node_debugger
+        
+        node_debugger.debug_mode = checked
+        
+        if checked:
+            utils.logger.info("🐛 节点调试模式已启用", module="main_window")
+            utils.logger.info("   - 调试日志将显示在控制台", module="main_window")
+            utils.logger.info("   - 节点执行将被追踪", module="main_window")
+        else:
+            utils.logger.info("🐛 节点调试模式已禁用", module="main_window")
+    
     def run_graph(self):
         """
         执行当前激活的节点图（委托给ExecutionUIManager）
@@ -1191,9 +1306,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     )
 
                     if reply == QtWidgets.QMessageBox.Yes:
-                        # 用户确认，执行删除
+                        # 用户确认，执行删除（使用完整清理流程）
                         for node in selected_nodes:
-                            self.current_node_graph.delete_node(node)
+                            lifecycle_manager.delete_node_with_cleanup(node, self.current_node_graph)
 
                     return  # 拦截事件，阻止默认行为
 

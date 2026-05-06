@@ -244,6 +244,10 @@ class NodeEditorDialog(QtWidgets.QDialog):
         refresh_action = toolbar.addAction("🔄 刷新")
         refresh_action.triggered.connect(self._refresh_packages)
 
+        # ✨ 同步到运行时（新增）
+        sync_action = toolbar.addAction("🔃 同步到运行时")
+        sync_action.triggered.connect(self._on_sync_to_runtime)
+
         return toolbar
 
     def _create_left_panel(self):
@@ -852,17 +856,65 @@ class {class_name}(BaseNode):
         # 从列表中移除
         if row < len(data['nodes']):
             removed_node = data['nodes'].pop(row)
+            class_name = removed_node.get('class', '')
 
             # 保存plugin.json
             plugin_json_path = pkg_info['path'] / "plugin.json"
             with open(plugin_json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
-            # TODO: 从nodes.py中删除对应的类定义（需要解析AST）
-            # 暂时只更新JSON，手动清理代码
+            # ✨ 从nodes.py中删除对应的类定义
+            if class_name:
+                self._remove_class_from_nodes_py(pkg_info['path'], class_name)
 
             QtWidgets.QMessageBox.information(
                 self, "成功", f"节点 '{removed_node.get('display_name', '')}' 已删除")
+
+    def _remove_class_from_nodes_py(self, pkg_dir, class_name):
+        """
+        从nodes.py文件中删除指定的类定义
+        
+        Args:
+            pkg_dir: 节点包目录路径
+            class_name: 要删除的类名
+        """
+        nodes_py_path = pkg_dir / "nodes.py"
+        if not nodes_py_path.exists():
+            return
+
+        try:
+            with open(nodes_py_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # 使用正则表达式匹配类定义
+            # 匹配格式: class ClassName(...): 及其后面的所有内容直到下一个class定义或文件结束
+            pattern = rf'class\s+{re.escape(class_name)}\s*\([^)]*\)\s*:\s*\n([\s\S]*?)(?=\nclass\s+\w|\Z)'
+            
+            # 删除匹配的类定义（保留空行分隔）
+            new_content = re.sub(pattern, '', content)
+            
+            # 清理多余的空行
+            lines = new_content.split('\n')
+            cleaned_lines = []
+            prev_empty = False
+            
+            for line in lines:
+                is_empty = line.strip() == ''
+                if is_empty and prev_empty:
+                    continue
+                cleaned_lines.append(line)
+                prev_empty = is_empty
+            
+            new_content = '\n'.join(cleaned_lines)
+            
+            # 保存修改
+            with open(nodes_py_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+                
+            print(f"🗑️ 已从 nodes.py 中删除类: {class_name}")
+            
+        except Exception as e:
+            print(f"⚠️ 删除类 {class_name} 失败: {e}")
 
     def _on_import_package(self):
         """导入节点包"""
@@ -1386,6 +1438,110 @@ class {class_name}(BaseNode):
         self.preview_label.setText("选择节点后点击'预览'按钮查看效果")
         self.preview_label.setStyleSheet(
             "background-color: #f0f0f0; color: gray; font-size: 12px;")
+
+    def _on_sync_to_runtime(self):
+        """
+        ✨ 同步节点编辑器更改到运行时
+        
+        将编辑后的节点类重新加载到所有工作流，无需重启应用
+        """
+        selected_items = self.package_tree.selectedItems()
+        if not selected_items:
+            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点包")
+            return
+
+        pkg_name = selected_items[0].data(0, QtCore.Qt.UserRole)
+        if not pkg_name or pkg_name not in self.plugin_packages:
+            QtWidgets.QMessageBox.warning(self, "警告", "请选择有效的节点包")
+            return
+
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            "确认同步",
+            f"确定要将节点包 '{pkg_name}' 的更改同步到运行时吗？\n\n"
+            "这将重新加载节点类到所有工作流中。",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No
+        )
+
+        if reply == QtWidgets.QMessageBox.Yes:
+            self._sync_package_to_runtime(pkg_name)
+
+    def _sync_package_to_runtime(self, pkg_name):
+        """
+        将指定节点包同步到运行时
+        
+        Args:
+            pkg_name: 节点包名称
+        """
+        try:
+            pkg_info = self.plugin_packages[pkg_name]
+            pkg_path = pkg_info['path']
+            
+            # 1. 重新加载模块
+            import importlib
+            import sys
+            
+            # 构建模块路径
+            nodes_module_path = f"user_plugins.{pkg_name}.nodes"
+            
+            # 移除旧模块（如果存在）
+            if nodes_module_path in sys.modules:
+                del sys.modules[nodes_module_path]
+            
+            # 动态导入模块
+            nodes_module = importlib.import_module(nodes_module_path)
+            importlib.reload(nodes_module)
+            
+            # 2. 获取所有节点类
+            node_classes = []
+            for name, obj in vars(nodes_module).items():
+                if isinstance(obj, type) and obj.__name__ != 'BaseNode':
+                    # 检查是否是节点类
+                    if hasattr(obj, 'NODE_NAME') and hasattr(obj, '__identifier__'):
+                        node_classes.append(obj)
+            
+            if not node_classes:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "提示",
+                    f"在节点包 '{pkg_name}' 中未找到有效的节点类\n\n"
+                    "请确保节点类继承自 BaseNode 并定义了 NODE_NAME 属性"
+                )
+                return
+            
+            # 3. 通过事件总线通知所有工作流刷新节点
+            try:
+                from core.event_bus import event_bus, Events
+                
+                event_bus.publish(Events.PLUGIN_RELOADED, plugin_name=pkg_name)
+                
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "成功",
+                    f"节点包 '{pkg_name}' 已成功同步到运行时！\n\n"
+                    f"已加载 {len(node_classes)} 个节点类:\n" + 
+                    "\n".join([f"• {cls.NODE_NAME}" for cls in node_classes])
+                )
+                
+            except Exception as e:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "部分成功",
+                    f"节点类已重新加载，但同步到工作流时出错:\n\n{e}\n\n"
+                    "请手动刷新节点库或重启应用"
+                )
+            
+            print(f"🔃 节点包 '{pkg_name}' 已同步到运行时")
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            QtWidgets.QMessageBox.critical(
+                self,
+                "错误",
+                f"同步失败:\n\n{str(e)}"
+            )
 
     def _on_manage_tab_order(self):
         """管理节点库标签页顺序"""

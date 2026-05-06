@@ -111,6 +111,12 @@ class NodeLifecycleManager:
     节点生命周期管理器
     
     负责管理所有节点的生命周期状态转换和资源清理
+    
+    清理流程（delete_node_with_cleanup）：
+    1. 通知生命周期管理器执行销毁
+    2. 清理预览窗口引用
+    3. 清理相关监听器
+    4. 从NodeGraph中删除节点
     """
     
     _instance = None
@@ -120,6 +126,7 @@ class NodeLifecycleManager:
             cls._instance = super().__new__(cls)
             cls._instance._nodes = weakref.WeakSet()  # 使用弱引用避免内存泄漏
             cls._instance._state_listeners = {}
+            cls._instance._preview_windows = weakref.WeakKeyDictionary()  # 预览窗口引用
         return cls._instance
     
     def register_node(self, node):
@@ -286,6 +293,81 @@ class NodeLifecycleManager:
                 self.destroy_node(node)
             except Exception as e:
                 logger.error(f"销毁节点失败: {e}", module="lifecycle")
+    
+    def register_preview_window(self, node, window):
+        """
+        注册节点的预览窗口
+        
+        Args:
+            node: 节点对象
+            window: 预览窗口对象
+        """
+        self._preview_windows[node] = window
+    
+    def unregister_preview_window(self, node):
+        """
+        注销节点的预览窗口
+        
+        Args:
+            node: 节点对象
+        """
+        if node in self._preview_windows:
+            window = self._preview_windows[node]
+            try:
+                window.close()
+            except Exception as e:
+                logger.warning(f"关闭预览窗口失败: {e}", module="lifecycle")
+            del self._preview_windows[node]
+    
+    def delete_node_with_cleanup(self, node, node_graph=None):
+        """
+        完整删除节点并清理所有相关资源
+        
+        清理流程：
+        1. 通知生命周期管理器执行销毁（触发 on_destroy 钩子）
+        2. 清理预览窗口引用
+        3. 清理相关监听器
+        4. 从NodeGraph中删除节点（如果提供）
+        
+        Args:
+            node: 要删除的节点对象
+            node_graph: NodeGraph实例（可选，用于从图中移除节点）
+        
+        Returns:
+            bool: 是否成功删除
+        """
+        try:
+            logger.info(f"🗑️ 开始删除节点: {getattr(node, 'name', str(node))}", module="lifecycle")
+            
+            # 1. 清理预览窗口
+            self.unregister_preview_window(node)
+            
+            # 2. 移除所有状态监听器
+            node_id = getattr(node, 'id', str(id(node)))
+            if node_id in self._state_listeners:
+                del self._state_listeners[node_id]
+                logger.info(f"   清理状态监听器", module="lifecycle")
+            
+            # 3. 销毁节点（触发生命周期钩子）
+            self.destroy_node(node)
+            logger.info(f"   执行生命周期销毁", module="lifecycle")
+            
+            # 4. 从NodeGraph中删除（如果提供）
+            if node_graph is not None:
+                try:
+                    node_graph.delete_node(node)
+                    logger.info(f"   从NodeGraph删除", module="lifecycle")
+                except Exception as e:
+                    logger.warning(f"   从NodeGraph删除失败: {e}", module="lifecycle")
+            
+            logger.success(f"✅ 节点删除完成", module="lifecycle")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ 删除节点失败: {e}", module="lifecycle")
+            import traceback
+            traceback.print_exc()
+            return False
 
 
 class LifecycleMixin:

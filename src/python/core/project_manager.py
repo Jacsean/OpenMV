@@ -56,6 +56,11 @@ class Workflow:
     表示一个独立的节点图和执行流程。
     每个工作流包含一个NodeGraph实例和相关的元数据。
     
+    节点命名空间隔离：
+    - 每个工作流维护独立的节点注册表（node_registry）
+    - 避免工作流之间的状态污染
+    - 支持工作流级别的节点配置和状态管理
+    
     Attributes:
         id (str): 工作流唯一标识符
         name (str): 工作流名称
@@ -67,6 +72,7 @@ class Workflow:
         preview_image (str): 预览图路径
         created_time (str): 创建时间
         modified_time (str): 最后修改时间
+        node_registry (dict): 工作流级别的节点注册表
     """
     
     def __init__(self, name: str = "新工作流", file_path: str = ""):
@@ -87,6 +93,43 @@ class Workflow:
         self.preview_image = ""  # 预览图路径
         self.created_time = datetime.now().isoformat()
         self.modified_time = self.created_time
+        
+        # 工作流级节点注册表（实现命名空间隔离）
+        self.node_registry = {}  # {node_type_key: node_class}
+        
+    def register_node(self, node_class):
+        """
+        注册节点类到工作流
+        
+        Args:
+            node_class: 节点类
+        """
+        node_key = f"{node_class.__module__}.{node_class.__name__}"
+        self.node_registry[node_key] = node_class
+        
+    def get_node_class(self, node_key):
+        """
+        获取已注册的节点类
+        
+        Args:
+            node_key: 节点类型键
+            
+        Returns:
+            节点类或None
+        """
+        return self.node_registry.get(node_key)
+    
+    def has_node(self, node_key):
+        """
+        检查节点是否已注册
+        
+        Args:
+            node_key: 节点类型键
+            
+        Returns:
+            bool: 是否已注册
+        """
+        return node_key in self.node_registry
         
     def mark_modified(self):
         """标记工作流为已修改状态"""

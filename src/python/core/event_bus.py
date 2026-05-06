@@ -166,6 +166,7 @@ class Events(Enum):
     PLUGIN_UNLOADED = auto()
     PLUGIN_INSTALL = auto()
     PLUGIN_UNINSTALL = auto()
+    PLUGIN_RELOADED = auto()
 
     NODE_CREATED = auto()
     NODE_DELETED = auto()

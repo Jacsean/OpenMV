@@ -13,3 +13,4 @@ from .threshold import ThresholdNode
 from .adaptive_threshold import AdaptiveThresholdNode
 from .histogram_equalization import HistogramEqualizationNode
 from .image_evaluation import ImageEvaluationNode
+from .morphology import MorphologyNode

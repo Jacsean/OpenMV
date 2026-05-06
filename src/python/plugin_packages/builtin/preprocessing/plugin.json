@@ -279,6 +279,31 @@
         "opencv-python>=4.5.0"
       ],
       "optional_dependencies": {}
+    },
+    {
+      "class": "MorphologyNode",
+      "display_name": "形态学操作",
+      "category": "形态学",
+      "color": [
+        150,
+        200,
+        255
+      ],
+      "icon": "🧬",
+      "width": 200,
+      "height": 120,
+      "description": "执行形态学操作，支持腐蚀、膨胀、开运算、闭运算、梯度、顶帽、黑帽等运算方法",
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 1,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "optional_dependencies": {}
     }
   ],
   "dependencies": [

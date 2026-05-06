@@ -427,9 +427,14 @@ class PluginManager:
         if new_info:
             self.plugins[plugin_name] = new_info
         
-        # 3. 重新加载节点（需要外部传入node_graph，这里仅更新元数据）
-        utils.logger.info(f"✅ 插件 {plugin_name} 元数据已更新", module="plugin_manager")
-        utils.logger.info(f"💡 提示：请刷新NodeGraph以应用更改", module="plugin_manager")
+        # 3. 触发热重载事件，通知所有工作流刷新节点
+        try:
+            from core.event_bus import event_bus, Events
+            event_bus.publish(Events.PLUGIN_RELOADED, plugin_name=plugin_name)
+            utils.logger.success(f"✅ 插件 {plugin_name} 已重载，已通知所有工作流", module="plugin_manager")
+        except Exception as e:
+            utils.logger.warning(f"⚠️ 触发热重载事件失败: {e}", module="plugin_manager")
+            utils.logger.info(f"💡 提示：请手动刷新NodeGraph以应用更改", module="plugin_manager")
     
     def unload_plugin_nodes(self, plugin_name: str) -> bool:
         """

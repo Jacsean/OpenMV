@@ -1,5 +1,3 @@
-import utils
-from utils import logger
 """
 工程UI管理器
 
@@ -13,6 +11,10 @@ from utils import logger
 本模块已重构为事件驱动：
 - 通过 EventBus 发布事件通知工程/工作流变更
 - UI响应逻辑由订阅者处理
+
+节点注册时机：
+- 在工作流创建时（add_workflow_tab）统一注册节点到 NodeGraph
+- 使用 NodeRegistry 确保每个 NodeGraph 只注册一次
 """
 
 import os
@@ -20,7 +22,10 @@ from pathlib import Path
 from PySide2 import QtWidgets, QtCore
 from NodeGraphQt import NodeGraph
 
+import utils
 from core.event_bus import event_bus, Events
+from core.node_registry import register_nodes_on_workflow_create, node_registry
+from core.node_lifecycle import lifecycle_manager
 
 
 class ProjectUIManager:
@@ -56,6 +61,9 @@ class ProjectUIManager:
         """
         self.project_manager = project_manager
         self.main_window = main_window
+        
+        # 订阅插件重载事件
+        event_bus.subscribe(Events.PLUGIN_RELOADED, self._on_plugin_reloaded)
 
     def initialize_default_project(self):
         """
@@ -78,21 +86,10 @@ class ProjectUIManager:
         """
         node_graph = NodeGraph()
 
-        if hasattr(self.main_window, '_pending_plugins') and self.main_window.tab_widget.count() == 0:
-            utils.logger.info(f"\n🔍 检测到首次创建工作流，开始加载插件...", module="project_ui_manager")
-            utils.logger.info(f"   _pending_plugins数量: {len(self.main_window._pending_plugins)}", module="project_ui_manager")
-            utils.logger.info(f"   tab_widget当前标签页数: {self.main_window.tab_widget.count()}", module="project_ui_manager")
-
-            from plugins.plugin_ui_manager import PluginUIManager
-            plugin_ui = PluginUIManager(self.main_window.plugin_manager, self.main_window)
-            utils.logger.info(f"   调用 plugin_ui.load_plugins_to_graph(node_graph)", module="project_ui_manager")
-            plugin_ui.load_plugins_to_graph(node_graph)
-            utils.logger.success(f"   ✅ 插件加载完成\n", module="project_ui_manager")
+        if hasattr(self.main_window, 'plugin_manager'):
+            register_nodes_on_workflow_create(node_graph, workflow, self.main_window.plugin_manager)
         else:
-            if not hasattr(self.main_window, '_pending_plugins'):
-                utils.logger.warning(f"⚠️ main_window没有_pending_plugins属性", module="project_ui_manager")
-            elif self.main_window.tab_widget.count() != 0:
-                utils.logger.warning(f"⚠️ 不是第一个标签页 (当前有 {self.main_window.tab_widget.count()} 个标签页)，跳过插件加载", module="project_ui_manager")
+            utils.logger.warning(f"⚠️ 未找到 plugin_manager，跳过节点注册", module="project_ui_manager")
 
         workflow.node_graph = node_graph
 
@@ -104,7 +101,13 @@ class ProjectUIManager:
         tab_title = workflow.name
         if workflow.is_modified:
             tab_title += " *"
+        
         tab_index = self.main_window.tab_widget.addTab(graph_widget, tab_title)
+        
+        # 首次创建工作流时，初始化共享组件
+        if hasattr(self.main_window, '_shared_components_initialized') and not self.main_window._shared_components_initialized:
+            utils.logger.info("首次创建工作流，初始化共享组件...", module="project_ui_manager")
+            self.main_window._initialize_shared_components(node_graph)
 
         if self.main_window.tab_widget.count() == 1:
             self.on_tab_changed(0)
@@ -127,6 +130,10 @@ class ProjectUIManager:
             workflow = project.workflows[index]
 
             if workflow.node_graph:
+                # 清理所有节点
+                for node in list(workflow.node_graph.all_nodes()):
+                    lifecycle_manager.delete_node_with_cleanup(node)
+                
                 try:
                     workflow.node_graph.node_created.disconnect()
                     workflow.node_graph.node_double_clicked.disconnect()
@@ -159,6 +166,9 @@ class ProjectUIManager:
             event_bus.publish(Events.TAB_CHANGED, tab_index=index, workflow=workflow)
             event_bus.publish(Events.WORKFLOW_SELECTED, workflow=workflow)
             utils.logger.info(f"🔄 切换到工作流: {workflow.name}", module="project_ui_manager")
+            
+            # 更新共享组件引用（消除临时Graph问题）
+            self.main_window._update_shared_components()
 
     def on_tab_close_requested(self, index):
         """
@@ -278,24 +288,7 @@ class ProjectUIManager:
 
                     utils.logger.info(f"   🔌 注册插件节点到 NodeGraph...", module="project_ui_manager")
                     if hasattr(self.main_window, 'plugin_manager'):
-                        try:
-                            loaded_plugins = self.main_window.plugin_manager.get_loaded_plugins()
-                            utils.logger.info(f"      📦 已加载插件数量: {len(loaded_plugins)}", module="project_ui_manager")
-
-                            registered_node_count = 0
-                            for plugin_info in loaded_plugins:
-                                if plugin_info.enabled:
-                                    self.main_window.plugin_manager.load_plugin_nodes(
-                                        plugin_info.name,
-                                        node_graph
-                                    )
-                                    registered_node_count += len(plugin_info.nodes)
-
-                            utils.logger.success(f"      ✅ 共注册 {registered_node_count} 个节点类型", module="project_ui_manager")
-                        except Exception as e:
-                            utils.logger.error(f"      ❌ 注册插件节点失败: {e}", module="project_ui_manager")
-                            import traceback
-                            traceback.print_exc()
+                        register_nodes_on_workflow_create(node_graph, workflow, self.main_window.plugin_manager)
                     else:
                         utils.logger.warning(f"      ⚠️ 未找到 plugin_manager，跳过节点注册", module="project_ui_manager")
 
@@ -614,16 +607,7 @@ class ProjectUIManager:
                     node_graph = NodeGraph()
 
                     if hasattr(self.main_window, 'plugin_manager'):
-                        try:
-                            loaded_plugins = self.main_window.plugin_manager.get_loaded_plugins()
-                            for plugin_info in loaded_plugins:
-                                if plugin_info.enabled:
-                                    self.main_window.plugin_manager.load_plugin_nodes(
-                                        plugin_info.name,
-                                        node_graph
-                                    )
-                        except Exception as e:
-                            utils.logger.error(f"❌ 注册插件节点失败: {e}", module="project_ui_manager")
+                        register_nodes_on_workflow_create(node_graph, workflow, self.main_window.plugin_manager)
 
                     workflow.node_graph = node_graph
 
@@ -753,33 +737,10 @@ class ProjectUIManager:
             from NodeGraphQt import NodeGraph
             node_graph = NodeGraph()
 
-            if not hasattr(node_graph, '_plugins_registered'):
-                utils.logger.info(f"      🔌 注册插件节点到 NodeGraph...", module="project_ui_manager")
-                if hasattr(self.main_window, 'plugin_manager'):
-                    try:
-                        loaded_plugins = self.main_window.plugin_manager.get_loaded_plugins()
-                        utils.logger.info(f"      📦 已加载插件数量: {len(loaded_plugins)}", module="project_ui_manager")
-
-                        registered_node_count = 0
-                        for plugin_info in loaded_plugins:
-                            if plugin_info.enabled:
-                                self.main_window.plugin_manager.load_plugin_nodes(
-                                    plugin_info.name,
-                                    node_graph
-                                )
-                                registered_node_count += len(plugin_info.nodes)
-
-                        utils.logger.success(f"      ✅ 共注册 {registered_node_count} 个节点类型", module="project_ui_manager")
-
-                        node_graph._plugins_registered = True
-                    except Exception as e:
-                        utils.logger.error(f"      ❌ 注册插件节点失败: {e}", module="project_ui_manager")
-                        import traceback
-                        traceback.print_exc()
-                else:
-                    utils.logger.warning(f"      ⚠️ 未找到 plugin_manager，跳过节点注册", module="project_ui_manager")
+            if hasattr(self.main_window, 'plugin_manager'):
+                register_nodes_on_workflow_create(node_graph, workflow, self.main_window.plugin_manager)
             else:
-                utils.logger.info(f"      ℹ️  插件节点已注册，跳过", module="project_ui_manager")
+                utils.logger.warning(f"      ⚠️ 未找到 plugin_manager，跳过节点注册", module="project_ui_manager")
 
             workflow.node_graph = node_graph
 
@@ -800,3 +761,42 @@ class ProjectUIManager:
         tab_index = self.main_window.tab_widget.addTab(graph_widget, tab_title)
         utils.logger.success(f"      ✅ 标签页索引: {tab_index}", module="project_ui_manager")
         utils.logger.info(f"      📑 当前标签页总数: {self.main_window.tab_widget.count()}", module="project_ui_manager")
+    
+    def _on_plugin_reloaded(self, plugin_name: str):
+        """
+        插件重载事件处理（由事件总线触发）
+        
+        当插件文件发生变化并重新加载后，刷新所有工作流的节点注册表
+        
+        Args:
+            plugin_name: 重载的插件名称
+        """
+        utils.logger.info(f"\n{'='*60}", module="project_ui_manager")
+        utils.logger.info(f"🔄 收到插件重载事件: {plugin_name}", module="project_ui_manager")
+        utils.logger.info(f"{'='*60}", module="project_ui_manager")
+        
+        project = self.project_manager.current_project
+        if not project:
+            utils.logger.warning(f"⚠️ 没有打开的工程，跳过节点刷新", module="project_ui_manager")
+            return
+        
+        if not hasattr(self.main_window, 'plugin_manager'):
+            utils.logger.warning(f"⚠️ 未找到 plugin_manager，跳过节点刷新", module="project_ui_manager")
+            return
+        
+        utils.logger.info(f"📋 开始刷新所有工作流的节点...", module="project_ui_manager")
+        
+        for workflow in project.workflows:
+            if workflow.node_graph:
+                utils.logger.info(f"\n--- 刷新工作流: {workflow.name} ---", module="project_ui_manager")
+                
+                try:
+                    # 使用 NodeRegistry 的重载方法刷新节点
+                    node_registry.reload_nodes(workflow.node_graph, workflow)
+                    utils.logger.success(f"   ✅ 工作流节点刷新完成", module="project_ui_manager")
+                except Exception as e:
+                    utils.logger.error(f"   ❌ 刷新工作流节点失败: {e}", module="project_ui_manager")
+        
+        utils.logger.info(f"\n{'='*60}", module="project_ui_manager")
+        utils.logger.success(f"✅ 所有工作流节点刷新完成!", module="project_ui_manager")
+        utils.logger.info(f"{'='*60}\n", module="project_ui_manager")
