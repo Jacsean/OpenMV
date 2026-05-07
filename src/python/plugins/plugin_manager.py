@@ -360,27 +360,141 @@ class PluginManager:
     def unload_plugin_nodes(self, plugin_name: str, node_graph=None):
         """
         卸载插件的节点类
-        
+
         Args:
             plugin_name: 插件名称
             node_graph: NodeGraph实例（可选）
         """
         if plugin_name not in self.plugins:
             return
-        
+
         # 停止热重载监听
         self.hot_reloader.stop_watching(plugin_name)
-        
-        # 从已加载节点字典中移除
+
+        # 1. 从已加载节点字典中移除
         keys_to_remove = []
-        for key in self.loaded_nodes:
+        for key in list(self.loaded_nodes.keys()):
             if key.startswith(f"{plugin_name}."):
                 keys_to_remove.append(key)
-        
+
         for key in keys_to_remove:
             del self.loaded_nodes[key]
-        
+
+        # 2. 从 NodeGraph 的节点工厂中注销节点类型
+        if node_graph and hasattr(node_graph, '_node_factory') and plugin_name in self.plugins:
+            factory = node_graph._node_factory
+            
+            # 获取插件的所有 identifier 值
+            identifiers = set()
+            plugin_info = self.plugins[plugin_name]
+            if hasattr(plugin_info, 'nodes') and plugin_info.nodes:
+                for node_def in plugin_info.nodes:
+                    if hasattr(node_def, 'identifier') and node_def.identifier:
+                        identifiers.add(node_def.identifier)
+            
+            # 从 __nodes 中删除（私有属性，需要通过名称访问）
+            if hasattr(factory, '_NodeFactory__nodes'):
+                keys_to_remove = []
+                for key in list(getattr(factory, '_NodeFactory__nodes').keys()):
+                    # 检查节点类型是否以插件名称开头（marketplace 插件）
+                    if key.startswith(f"{plugin_name}."):
+                        keys_to_remove.append(key)
+                    else:
+                        # 检查节点类型是否以插件的任何 identifier 开头（builtin 插件）
+                        for identifier in identifiers:
+                            if key.startswith(f"{identifier}."):
+                                keys_to_remove.append(key)
+                                break
+                for key in keys_to_remove:
+                    del getattr(factory, '_NodeFactory__nodes')[key]
+            
+            # 从 __names 中删除（私有属性，需要通过名称访问）
+            if hasattr(factory, '_NodeFactory__names'):
+                keys_to_remove = []
+                for key in list(getattr(factory, '_NodeFactory__names').keys()):
+                    # 检查名称是否以插件名称开头（marketplace 插件）
+                    if key.startswith(f"{plugin_name}."):
+                        keys_to_remove.append(key)
+                    else:
+                        # 检查名称是否以插件的任何 identifier 开头（builtin 插件）
+                        for identifier in identifiers:
+                            if key.startswith(f"{identifier}."):
+                                keys_to_remove.append(key)
+                                break
+                for key in keys_to_remove:
+                    del getattr(factory, '_NodeFactory__names')[key]
+            
+            # 从 __aliases 中删除（私有属性，需要通过名称访问）
+            if hasattr(factory, '_NodeFactory__aliases'):
+                keys_to_remove = []
+                for key in list(getattr(factory, '_NodeFactory__aliases').keys()):
+                    # 检查别名是否以插件名称开头（marketplace 插件）
+                    if key.startswith(f"{plugin_name}."):
+                        keys_to_remove.append(key)
+                    else:
+                        # 检查别名是否以插件的任何 identifier 开头（builtin 插件）
+                        for identifier in identifiers:
+                            if key.startswith(f"{identifier}."):
+                                keys_to_remove.append(key)
+                                break
+                for key in keys_to_remove:
+                    del getattr(factory, '_NodeFactory__aliases')[key]
+
         utils.logger.info(f"✅ 插件 {plugin_name} 已卸载", module="plugin_manager")
+
+    def reload_plugin(self, plugin_name: str, node_graph=None) -> bool:
+        """
+        重新加载插件（用于热重载 plugin.json 的节点分组变更）
+
+        Args:
+            plugin_name: 插件名称
+            node_graph: NodeGraph实例
+
+        Returns:
+            bool: 是否成功
+        """
+        utils.logger.info(f"🔄 开始重新加载插件: {plugin_name}", module="plugin_manager")
+
+        # 1. 卸载旧节点
+        self.unload_plugin_nodes(plugin_name, node_graph)
+
+        # 2. 重新加载 plugin.json
+        from pathlib import Path
+        plugin_path = Path(self.plugins[plugin_name].path)
+        plugin_info = self._load_plugin_metadata(plugin_path, self.plugins[plugin_name].source, self.plugins[plugin_name].priority)
+        if not plugin_info:
+            utils.logger.info(f"❌ 重新加载插件元数据失败: {plugin_name}", module="plugin_manager")
+            return False
+
+        # 更新插件信息
+        self.plugins[plugin_name] = plugin_info
+
+        # 3. 重新注册节点
+        if node_graph:
+            success = self.load_plugin_nodes(plugin_name, node_graph)
+            if success:
+                utils.logger.info(f"✅ 插件 {plugin_name} 重新加载成功", module="plugin_manager")
+            else:
+                utils.logger.info(f"❌ 插件 {plugin_name} 节点注册失败", module="plugin_manager")
+            return success
+
+        utils.logger.info(f"✅ 插件 {plugin_name} 元数据重新加载成功", module="plugin_manager")
+        return True
+
+    def reload_all_plugins(self, node_graph=None) -> Dict[str, bool]:
+        """
+        重新加载所有插件
+
+        Args:
+            node_graph: NodeGraph实例
+
+        Returns:
+            Dict[str, bool]: 每个插件的重载结果
+        """
+        results = {}
+        for plugin_name in list(self.plugins.keys()):
+            results[plugin_name] = self.reload_plugin(plugin_name, node_graph)
+        return results
 
     def _on_plugin_changed(self, plugin_name: str):
         """

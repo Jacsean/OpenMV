@@ -231,17 +231,12 @@ class MainWindow(QtWidgets.QMainWindow):
         main_layout = QtWidgets.QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # === 顶部：日志和状态面板（位置交换）===
-        self.log_panel = self._create_log_panel()
-        main_layout.addWidget(self.log_panel)
-
         # === 标签页容器（位置交换 - 现在在日志面板下方）===
         self.tab_widget = QtWidgets.QTabWidget()
-        self.tab_widget.setTabsClosable(True)  # 允许关闭标签页
-        self.tab_widget.setMovable(True)       # 允许拖动排序
-        # PySide2 QTabWidget 不支持 setAnimated()，使用样式表禁用动画效果
+        # self.tab_widget.setTabsClosable(True)  # 允许关闭标签页
+        # self.tab_widget.setMovable(True)       # 允许拖动排序
         self.tab_widget.setStyleSheet("QTabWidget::pane { border: 1px solid #3c3c3c; }")
-        self.tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
+        # self.tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
         self.tab_widget.currentChanged.connect(self._on_tab_changed)
         main_layout.addWidget(self.tab_widget)
 
@@ -274,7 +269,7 @@ class MainWindow(QtWidgets.QMainWindow):
         dock_left.setWidget(self._left_container)
         dock_left.setFeatures(
             QtWidgets.QDockWidget.NoDockWidgetFeatures)
-        dock_left.setProperty("animated", False)
+        # dock_left.setProperty("animated", False)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock_left)
 
         # === 右侧：属性面板 ===
@@ -287,6 +282,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # 创建菜单栏
         self._create_menu_bar()
     
+        # === 顶部：日志和状态面板（位置交换）===
+        self.log_panel = self._create_log_panel()
+        main_layout.addWidget(self.log_panel)
+
     def _init_shared_components_placeholder(self):
         """
         初始化共享组件占位符
@@ -1333,6 +1332,7 @@ class MainWindow(QtWidgets.QMainWindow):
         自定义节点库面板：
         1. 根据 study OpenCV.md 的知识结构重新分组节点
         2. 隐藏 nodeGraphQt.nodes 默认标签（BackdropNode由NodeGraphQt自动注册）
+        3. 添加刷新节点库按钮
         """
         if not self.nodes_palette:
             return
@@ -1351,8 +1351,184 @@ class MainWindow(QtWidgets.QMainWindow):
                         utils.logger.info("✅ nodeGraphQt.nodes 标签已隐藏", module="main_window")
                         break
 
+                # 3. 添加刷新节点库按钮
+                self._add_refresh_button_to_palette(tab_widget)
+
         except Exception as e:
             utils.logger.error(f"❌ 自定义节点库失败: {e}", module="main_window")
+
+    def _add_refresh_button_to_palette(self, tab_widget):
+        """
+        在节点库面板添加刷新按钮
+
+        Args:
+            tab_widget: QTabWidget 实例
+        """
+        try:
+            from PySide2.QtWidgets import QPushButton, QHBoxLayout, QWidget
+            from PySide2.QtCore import Qt
+
+            # 检查是否已经添加过刷新按钮（检查 tab_widget 中是否已有刷新标签）
+            has_refresh_tab = False
+            for i in range(tab_widget.count()):
+                if tab_widget.tabText(i) == "🔄":
+                    has_refresh_tab = True
+                    break
+            if has_refresh_tab:
+                return
+
+            # 创建刷新按钮
+            refresh_btn = QPushButton("🔄 刷新节点库")
+            refresh_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #4CAF50;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #45a049;
+                }
+                QPushButton:pressed {
+                    background-color: #3d8b40;
+                }
+            """)
+            refresh_btn.clicked.connect(self._on_refresh_node_library)
+
+            # 创建一个容器widget来放置按钮
+            btn_container = QWidget()
+            btn_layout = QHBoxLayout(btn_container)
+            btn_layout.setContentsMargins(5, 5, 5, 5)
+            btn_layout.addWidget(refresh_btn)
+            btn_layout.addStretch()
+
+            # 添加到标签页（作为最后一个标签）
+            tab_widget.addTab(btn_container, "🔄")
+            tab_widget.tabBar().setTabToolTip(tab_widget.count() - 1, "点击刷新节点库")
+
+            # 保存按钮引用
+            self._node_library_refresh_btn = refresh_btn
+
+            utils.logger.info("✅ 节点库刷新按钮已添加", module="main_window")
+
+        except Exception as e:
+            utils.logger.error(f"❌ 添加刷新按钮失败: {e}", module="main_window")
+
+    def _clear_node_factory(self):
+        """
+        强制清空 NodeFactory 中的所有节点类型（防止刷新时节点重复）
+        """
+        try:
+            if not hasattr(self, 'current_node_graph') or not self.current_node_graph:
+                return
+            
+            factory = self.current_node_graph._node_factory
+            
+            # 清空 __nodes 字典
+            if hasattr(factory, '_NodeFactory__nodes'):
+                getattr(factory, '_NodeFactory__nodes').clear()
+            
+            # 清空 __names 字典
+            if hasattr(factory, '_NodeFactory__names'):
+                getattr(factory, '_NodeFactory__names').clear()
+            
+            # 清空 __aliases 字典
+            if hasattr(factory, '_NodeFactory__aliases'):
+                getattr(factory, '_NodeFactory__aliases').clear()
+            
+            utils.logger.info("✅ NodeFactory 已清空", module="main_window")
+            
+        except Exception as e:
+            utils.logger.error(f"❌ 清空 NodeFactory 失败: {e}", module="main_window")
+    
+    def _on_refresh_node_library(self):
+        """
+        刷新节点库的回调函数
+        """
+        try:
+            utils.logger.info("🔄 开始刷新节点库...", module="main_window")
+
+            if hasattr(self, 'current_node_graph') and self.current_node_graph:
+                # 0. 强制清空 NodeFactory（防止节点重复）
+                self._clear_node_factory()
+
+                # 1. 重新加载所有插件（卸载旧节点，重新注册新节点）
+                results = self.plugin_manager.reload_all_plugins(self.current_node_graph)
+
+                # 2. 刷新节点库显示（强制重建标签）
+                self._refresh_node_palette_display()
+
+                # 3. 重新应用节点库定制
+                self._customize_node_palette()
+
+                # 统计结果
+                success_count = sum(1 for v in results.values() if v)
+                total_count = len(results)
+
+                utils.logger.info(f"✅ 节点库刷新完成: {success_count}/{total_count} 个插件重载成功", module="main_window")
+
+                # 显示提示
+                self.statusBar().showMessage(f"节点库已刷新: {success_count}/{total_count} 个插件重载成功", 3000)
+            else:
+                utils.logger.warning("⚠️ current_node_graph 未初始化，无法刷新节点库", module="main_window")
+
+        except Exception as e:
+            utils.logger.error(f"❌ 刷新节点库失败: {e}", module="main_window")
+            import traceback
+            traceback.print_exc()
+    
+    def _refresh_node_palette_display(self):
+        """
+        刷新节点库显示（重新创建 NodesPaletteWidget，保留原有布局和标签位置）
+        """
+        try:
+            if not self.nodes_palette or not self.current_node_graph:
+                return
+            
+            # 获取当前的父布局
+            parent_layout = self.nodes_palette.parent().layout() if self.nodes_palette.parent() else None
+            if not parent_layout:
+                utils.logger.warning("⚠️ 无法找到节点库的父布局", module="main_window")
+                return
+            
+            # 找到旧节点库在布局中的索引
+            old_index = -1
+            for i in range(parent_layout.count()):
+                if parent_layout.itemAt(i).widget() == self.nodes_palette:
+                    old_index = i
+                    break
+            
+            if old_index == -1:
+                utils.logger.warning("⚠️ 无法找到节点库在布局中的位置", module="main_window")
+                return
+            
+            # 保存旧节点库的标签位置
+            old_tab_position = self.nodes_palette.tab_widget().tabPosition() if hasattr(self.nodes_palette, 'tab_widget') else None
+            
+            # 创建新的节点库面板
+            new_palette = NodesPaletteWidget(node_graph=self.current_node_graph)
+            new_palette.setWindowTitle("节点库")
+            
+            # 设置标签位置（保持与旧节点库一致）
+            if old_tab_position is not None:
+                new_palette.tab_widget().setTabPosition(old_tab_position)
+            
+            # 移除旧节点库
+            parent_layout.removeWidget(self.nodes_palette)
+            self.nodes_palette.deleteLater()
+            
+            # 在原位置插入新节点库
+            parent_layout.insertWidget(old_index, new_palette)
+            
+            # 更新引用
+            self.nodes_palette = new_palette
+            
+            utils.logger.info("✅ 节点库显示已刷新", module="main_window")
+            
+        except Exception as e:
+            utils.logger.error(f"❌ 刷新节点库显示失败: {e}", module="main_window")
     
     def _regroup_nodes_by_knowledge_structure(self):
         """
@@ -1492,16 +1668,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
             tabs_info.append((tab_text, display_name, i))
 
-        # 根据 group_order 排序
+        # 根据 group_order 排序（大小写不敏感）
         def get_sort_key(item):
             original_name, display_name, index = item
             
-            # 如果原始名称在 group_order 中，使用其索引
-            if original_name in group_order:
-                return group_order.index(original_name)
-            # 如果显示名称在 group_order 中，使用其索引
-            if display_name in group_order:
-                return group_order.index(display_name)
+            # 使用大小写不敏感的比较
+            original_lower = original_name.lower()
+            display_lower = display_name.lower()
+            
+            # 遍历 group_order 查找匹配
+            for i, group_name in enumerate(group_order):
+                group_lower = group_name.lower()
+                if group_lower == original_lower or group_lower == display_lower:
+                    return i
+            
             # 否则放在最后
             return len(group_order)
 
@@ -1511,30 +1691,24 @@ class MainWindow(QtWidgets.QMainWindow):
         sorted_names = [info[1] for info in tabs_info]
         utils.logger.info(f"🔄 排序后的标签顺序: {sorted_names}", module="main_window")
 
-        # 先重命名所有标签
-        for original_name, display_name, old_index in tabs_info:
-            if display_name != original_name:
-                tab_widget.setTabText(old_index, display_name)
-
-        # 然后重新排序标签（使用 QTabWidget 的 insertTab 和 removeTab 方法）
-        # 先记录所有标签页的内容
-        tab_contents = []
+        # 先记录所有标签页的内容（使用原始名称）
+        tab_contents = {}
         for i in range(tab_widget.count()):
             widget = tab_widget.widget(i)
             label = tab_widget.tabText(i)
-            tab_contents.append((widget, label))
+            tab_contents[label] = widget
         
         # 清空所有标签
         while tab_widget.count() > 0:
             tab_widget.removeTab(0)
         
-        # 按照排序后的顺序重新添加标签
+        # 按照排序后的顺序重新添加标签（同时重命名）
         for original_name, display_name, old_index in tabs_info:
             # 找到对应的标签内容
-            for widget, label in tab_contents:
-                if label == display_name or label == original_name:
-                    tab_widget.addTab(widget, display_name)
-                    break
+            if original_name in tab_contents:
+                tab_widget.addTab(tab_contents[original_name], display_name)
+            elif display_name in tab_contents:
+                tab_widget.addTab(tab_contents[display_name], display_name)
 
         utils.logger.info("✅ 节点库标签重命名和排序完成", module="main_window")
 

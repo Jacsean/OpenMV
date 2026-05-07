@@ -616,6 +616,11 @@ class ProjectManager:
         utils.logger.info(f"   文件路径: {proj_file}", module="project_manager")
         utils.logger.info(f"{'='*60}\n", module="project_manager")
         
+        # 创建临时目录解压（移到try块之前，确保finally中可以访问）
+        import tempfile
+        temp_dir = tempfile.mkdtemp(prefix='proj_import_')
+        utils.logger.info(f"📁 创建临时目录: {temp_dir}", module="project_manager")
+        
         try:
             # 验证文件是否存在
             if not os.path.exists(proj_file):
@@ -624,11 +629,6 @@ class ProjectManager:
             
             file_size = os.path.getsize(proj_file)
             utils.logger.info(f"📊 文件大小: {file_size} bytes ({file_size/1024:.2f} KB)", module="project_manager")
-            
-            # 创建临时目录解压
-            import tempfile
-            temp_dir = tempfile.mkdtemp(prefix='proj_import_')
-            utils.logger.info(f"📁 创建临时目录: {temp_dir}", module="project_manager")
             
             # 解压ZIP
             utils.logger.info(f"🗜️  解压ZIP文件...", module="project_manager")
@@ -644,7 +644,6 @@ class ProjectManager:
             project_file = os.path.join(temp_dir, "project.json")
             if not os.path.exists(project_file):
                 utils.logger.error(f"❌ 工程配置文件不存在: {project_file}", module="project_manager")
-                shutil.rmtree(temp_dir, ignore_errors=True)
                 return None
             
             utils.logger.info(f"\n📝 读取工程配置...", module="project_manager")
@@ -724,6 +723,11 @@ class ProjectManager:
             import traceback
             traceback.print_exc()
             return None
+        finally:
+            # 清理临时目录（确保任何情况下都会清理）
+            if temp_dir and os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                utils.logger.info(f"🧹 清理临时目录: {temp_dir}", module="project_manager")
     
     def has_unsaved_changes(self) -> bool:
         """
