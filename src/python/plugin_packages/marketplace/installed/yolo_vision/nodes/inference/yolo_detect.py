@@ -44,7 +44,7 @@ class YOLODetectNode(BaseNode):
     """
     
     __identifier__ = 'yolo_vision'
-    NODE_NAME = 'YOLO 目标检测'
+    NODE_NAME = '目标检测'
     
     def __init__(self):
         super(YOLODetectNode, self).__init__()

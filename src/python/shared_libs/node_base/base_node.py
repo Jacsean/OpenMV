@@ -8,6 +8,7 @@
 - 资源等级声明
 - 友好的错误提示
 - 性能监控与结果缓存
+- 生命周期管理
 
 遵循《AI 模块资源隔离设计规范》
 """
@@ -25,6 +26,18 @@ try:
     HAS_PERFORMANCE_TOOLS = True
 except ImportError:
     HAS_PERFORMANCE_TOOLS = False
+
+# 导入生命周期管理
+try:
+    from core.node_lifecycle import (
+        NodeState, 
+        LifecycleHook, 
+        DefaultLifecycleHook,
+        lifecycle_manager
+    )
+    HAS_LIFECYCLE = True
+except ImportError:
+    HAS_LIFECYCLE = False
 
 
 class BaseNode(BaseNode):
@@ -84,6 +97,15 @@ class BaseNode(BaseNode):
         else:
             self.performance_monitor = None
             self.result_cache = None
+        
+        # 生命周期管理（如果可用）
+        if HAS_LIFECYCLE:
+            self._lifecycle_hook = DefaultLifecycleHook()
+            self._node_state = NodeState.INITIALIZED
+            lifecycle_manager.register_node(self)
+        else:
+            self._lifecycle_hook = None
+            self._node_state = None
     
     def measure_performance(self, label: str = "process"):
         """
@@ -305,6 +327,80 @@ class BaseNode(BaseNode):
             self.result_cache.clear()
             self.log_info("已清空结果缓存")
     
+    # === 生命周期管理方法 ===
+    
+    def set_lifecycle_hook(self, hook: 'LifecycleHook'):
+        """
+        设置自定义生命周期钩子
+        
+        Args:
+            hook: 生命周期钩子实现
+        """
+        if HAS_LIFECYCLE:
+            self._lifecycle_hook = hook
+    
+    def activate(self):
+        """激活节点"""
+        if HAS_LIFECYCLE:
+            lifecycle_manager.transition_state(self, NodeState.ACTIVATED)
+    
+    def deactivate(self):
+        """停用节点"""
+        if HAS_LIFECYCLE:
+            lifecycle_manager.transition_state(self, NodeState.DEACTIVATED)
+    
+    def destroy(self):
+        """销毁节点并清理资源"""
+        if HAS_LIFECYCLE:
+            lifecycle_manager.destroy_node(self)
+        else:
+            # 手动清理资源
+            self.clear_model_cache()
+            self.clear_result_cache()
+    
+    def get_state(self) -> Optional['NodeState']:
+        """获取当前状态"""
+        return self._node_state
+    
+    def is_processing(self) -> bool:
+        """检查是否正在处理"""
+        if HAS_LIFECYCLE:
+            return self._node_state == NodeState.PROCESSING
+        return False
+    
+    def is_active(self) -> bool:
+        """检查是否处于激活状态"""
+        if HAS_LIFECYCLE:
+            return self._node_state in [NodeState.ACTIVATED, NodeState.PROCESSING]
+        return True
+    
+    def _on_create(self):
+        """节点创建时调用（可被子类覆盖）"""
+        pass
+    
+    def _on_activate(self):
+        """节点激活时调用（可被子类覆盖）"""
+        pass
+    
+    def _on_deactivate(self):
+        """节点停用时调用（可被子类覆盖）"""
+        pass
+    
+    def _on_destroy(self):
+        """节点销毁前调用（可被子类覆盖）"""
+        self.clear_model_cache()
+        self.clear_result_cache()
+    
+    def _on_process_start(self):
+        """处理开始时调用（可被子类覆盖）"""
+        if HAS_LIFECYCLE:
+            lifecycle_manager.transition_state(self, NodeState.PROCESSING)
+    
+    def _on_process_end(self, success: bool = True, error: Optional[Exception] = None):
+        """处理结束时调用（可被子类覆盖）"""
+        if HAS_LIFECYCLE:
+            lifecycle_manager.transition_state(self, NodeState.IDLE)
+    
     def optimize_resources(self):
         """优化资源使用（在执行重量级任务前调用）"""
         if HAS_PERFORMANCE_TOOLS:
@@ -368,6 +464,10 @@ class AsyncAINode(BaseNode):
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._future: Optional[Future] = None
         self._start_time: Optional[float] = None
+        
+        # 自定义生命周期钩子，处理异步资源清理
+        if HAS_LIFECYCLE:
+            self._lifecycle_hook = _AsyncNodeLifecycleHook(self)
     
     def start_async_process(self, inputs: Dict[str, Any], process_func: Optional[Callable] = None):
         """
@@ -431,6 +531,46 @@ class AsyncAINode(BaseNode):
         if self._executor:
             self._executor.shutdown(wait=False)
         self.clear_model_cache()
+
+
+# === 异步节点生命周期钩子 ===
+
+class _AsyncNodeLifecycleHook(DefaultLifecycleHook):
+    """
+    异步节点的生命周期钩子实现
+    
+    负责在节点销毁时正确清理线程池和取消正在执行的任务
+    """
+    
+    def __init__(self, node):
+        self._node_ref = weakref.ref(node)
+    
+    def on_destroy(self):
+        """节点销毁时清理异步资源"""
+        node = self._node_ref()
+        if node:
+            # 取消正在执行的任务
+            node.cancel_async_process()
+            
+            # 关闭线程池
+            if hasattr(node, '_executor') and node._executor:
+                node._executor.shutdown(wait=False)
+            
+            # 清理缓存
+            node.clear_model_cache()
+            node.clear_result_cache()
+    
+    def on_process_start(self):
+        """处理开始时的钩子"""
+        node = self._node_ref()
+        if node:
+            node._on_process_start()
+    
+    def on_process_end(self, success: bool, error: Optional[Exception] = None):
+        """处理结束时的钩子"""
+        node = self._node_ref()
+        if node:
+            node._on_process_end(success, error)
 
 
 # 导出基类

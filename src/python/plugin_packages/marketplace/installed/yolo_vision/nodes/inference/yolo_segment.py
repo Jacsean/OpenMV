@@ -42,7 +42,7 @@ class YOLOSegmentNode(BaseNode):
     """
     
     __identifier__ = 'yolo_vision'
-    NODE_NAME = 'YOLO 实例分割'
+    NODE_NAME = '实例分割'
     
     def __init__(self):
         super(YOLOSegmentNode, self).__init__()

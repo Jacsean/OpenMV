@@ -19,6 +19,7 @@ class NodeDefinition:
     height: Optional[int] = None # 节点高度（像素）
     description: str = ""     # 节点详细描述
     color: Optional[List[int]] = None  # 节点颜色 RGB [R, G, B]
+    identifier: str = ""      # 节点标识符（用于工作流序列化/反序列化）
     
     # AI 节点扩展字段（遵循《AI 模块资源隔离设计规范》）
     resource_level: str = "light"  # 资源等级: light/medium/heavy
@@ -40,6 +41,7 @@ class PluginInfo:
     author: str               # 作者
     description: str          # 描述
     category_group: str = ""  # 分类组名称（用于节点库标签页显示）
+    group: List[str] = field(default_factory=list)  # 分组顺序（用于节点库标签页排序）
     nodes: List[NodeDefinition] = field(default_factory=list)
     dependencies: List[str] = field(default_factory=list)
     min_app_version: str = "3.1.0"

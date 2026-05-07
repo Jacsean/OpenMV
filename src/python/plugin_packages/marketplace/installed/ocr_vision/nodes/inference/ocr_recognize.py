@@ -43,7 +43,7 @@ class OCRTextRecognitionNode(BaseNode):
     """
     
     __identifier__ = 'ocr_vision'
-    NODE_NAME = 'OCR 文字识别'
+    NODE_NAME = '文字识别'
     
     # 资源等级声明
     resource_level = "light"

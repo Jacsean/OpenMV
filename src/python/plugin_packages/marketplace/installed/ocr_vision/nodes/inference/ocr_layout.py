@@ -46,7 +46,7 @@ class OCRLanguageLayoutNode(BaseNode):
     """
     
     __identifier__ = 'ocr_vision'
-    NODE_NAME = 'OCR 版面分析'
+    NODE_NAME = '版面分析'
     
     # 资源等级声明
     resource_level = "medium"
