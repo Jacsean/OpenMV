@@ -372,6 +372,7 @@ class PluginManager:
         self.hot_reloader.stop_watching(plugin_name)
 
         # 1. 从已加载节点字典中移除
+        # 使用 list() 转换是为了创建一个副本，避免在迭代过程中修改字典导致 RuntimeError
         keys_to_remove = []
         for key in list(self.loaded_nodes.keys()):
             if key.startswith(f"{plugin_name}."):

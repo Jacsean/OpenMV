@@ -1482,18 +1482,30 @@ class MainWindow(QtWidgets.QMainWindow):
     def _refresh_node_palette_display(self):
         """
         刷新节点库显示（重新创建 NodesPaletteWidget，保留原有布局和标签位置）
+        
+        实现逻辑：
+        1. 检查节点库和当前节点图是否有效
+        2. 获取节点库的父布局，确保能正确替换组件
+        3. 找到旧节点库在布局中的索引位置
+        4. 保存旧节点库的标签位置（保持用户习惯的UI布局）
+        5. 创建新的 NodesPaletteWidget 实例（使用最新注册的节点）
+        6. 恢复标签位置（保持与旧节点库一致）
+        7. 移除旧节点库并清理资源
+        8. 在原位置插入新节点库
+        9. 更新引用并记录日志
         """
         try:
+            # 1. 检查有效性
             if not self.nodes_palette or not self.current_node_graph:
                 return
             
-            # 获取当前的父布局
+            # 2. 获取父布局
             parent_layout = self.nodes_palette.parent().layout() if self.nodes_palette.parent() else None
             if not parent_layout:
                 utils.logger.warning("⚠️ 无法找到节点库的父布局", module="main_window")
                 return
             
-            # 找到旧节点库在布局中的索引
+            # 3. 找到旧节点库在布局中的索引
             old_index = -1
             for i in range(parent_layout.count()):
                 if parent_layout.itemAt(i).widget() == self.nodes_palette:
@@ -1504,25 +1516,25 @@ class MainWindow(QtWidgets.QMainWindow):
                 utils.logger.warning("⚠️ 无法找到节点库在布局中的位置", module="main_window")
                 return
             
-            # 保存旧节点库的标签位置
+            # 4. 保存旧节点库的标签位置（左/右/上/下）
             old_tab_position = self.nodes_palette.tab_widget().tabPosition() if hasattr(self.nodes_palette, 'tab_widget') else None
             
-            # 创建新的节点库面板
+            # 5. 创建新的节点库面板（自动加载 NodeFactory 中的所有节点）
             new_palette = NodesPaletteWidget(node_graph=self.current_node_graph)
             new_palette.setWindowTitle("节点库")
             
-            # 设置标签位置（保持与旧节点库一致）
+            # 6. 设置标签位置（保持与旧节点库一致，避免用户体验突兀）
             if old_tab_position is not None:
                 new_palette.tab_widget().setTabPosition(old_tab_position)
             
-            # 移除旧节点库
+            # 7. 移除旧节点库并清理资源
             parent_layout.removeWidget(self.nodes_palette)
             self.nodes_palette.deleteLater()
             
-            # 在原位置插入新节点库
+            # 8. 在原位置插入新节点库
             parent_layout.insertWidget(old_index, new_palette)
             
-            # 更新引用
+            # 9. 更新引用
             self.nodes_palette = new_palette
             
             utils.logger.info("✅ 节点库显示已刷新", module="main_window")
