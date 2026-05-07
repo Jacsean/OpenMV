@@ -341,6 +341,16 @@ class NodeEditorDialog(QtWidgets.QDialog):
             widget = item.widget()
             if widget:
                 widget.deleteLater()
+            # 也需要删除布局
+            layout = item.layout()
+            if layout:
+                # 递归删除布局中的内容
+                while layout.count() > 0:
+                    sub_item = layout.takeAt(0)
+                    sub_widget = sub_item.widget()
+                    if sub_widget:
+                        sub_widget.deleteLater()
+                layout.deleteLater()
 
     def _on_tree_selection_changed(self):
         """树形视图选择变化"""
@@ -431,21 +441,25 @@ class NodeEditorDialog(QtWidgets.QDialog):
     def _show_node_info(self, data):
         """显示节点信息（可编辑）"""
         layout = self.detail_layout
+        layout.setSpacing(12)
         node_data = data.get('data', {})
 
+        # 创建一个容器widget来组织布局
+        container = QtWidgets.QWidget()
+        container_layout = QtWidgets.QFormLayout(container)
+        container_layout.setSpacing(10)
+        container_layout.setLabelAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        container_layout.setFormAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+
         # 显示名称编辑
-        name_layout = QtWidgets.QHBoxLayout()
-        name_label = QtWidgets.QLabel("显示名称:")
         self.node_name_edit = QtWidgets.QLineEdit(node_data.get('display_name', ''))
-        name_layout.addWidget(name_label)
-        name_layout.addWidget(self.node_name_edit)
-        layout.addLayout(name_layout)
+        self.node_name_edit.setMinimumWidth(200)
+        container_layout.addRow("显示名称:", self.node_name_edit)
 
         # 所属分组选择
-        group_layout = QtWidgets.QHBoxLayout()
-        group_label = QtWidgets.QLabel("所属分组:")
+        self.group_combo = QtWidgets.QComboBox()
+        self.group_combo.setMinimumWidth(200)
         
-        # 获取所有分组
         group_order = self.builtin_plugin_info.get('group', []) if self.builtin_plugin_info else []
         group_display_names = {
             'Image_Source': '图像源',
@@ -457,46 +471,79 @@ class NodeEditorDialog(QtWidgets.QDialog):
             'YOLO': 'YOLO'
         }
         
-        self.group_combo = QtWidgets.QComboBox()
         for group_id in group_order:
             display_name = group_display_names.get(group_id, group_id)
             self.group_combo.addItem(display_name, group_id)
         
-        # 设置当前选中
         current_group = node_data.get('__identifier__', '')
         index = self.group_combo.findData(current_group)
         if index >= 0:
             self.group_combo.setCurrentIndex(index)
         
-        group_layout.addWidget(group_label)
-        group_layout.addWidget(self.group_combo)
-        layout.addLayout(group_layout)
+        container_layout.addRow("所属分组:", self.group_combo)
 
         # 是否启用
-        enabled_layout = QtWidgets.QHBoxLayout()
-        self.enabled_check = QtWidgets.QCheckBox("是否启用")
+        self.enabled_check = QtWidgets.QCheckBox()
         self.enabled_check.setChecked(node_data.get('enabled', True))
-        enabled_layout.addWidget(self.enabled_check)
-        layout.addLayout(enabled_layout)
+        container_layout.addRow("是否启用:", self.enabled_check)
 
         # 类名（只读）
-        class_layout = QtWidgets.QHBoxLayout()
-        class_label = QtWidgets.QLabel("类名:")
         class_value = QtWidgets.QLabel(f"<b>{node_data.get('class', '')}</b>")
-        class_layout.addWidget(class_label)
-        class_layout.addWidget(class_value)
-        layout.addLayout(class_layout)
+        class_value.setStyleSheet("color: #666;")
+        container_layout.addRow("类名:", class_value)
+
+        # 添加分隔线
+        separator = QtWidgets.QFrame()
+        separator.setFrameShape(QtWidgets.QFrame.HLine)
+        separator.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator_layout = QtWidgets.QHBoxLayout()
+        separator_layout.addWidget(separator)
+        container_layout.addRow("", separator_layout)
 
         # 操作按钮
-        btn_layout = QtWidgets.QHBoxLayout()
+        btn_widget = QtWidgets.QWidget()
+        btn_layout = QtWidgets.QHBoxLayout(btn_widget)
+        btn_layout.setSpacing(10)
+        
         self.save_node_btn = QtWidgets.QPushButton("💾 保存")
+        self.save_node_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 6px 16px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+        """)
         self.save_node_btn.clicked.connect(self._on_save_node)
+        
         self.cancel_node_btn = QtWidgets.QPushButton("取消")
+        self.cancel_node_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f0f0;
+                color: #333;
+                border: 1px solid #ccc;
+                padding: 6px 16px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+        """)
         self.cancel_node_btn.clicked.connect(self._on_cancel_node_edit)
+        
         btn_layout.addWidget(self.save_node_btn)
         btn_layout.addWidget(self.cancel_node_btn)
         btn_layout.addStretch()
-        layout.addLayout(btn_layout)
+        
+        container_layout.addRow("", btn_widget)
+
+        # 添加到主布局
+        layout.addWidget(container)
+        layout.addStretch()
 
     def _show_market_local_info(self, data):
         """显示本地市场插件信息"""
