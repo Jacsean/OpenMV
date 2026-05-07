@@ -33,6 +33,7 @@ import json
 import time
 import queue
 import threading
+import inspect
 from enum import IntEnum
 from datetime import datetime
 from pathlib import Path
@@ -70,7 +71,9 @@ class LogRecord:
         module: Optional[str] = None,
         timestamp: Optional[datetime] = None,
         context: Optional[Dict[str, Any]] = None,
-        exc_info: Optional[tuple] = None
+        exc_info: Optional[tuple] = None,
+        func_name: Optional[str] = None,
+        line_number: Optional[int] = None
     ):
         self.level = level
         self.message = message
@@ -78,6 +81,8 @@ class LogRecord:
         self.timestamp = timestamp or datetime.now()
         self.context = context or {}
         self.exc_info = exc_info
+        self.func_name = func_name
+        self.line_number = line_number
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -86,6 +91,8 @@ class LogRecord:
             'level': self.level.name,
             'message': self.message,
             'module': self.module,
+            'func_name': self.func_name,
+            'line_number': self.line_number,
             'context': self.context
         }
 
@@ -140,10 +147,17 @@ class ConsoleHandler(LogHandler):
         """输出到控制台"""
         timestamp = record.timestamp.strftime('%H:%M:%S')
 
+        func_part = ""
+        if record.func_name:
+            if record.line_number:
+                func_part = f"[{record.func_name}][{record.line_number}]"
+            else:
+                func_part = f"[{record.func_name}]"
+
         if record.module:
-            formatted = f"[{timestamp}] [{record.level.name:<8}] [{record.module}] {record.message}"
+            formatted = f"[{timestamp}] [{record.level.name:<8}] [{record.module}] {func_part} {record.message}"
         else:
-            formatted = f"[{timestamp}] [{record.level.name:<8}] {record.message}"
+            formatted = f"[{timestamp}] [{record.level.name:<8}] {func_part} {record.message}"
 
         if record.context:
             context_str = ', '.join([f"{k}={v}" for k, v in record.context.items()])
@@ -289,10 +303,17 @@ class QtLogHandler(LogHandler):
         try:
             timestamp = record.timestamp.strftime('%H:%M:%S')
 
+            func_part = ""
+            if record.func_name:
+                if record.line_number:
+                    func_part = f"[{record.func_name}][{record.line_number}]"
+                else:
+                    func_part = f"[{record.func_name}]"
+
             if record.module:
-                formatted = f"[{timestamp}] [{record.level.name:<8}] [{record.module}] {record.message}"
+                formatted = f"[{timestamp}] [{record.level.name:<8}] [{record.module}] {func_part} {record.message}"
             else:
-                formatted = f"[{timestamp}] [{record.level.name:<8}] {record.message}"
+                formatted = f"[{timestamp}] [{record.level.name:<8}] {func_part} {record.message}"
 
             if record.context:
                 context_str = ', '.join([f"{k}={v}" for k, v in record.context.items()])
@@ -454,7 +475,28 @@ class Logger:
         if not self._should_log(level, module):
             return
 
-        record = LogRecord(level=level, message=message, module=module, context=kwargs)
+        func_name = None
+        line_number = None
+
+        try:
+            stack = inspect.stack()
+            for i in range(2, min(len(stack), 6)):
+                frame = stack[i]
+                if frame.function not in ['_emit', 'debug', 'info', 'warning', 'error', 'critical', 'success', 'exception', 'debug_trace']:
+                    func_name = frame.function
+                    line_number = frame.lineno
+                    break
+        except Exception:
+            pass
+
+        record = LogRecord(
+            level=level,
+            message=message,
+            module=module,
+            context=kwargs,
+            func_name=func_name,
+            line_number=line_number
+        )
 
         for handler in self.handlers:
             try:
