@@ -183,6 +183,7 @@ class PluginManager:
                 source=source,
                 priority=priority,
                 category_group=data.get('category_group', data['name']),
+                group=data.get('group', []),
                 nodes=nodes,
                 dependencies=data.get('dependencies', []),
                 resource_level=data.get('resource_level', 'light'),

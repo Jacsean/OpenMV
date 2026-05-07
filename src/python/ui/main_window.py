@@ -1434,51 +1434,109 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _rename_palette_tabs_by_category(self, tab_widget):
         """
-        根据 plugin.json 的 category_group 和节点的 __identifier__ 重命名节点库面板的标签页
-        
+        根据 plugin.json 的 group 数组和节点的 __identifier__ 重命名并重新排序节点库面板的标签页
+
         Args:
             tab_widget: QTabWidget 实例
         """
         if not hasattr(self, 'plugin_manager') or not self.plugin_manager:
             return
-        
-        # 构建完整的标签名称映射
-        category_map = {}
-        
-        # 添加节点 __identifier__ 到中文分类的映射
-        identifier_mapping = {
-            'preprocessing': '图像分析',
-            'feature_extraction': '图像变换',
-            'match_location': '图像处理',
-            'io_camera': '图像相机',
-            'integration': '系统集成'
+
+        # 构建 identifier 到中文显示名的映射
+        identifier_display_map = {
+            # 小写版本（来自 plugin.json）
+            'image_source': '图像源',
+            'image_analysis': '图像分析',
+            'image_transform': '图像变换',
+            'image_process': '图像处理',
+            'integration': '系统集成',
+            # 大写版本（可能来自其他地方）
+            'Image_Source': '图像源',
+            'Image_Analysis': '图像分析',
+            'Image_Transform': '图像变换',
+            'Image_Process': '图像处理',
+            'Integration': '系统集成'
         }
-        
-        # 添加当前插件的映射（plugin_name -> category_group）
+
+        # 插件名称到中文名称的映射（用于 OCR、YOLO 等）
+        plugin_display_map = {
+            'ocr_vision': 'OCR',
+            'yolo_vision': 'YOLO'
+        }
+
+        # 从插件的 group 字段获取排序顺序
+        group_order = []
         for plugin_name, plugin_info in self.plugin_manager.plugins.items():
-            if hasattr(plugin_info, 'category_group') and plugin_info.category_group:
-                category_map[plugin_name] = plugin_info.category_group
-            else:
-                category_map[plugin_name] = plugin_name
+            if hasattr(plugin_info, 'group') and plugin_info.group:
+                group_order = plugin_info.group
+                utils.logger.info(f"📋 从插件 {plugin_name} 获取到 group 排序: {group_order}", module="main_window")
+                break
         
-        # 合并 identifier 映射
-        category_map.update(identifier_mapping)
-        
-        # 更新标签名称
-        renamed_count = 0
+        if not group_order:
+            utils.logger.info("⚠️ 未找到 group 排序配置，使用默认顺序", module="main_window")
+
+        # 收集所有标签信息
+        tabs_info = []  # [(原始名称, 显示名称, 原始索引)]
         for i in range(tab_widget.count()):
             tab_text = tab_widget.tabText(i)
+            display_name = tab_text  # 默认使用原始名称
+
+            # 尝试从 identifier 映射中获取显示名
+            if tab_text in identifier_display_map:
+                display_name = identifier_display_map[tab_text]
+                utils.logger.info(f"🔄 节点库标签重命名: '{tab_text}' -> '{display_name}'", module="main_window")
+            # 尝试从插件映射中获取显示名
+            elif tab_text in plugin_display_map:
+                display_name = plugin_display_map[tab_text]
+                utils.logger.info(f"🔄 节点库标签重命名: '{tab_text}' -> '{display_name}'", module="main_window")
+
+            tabs_info.append((tab_text, display_name, i))
+
+        # 根据 group_order 排序
+        def get_sort_key(item):
+            original_name, display_name, index = item
             
-            # 如果标签名称在映射表中，则替换
-            if tab_text in category_map:
-                new_name = category_map[tab_text]
-                if new_name != tab_text:
-                    tab_widget.setTabText(i, new_name)
-                    utils.logger.info(f"🔄 节点库标签重命名: '{tab_text}' -> '{new_name}'", module="main_window")
-                    renamed_count += 1
+            # 如果原始名称在 group_order 中，使用其索引
+            if original_name in group_order:
+                return group_order.index(original_name)
+            # 如果显示名称在 group_order 中，使用其索引
+            if display_name in group_order:
+                return group_order.index(display_name)
+            # 否则放在最后
+            return len(group_order)
+
+        tabs_info.sort(key=get_sort_key)
         
-        if renamed_count == 0:
-            utils.logger.info("⚠️ 未找到需要重命名的节点库标签", module="main_window")
+        # 打印排序后的顺序（调试信息）
+        sorted_names = [info[1] for info in tabs_info]
+        utils.logger.info(f"🔄 排序后的标签顺序: {sorted_names}", module="main_window")
+
+        # 先重命名所有标签
+        for original_name, display_name, old_index in tabs_info:
+            if display_name != original_name:
+                tab_widget.setTabText(old_index, display_name)
+
+        # 然后重新排序标签（使用 QTabWidget 的 insertTab 和 removeTab 方法）
+        # 先记录所有标签页的内容
+        tab_contents = []
+        for i in range(tab_widget.count()):
+            widget = tab_widget.widget(i)
+            label = tab_widget.tabText(i)
+            tab_contents.append((widget, label))
+        
+        # 清空所有标签
+        while tab_widget.count() > 0:
+            tab_widget.removeTab(0)
+        
+        # 按照排序后的顺序重新添加标签
+        for original_name, display_name, old_index in tabs_info:
+            # 找到对应的标签内容
+            for widget, label in tab_contents:
+                if label == display_name or label == original_name:
+                    tab_widget.addTab(widget, display_name)
+                    break
+
+        utils.logger.info("✅ 节点库标签重命名和排序完成", module="main_window")
 
     def closeEvent(self, event):
         """
