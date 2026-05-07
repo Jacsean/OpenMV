@@ -50,15 +50,24 @@ class TreeBranchDelegate(QtWidgets.QStyledItemDelegate):
         rect = option.rect
         x = 10  # 起始位置
         
-        # 绘制水平连线
-        if level > 0:
+        # 根节点（level = 0）：如果有子节点，绘制垂直线
+        if level == 0:
+            if item.childCount() > 0:
+                # 绘制根节点下方的垂直线
+                line_x = x - 5
+                painter.drawLine(line_x, rect.top() + 8, line_x, rect.bottom())
+                
+                # 绘制子节点的水平连线起点
+                child_y = rect.bottom()
+                painter.drawLine(line_x, child_y, line_x + indent // 2, child_y)
+        else:
+            # 非根节点：绘制水平连线
             line_y = rect.center().y()
-            start_x = x + (level - 1) * indent
+            start_x = x + (level - 1) * indent - 5
             end_x = x + level * indent - 5
             painter.drawLine(start_x, line_y, end_x, line_y)
-        
-        # 绘制垂直连线（如果不是最后一个子节点）
-        if level > 0:
+            
+            # 绘制垂直连线（如果不是最后一个子节点或有子节点）
             has_next_sibling = False
             parent_item = item.parent()
             if parent_item:
@@ -129,8 +138,8 @@ class NodeEditorDialog(QtWidgets.QDialog):
         
         # 左侧：节点树形视图（宽度约为右侧的1/4）
         left_panel = self._create_left_panel()
-        left_panel.setMinimumWidth(120)
-        left_panel.setMaximumWidth(150)
+        left_panel.setMinimumWidth(160)
+        left_panel.setMaximumWidth(200)
         splitter.addWidget(left_panel)
 
         # 右侧：详情编辑区
