@@ -477,7 +477,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         self.enabled_check = QtWidgets.QCheckBox("是否启用")
         self.enabled_check.setChecked(node_data.get('enabled', True))
         enabled_layout.addWidget(self.enabled_check)
-        layout.addWidget(enabled_layout)
+        layout.addLayout(enabled_layout)
 
         # 类名（只读）
         class_layout = QtWidgets.QHBoxLayout()
