@@ -31,7 +31,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         self.plugin_manager = plugin_manager
         self.plugins_dir = plugins_dir  # 保留向后兼容
         self.setWindowTitle("节点编辑器")
-        self.resize(1200, 800)
+        self.resize(600, 400)
 
         # 节点数据
         self.builtin_plugin_info = None
@@ -68,8 +68,10 @@ class NodeEditorDialog(QtWidgets.QDialog):
         except AttributeError:
             pass
         
-        # 左侧：节点树形视图
+        # 左侧：节点树形视图（宽度约为右侧的1/3）
         left_panel = self._create_left_panel()
+        left_panel.setMinimumWidth(180)
+        left_panel.setMaximumWidth(250)
         splitter.addWidget(left_panel)
 
         # 右侧：详情编辑区
@@ -77,7 +79,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         splitter.addWidget(right_panel)
 
         splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 2)
+        splitter.setStretchFactor(1, 3)  # 左侧:右侧 = 1:3
         main_layout.addWidget(splitter)
 
     def _create_toolbar(self):
@@ -135,7 +137,43 @@ class NodeEditorDialog(QtWidgets.QDialog):
         # 树形视图
         self.node_tree = QtWidgets.QTreeWidget()
         self.node_tree.setHeaderLabels(["名称"])
-        self.node_tree.setColumnWidth(0, 250)
+        self.node_tree.setColumnWidth(0, 200)
+        
+        # 添加树状连线样式
+        self.node_tree.setStyleSheet("""
+            QTreeWidget {
+                show-decoration-selected: 1;
+            }
+            QTreeWidget::item {
+                padding: 2px 0px;
+            }
+            QTreeWidget::branch:has-siblings:!adjoins-item {
+                border-image: url(:/qt-project.org/styles/commonstyle/images/vline.png) 0;
+            }
+            QTreeWidget::branch:has-siblings:adjoins-item {
+                border-image: url(:/qt-project.org/styles/commonstyle/images/branch-more.png) 0;
+            }
+            QTreeWidget::branch:!has-children:!has-siblings:adjoins-item {
+                border-image: url(:/qt-project.org/styles/commonstyle/images/branch-end.png) 0;
+            }
+            QTreeWidget::branch:has-children:!has-siblings:closed,
+            QTreeWidget::branch:closed:has-children:has-siblings {
+                border-image: none;
+                image: url(:/qt-project.org/styles/commonstyle/images/branch-closed.png);
+            }
+            QTreeWidget::branch:open:has-children:!has-siblings,
+            QTreeWidget::branch:open:has-children:has-siblings {
+                border-image: none;
+                image: url(:/qt-project.org/styles/commonstyle/images/branch-open.png);
+            }
+        """)
+        
+        # 如果上述样式不生效，使用简单的替代方案
+        try:
+            self.node_tree.setIndentation(20)
+        except:
+            pass
+        
         self.node_tree.itemSelectionChanged.connect(self._on_tree_selection_changed)
         layout.addWidget(self.node_tree)
 
