@@ -26,9 +26,10 @@ class NodeEditorDialog(QtWidgets.QDialog):
     提供可视化的节点管理界面，支持节点的完整生命周期管理
     """
 
-    def __init__(self, parent=None, plugin_manager=None):
+    def __init__(self, parent=None, plugin_manager=None, plugins_dir=None):
         super(NodeEditorDialog, self).__init__(parent)
         self.plugin_manager = plugin_manager
+        self.plugins_dir = plugins_dir  # 保留向后兼容
         self.setWindowTitle("节点编辑器")
         self.resize(1200, 800)
 
