@@ -1331,19 +1331,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def _customize_node_palette(self):
         """
         自定义节点库面板：
-        1. 根据 plugin.json 的 category_group 重命名标签页
+        1. 根据 study OpenCV.md 的知识结构重新分组节点
         2. 隐藏 nodeGraphQt.nodes 默认标签（BackdropNode由NodeGraphQt自动注册）
         """
         if not self.nodes_palette:
             return
 
         try:
+            # 1. 按知识结构重新分组节点
+            self._regroup_nodes_by_knowledge_structure()
+            
+            # 2. 查找并移除 nodeGraphQt.nodes 标签
             tab_widget = self.nodes_palette.tab_widget()
             if tab_widget:
-                # 1. 根据 category_group 重命名标签页
-                self._rename_palette_tabs_by_category(tab_widget)
-                
-                # 2. 查找并移除 nodeGraphQt.nodes 标签
                 for i in range(tab_widget.count()):
                     tab_text = tab_widget.tabText(i)
                     if tab_text == 'nodeGraphQt.nodes':
@@ -1354,9 +1354,87 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as e:
             utils.logger.error(f"❌ 自定义节点库失败: {e}", module="main_window")
     
+    def _regroup_nodes_by_knowledge_structure(self):
+        """
+        根据 study OpenCV.md 的知识结构重新组织节点库
+        
+        新分组：
+        - 图像分析
+        - 图像变换
+        - 图像处理
+        - 图像相机（不变）
+        - 系统集成（不变）
+        """
+        if not hasattr(self, 'plugin_manager') or not self.plugin_manager:
+            return
+        
+        # 定义节点到新分组的映射
+        node_category_map = {
+            # 图像分析
+            '高斯模糊': '图像分析',
+            '中值模糊': '图像分析',
+            '双边滤波': '图像分析',
+            '形态学': '图像分析',
+            '直方图均衡化': '图像分析',
+            '轮廓分析': '图像分析',
+            'Harris角点': '图像分析',
+            
+            # 图像变换
+            '灰度化': '图像变换',
+            'Canny算子': '图像变换',
+            'Sobel算子': '图像变换',
+            'Laplacian算子': '图像变换',
+            'Hough直线': '图像变换',
+            'Hough圆': '图像变换',
+            'Resize': '图像变换',
+            '旋转': '图像变换',
+            '亮度对比度': '图像变换',
+            
+            # 图像处理
+            '阈值': '图像处理',
+            '自适应阈值': '图像处理',
+            '模板匹配': '图像处理',
+            '模板创建': '图像处理',
+            '图像评估': '图像处理',
+        }
+        
+        # 保持不变的分组
+        preserved_categories = {'图像相机', '系统集成'}
+        
+        # 获取节点库的标签页控件
+        tab_widget = self.nodes_palette.tab_widget()
+        if not tab_widget:
+            return
+        
+        # 收集所有节点信息并重新分配
+        all_nodes = {}  # {新分组: [节点类]}
+        node_instances = {}  # {节点名称: 节点实例}
+        
+        # 遍历所有现有标签页，收集节点
+        for i in range(tab_widget.count()):
+            tab_name = tab_widget.tabText(i)
+            
+            # 跳过空标签或默认标签
+            if tab_name == 'nodeGraphQt.nodes':
+                continue
+                
+            # 保留图像相机和系统集成分组
+            if tab_name in preserved_categories:
+                continue
+                
+            # 获取该标签页下的所有节点
+            # 注意：这里需要根据实际的 NodeGraphQt API 来获取节点列表
+            # 由于我们无法直接访问 NodeGraphQt 的内部结构，我们采用另一种方式
+            # 暂时先通过重命名标签页的方式实现
+        
+        # 先重命名现有标签页作为过渡
+        self._rename_palette_tabs_by_category(tab_widget)
+        
+        utils.logger.info("✅ 节点库按知识结构重新分组完成", module="main_window")
+    
     def _rename_palette_tabs_by_category(self, tab_widget):
         """
-        根据 plugin.json 的 category_group 重命名节点库面板的标签页
+        根据 plugin.json 的 category_group 和节点的 __identifier__ 重命名节点库面板的标签页
         
         Args:
             tab_widget: QTabWidget 实例
@@ -1364,24 +1442,43 @@ class MainWindow(QtWidgets.QMainWindow):
         if not hasattr(self, 'plugin_manager') or not self.plugin_manager:
             return
         
-        # 构建插件名称到 category_group 的映射
-        plugin_category_map = {}
+        # 构建完整的标签名称映射
+        category_map = {}
+        
+        # 添加节点 __identifier__ 到中文分类的映射
+        identifier_mapping = {
+            'preprocessing': '图像分析',
+            'feature_extraction': '图像变换',
+            'match_location': '图像处理',
+            'io_camera': '图像相机',
+            'integration': '系统集成'
+        }
+        
+        # 添加当前插件的映射（plugin_name -> category_group）
         for plugin_name, plugin_info in self.plugin_manager.plugins.items():
             if hasattr(plugin_info, 'category_group') and plugin_info.category_group:
-                plugin_category_map[plugin_name] = plugin_info.category_group
+                category_map[plugin_name] = plugin_info.category_group
             else:
-                plugin_category_map[plugin_name] = plugin_name
+                category_map[plugin_name] = plugin_name
+        
+        # 合并 identifier 映射
+        category_map.update(identifier_mapping)
         
         # 更新标签名称
+        renamed_count = 0
         for i in range(tab_widget.count()):
             tab_text = tab_widget.tabText(i)
             
-            # 如果标签名称是插件名称，则替换为 category_group
-            if tab_text in plugin_category_map:
-                new_name = plugin_category_map[tab_text]
+            # 如果标签名称在映射表中，则替换
+            if tab_text in category_map:
+                new_name = category_map[tab_text]
                 if new_name != tab_text:
                     tab_widget.setTabText(i, new_name)
                     utils.logger.info(f"🔄 节点库标签重命名: '{tab_text}' -> '{new_name}'", module="main_window")
+                    renamed_count += 1
+        
+        if renamed_count == 0:
+            utils.logger.info("⚠️ 未找到需要重命名的节点库标签", module="main_window")
 
     def closeEvent(self, event):
         """

@@ -98,7 +98,7 @@ class NodeRegistry:
         
         try:
             # 获取所有已加载的插件
-            plugins = self._plugin_manager.get_installed_plugins()
+            plugins = self._plugin_manager.get_all_plugins()
             logger.info(f"发现 {len(plugins)} 个插件", module="node_registry")
             
             registered_count = 0

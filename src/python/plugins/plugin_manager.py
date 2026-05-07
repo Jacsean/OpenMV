@@ -53,9 +53,12 @@ class PluginManager:
         # 初始化热重载器
         self.hot_reloader = HotReloader()
         
+        # 初始化依赖解析器
+        self.dependency_resolver = DependencyResolver()
+        
         # 初始化安装器
         self.installer = PluginInstaller(self.plugins_dir)
-    
+
     def scan_plugins(self) -> List[PluginInfo]:
         """
         扫描插件目录，返回插件信息列表
@@ -79,7 +82,7 @@ class PluginManager:
         
         utils.logger.info(f"\n✅ 共扫描到 {len(plugins)} 个插件", module="plugin_manager")
         return plugins
-    
+
     def _scan_directory(self, directory: Path, source='builtin', priority=1) -> List[PluginInfo]:
         """
         扫描指定目录下的插件
@@ -97,6 +100,18 @@ class PluginManager:
         if not directory.exists():
             return plugins
         
+        # 特殊处理：builtin 目录本身可能是一个插件（新结构）
+        if source == 'builtin':
+            metadata_file = directory / "plugin.json"
+            if metadata_file.exists():
+                builtin_plugin_info = self._load_plugin_metadata(directory, source=source, priority=priority)
+                if builtin_plugin_info:
+                    plugins.append(builtin_plugin_info)
+                    self.plugins[builtin_plugin_info.name] = builtin_plugin_info
+                    utils.logger.info(f"   ✅ {directory.name} (source: {source}, new structure)", module="plugin_manager")
+                    return plugins
+        
+        # 旧结构：扫描子目录
         for item in sorted(directory.iterdir()):
             if item.is_dir():
                 plugin_info = self._load_plugin_metadata(item, source=source, priority=priority)
@@ -106,7 +121,7 @@ class PluginManager:
                     utils.logger.info(f"   ✅ {item.name} (source: {source})", module="plugin_manager")
         
         return plugins
-    
+
     def _load_plugin_metadata(self, plugin_path: Path, source='builtin', priority=1) -> Optional[PluginInfo]:
         """
         加载插件元数据
@@ -148,48 +163,40 @@ class PluginManager:
                     icon=node_data.get('icon'),
                     width=node_data.get('width'),
                     height=node_data.get('height'),
-                    description=node_data.get('description', ''),
-                    color=node_data.get('color'),
-                    # AI 节点扩展字段
+                    description=node_data.get('description'),
                     resource_level=node_data.get('resource_level', 'light'),
-                    hardware_requirements=node_data.get('hardware_requirements', {
-                        'cpu_cores': 2,
-                        'memory_gb': 2,
-                        'gpu_required': False,
-                        'gpu_memory_gb': 0
-                    }),
+                    hardware_requirements=node_data.get('hardware_requirements', {}),
                     dependencies=node_data.get('dependencies', []),
-                    optional_dependencies=node_data.get('optional_dependencies', {})
+                    optional_dependencies=node_data.get('optional_dependencies', {}),
+                    color=node_data.get('color', [100, 100, 100]),
+                    identifier=node_data.get('__identifier__', data.get('name', ''))
                 )
                 nodes.append(node_def)
             
+            # 创建插件信息对象
             plugin_info = PluginInfo(
                 name=data['name'],
-                version=data.get('version', '1.0.0'),
-                author=data.get('author', 'Unknown'),
+                version=data['version'],
+                author=data.get('author', ''),
                 description=data.get('description', ''),
-                category_group=data.get('category_group', data['name']),  # 使用category_group，如果没有则使用name
+                path=str(plugin_path),
+                source=source,
+                priority=priority,
+                category_group=data.get('category_group', data['name']),
                 nodes=nodes,
                 dependencies=data.get('dependencies', []),
-                min_app_version=data.get('min_app_version', '3.1.0'),
-                path=str(plugin_path),
-                source=data.get('source', source),  # 从plugin.json读取或使用默认值
-                priority=priority,  # 加载优先级
-                # AI 插件扩展字段
                 resource_level=data.get('resource_level', 'light'),
-                installation_guide=data.get('installation_guide', {}),
-                hardware_recommendations=data.get('hardware_recommendations', {})
+                min_app_version=data.get('min_app_version', '1.0.0')
             )
             
             return plugin_info
             
-        except json.JSONDecodeError as e:
-            utils.logger.info(f"❌ 插件元数据JSON格式错误 {plugin_path}: {e}", module="plugin_manager")
-            return None
         except Exception as e:
             utils.logger.info(f"❌ 加载插件元数据失败 {plugin_path}: {e}", module="plugin_manager")
+            import traceback
+            traceback.print_exc()
             return None
-    
+
     def load_plugin_nodes(self, plugin_name: str, node_graph) -> bool:
         """
         安全地加载插件的节点类并注册到NodeGraph
@@ -258,66 +265,19 @@ class PluginManager:
             # 4. 动态导入模块
             # 关键修复：正确设置包层次结构以支持相对导入
             if is_new_structure:
-                # 新体系：需要将 user_plugins 作为包根
-                user_plugins_path = plugin_path.parent
+                # 新体系：需要将 src/python 目录添加到 sys.path
+                # 这样节点文件中的 "from shared_libs..." 才能正确导入
+                src_python_path = plugin_path.parent.parent / "src" / "python"
                 
-                # 确保 user_plugins 在 sys.path 中
-                if str(user_plugins_path) not in sys.path:
-                    sys.path.insert(0, str(user_plugins_path))
+                if str(src_python_path) not in sys.path:
+                    sys.path.insert(0, str(src_python_path))
                 
                 # 使用完整的模块名（包含包路径）
-                module_name = f"user_plugins.{plugin_name}.nodes"
+                module_name = f"{plugin_name}.nodes"
             
             spec = importlib.util.spec_from_file_location(module_name, module_path)
             module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = module
-            
-            # 如果是新体系，还需要注册父包到 sys.modules
-            if is_new_structure:
-                # 确定插件所在的根目录（plugin_packages）
-                plugin_packages_path = plugin_path.parent.parent  # plugin_packages
-                
-                # 确保 plugin_packages 在 sys.path 中
-                if str(plugin_packages_path) not in sys.path:
-                    sys.path.insert(0, str(plugin_packages_path))
-                
-                # 确定模块名前缀（builtin 或 marketplace.installed）
-                relative_path = plugin_path.relative_to(plugin_packages_path)
-                package_prefix = str(relative_path.parent).replace(os.sep, '.')
-                
-                # 使用完整的模块名（包含包路径）
-                module_name = f"{package_prefix}.{plugin_name}.nodes"
-                
-                # 注册 plugin_packages 包
-                if 'plugin_packages' not in sys.modules:
-                    plugin_packages_spec = importlib.util.spec_from_file_location(
-                        'plugin_packages',
-                        plugin_packages_path / '__init__.py' if (plugin_packages_path / '__init__.py').exists() else None
-                    )
-                    if plugin_packages_spec:
-                        plugin_packages_module = importlib.util.module_from_spec(plugin_packages_spec)
-                        sys.modules['plugin_packages'] = plugin_packages_module
-                
-                # 注册子包（builtin 或 marketplace）
-                if package_prefix not in sys.modules:
-                    sub_package_path = plugin_packages_path / relative_path.parent
-                    sub_package_spec = importlib.util.spec_from_file_location(
-                        package_prefix,
-                        sub_package_path / '__init__.py' if (sub_package_path / '__init__.py').exists() else None
-                    )
-                    if sub_package_spec:
-                        sub_package_module = importlib.util.module_from_spec(sub_package_spec)
-                        sys.modules[package_prefix] = sub_package_module
-                
-                # 注册插件包
-                plugin_package_name = f"{package_prefix}.{plugin_name}"
-                if plugin_package_name not in sys.modules:
-                    plugin_package_spec = importlib.util.spec_from_file_location(
-                        plugin_package_name,
-                        plugin_path / '__init__.py'
-                    )
-                    plugin_package_module = importlib.util.module_from_spec(plugin_package_spec)
-                    sys.modules[plugin_package_name] = plugin_package_module
             
             spec.loader.exec_module(module)
             
@@ -331,8 +291,12 @@ class PluginManager:
                 if hasattr(module, class_name):
                     node_class = getattr(module, class_name)
                     
-                    # 保留节点原有的 __identifier__（用于工作流序列化/反序列化）
-                    # 节点库面板的标签名称由 NodeGraphQt 根据 __identifier__ 自动生成
+                    # 使用节点定义中的 identifier（用于工作流序列化/反序列化）
+                    if node_def.identifier:
+                        node_class.__identifier__ = node_def.identifier
+                    
+                    # 获取插件的 category_group（用于节点库标签名称）
+                    category_group = plugin_info.category_group
                     
                     # 注册到NodeGraph
                     node_graph.register_node(node_class)
@@ -369,7 +333,7 @@ class PluginManager:
             import traceback
             traceback.print_exc()
             return False
-    
+
     def _apply_node_style(self, node_class, node_def):
         """
         应用节点样式配置
@@ -385,124 +349,70 @@ class PluginManager:
                 # NodeGraphQt 可能不支持直接设置图标，这里预留接口
                 # node_class.set_icon(icon)
             
-            # 设置节点尺寸（如果支持）
-            if node_def.width is not None or node_def.height is not None:
-                width = node_def.width
-                height = node_def.height
-                # NodeGraphQt 的节点尺寸通常在创建实例时设置
-                # 这里可以存储配置供后续使用
-                if hasattr(node_class, '_style_config'):
-                    node_class._style_config['width'] = width
-                    node_class._style_config['height'] = height
-                else:
-                    node_class._style_config = {'width': width, 'height': height}
-            
-            # 存储描述信息用于说明面板
-            if node_def.description:
-                description = node_def.description
-                if not hasattr(node_class, '_node_description'):
-                    node_class._node_description = description
-                
             # 设置节点颜色（如果支持）
             if node_def.color:
-                color = node_def.color
-                
+                # 预留颜色设置接口
+                pass
         except Exception as e:
-            utils.logger.info(f"   ⚠️ 应用节点样式失败: {e}", module="plugin_manager")
-            import traceback
-            traceback.print_exc()
-    
-    def _on_plugin_changed(self, plugin_name: str):
+            utils.logger.info(f"⚠️ 应用节点样式失败: {e}", module="plugin_manager")
+
+    def unload_plugin_nodes(self, plugin_name: str, node_graph=None):
         """
-        插件文件变化回调（由热重载器触发）
+        卸载插件的节点类
         
         Args:
             plugin_name: 插件名称
-        """
-        utils.logger.info(f"\n🔄 开始重载插件: {plugin_name}", module="plugin_manager")
-        
-        # 1. 卸载旧节点
-        self.unload_plugin_nodes(plugin_name)
-        
-        # 2. 重新扫描元数据
-        plugin_path = Path(self.plugins[plugin_name].path)
-        new_info = self._load_plugin_metadata(plugin_path)
-        
-        if new_info:
-            self.plugins[plugin_name] = new_info
-        
-        # 3. 触发热重载事件，通知所有工作流刷新节点
-        try:
-            from core.event_bus import event_bus, Events
-            event_bus.publish(Events.PLUGIN_RELOADED, plugin_name=plugin_name)
-            utils.logger.success(f"✅ 插件 {plugin_name} 已重载，已通知所有工作流", module="plugin_manager")
-        except Exception as e:
-            utils.logger.warning(f"⚠️ 触发热重载事件失败: {e}", module="plugin_manager")
-            utils.logger.info(f"💡 提示：请手动刷新NodeGraph以应用更改", module="plugin_manager")
-    
-    def unload_plugin_nodes(self, plugin_name: str) -> bool:
-        """
-        卸载插件节点
-        
-        Args:
-            plugin_name: 插件名称
-            node_graph: NodeGraph实例（可选），如果提供则从Graph中注销节点
-        
-        Returns:
-            bool: 卸载是否成功
+            node_graph: NodeGraph实例（可选）
         """
         if plugin_name not in self.plugins:
-            return False
+            return
         
         # 停止热重载监听
         self.hot_reloader.stop_watching(plugin_name)
         
-        # 从NodeGraph中注销节点（如果提供了node_graph）
-        if node_graph:
-            plugin_info = self.plugins[plugin_name]
-            for node_def in plugin_info.nodes:
-                class_name = node_def.class_name
-                node_key = f"{plugin_name}.{class_name}"
-                
-                if node_key in self.loaded_nodes:
-                    node_class = self.loaded_nodes[node_key]
-                    try:
-                        # NodeGraphQt没有直接的unregister_node方法
-                        # 只能通过重新创建NodesPalette来刷新
-                        utils.logger.info(f"   🗑️ 从Graph移除节点: {node_def.display_name}", module="plugin_manager")
-                    except Exception as e:
-                        utils.logger.info(f"   ⚠️ 移除节点失败: {e}", module="plugin_manager")
+        # 从已加载节点字典中移除
+        keys_to_remove = []
+        for key in self.loaded_nodes:
+            if key.startswith(f"{plugin_name}."):
+                keys_to_remove.append(key)
         
-        # 移除已注册的节点
-        nodes_to_remove = [
-            key for key in self.loaded_nodes.keys()
-            if key.startswith(f"{plugin_name}.")
-        ]
-        
-        for node_key in nodes_to_remove:
-            del self.loaded_nodes[node_key]
-            utils.logger.info(f"   🗑️ 卸载节点: {node_key}", module="plugin_manager")
-        
-        # 清除模块缓存
-        module_name = f"plugin_{plugin_name}_nodes"
-        if module_name in sys.modules:
-            del sys.modules[module_name]
+        for key in keys_to_remove:
+            del self.loaded_nodes[key]
         
         utils.logger.info(f"✅ 插件 {plugin_name} 已卸载", module="plugin_manager")
-        return True
-    
-    def get_installed_plugins(self) -> List[PluginInfo]:
+
+    def _on_plugin_changed(self, plugin_name: str):
         """
-        获取已安装的插件列表
+        插件文件变化时的回调
         
-        Returns:
-            List[PluginInfo]: 插件信息列表
+        Args:
+            plugin_name: 插件名称
         """
-        return list(self.plugins.values())
-    
-    def get_plugin(self, plugin_name: str) -> Optional[PluginInfo]:
+        utils.logger.info(f"\n🔄 检测到插件变化: {plugin_name}", module="plugin_manager")
+        
+        # 卸载旧节点
+        self.unload_plugin_nodes(plugin_name)
+        
+        # 重新扫描元数据
+        plugin_info = self.plugins.get(plugin_name)
+        if plugin_info:
+            plugin_path = Path(plugin_info.path)
+            new_info = self._load_plugin_metadata(plugin_path)
+            
+            if new_info:
+                self.plugins[plugin_name] = new_info
+                utils.logger.info(f"✅ 插件元数据已更新: {plugin_name}", module="plugin_manager")
+        
+        # 发布插件重载事件
+        if hasattr(self, 'event_bus'):
+            from core.event_bus import Events
+            self.event_bus.publish(Events.PLUGIN_RELOADED, plugin_name=plugin_name)
+        else:
+            utils.logger.info(f"💡 提示：请刷新NodeGraph以应用更改", module="plugin_manager")
+
+    def get_plugin_info(self, plugin_name: str) -> Optional[PluginInfo]:
         """
-        获取指定插件信息
+        获取插件信息
         
         Args:
             plugin_name: 插件名称
@@ -511,45 +421,29 @@ class PluginManager:
             PluginInfo或None
         """
         return self.plugins.get(plugin_name)
-    
-    def install_plugin_from_zip(self, zip_path: str) -> Tuple[bool, str]:
+
+    def get_all_plugins(self) -> List[PluginInfo]:
         """
-        从ZIP文件安装插件
+        获取所有插件信息列表
+        
+        Returns:
+            List[PluginInfo]: 插件信息列表
+        """
+        return list(self.plugins.values())
+
+    def install_plugin(self, plugin_path: Path) -> bool:
+        """
+        安装插件
         
         Args:
-            zip_path: ZIP文件路径
+            plugin_path: 插件包路径（.zip或目录）
             
         Returns:
-            (success, message)
+            bool: 安装是否成功
         """
-        success, message = self.installer.install_from_zip(zip_path)
-        
-        if success:
-            # 重新扫描以加载新插件
-            self.scan_plugins()
-        
-        return success, message
-    
-    def get_loaded_plugins(self) -> List[PluginInfo]:
-        """
-        获取已加载的插件列表
-        
-        Returns:
-            已加载的插件信息列表
-        """
-        loaded = []
-        for plugin_name, plugin_info in self.plugins.items():
-            # 检查是否有节点被加载
-            has_loaded_nodes = any(
-                key.startswith(f"{plugin_name}.")
-                for key in self.loaded_nodes.keys()
-            )
-            if has_loaded_nodes:
-                loaded.append(plugin_info)
-        
-        return loaded
+        return self.installer.install(plugin_path)
 
-    def uninstall_plugin(self, plugin_name: str) -> Tuple[bool, str]:
+    def uninstall_plugin(self, plugin_name: str) -> bool:
         """
         卸载插件
         
@@ -557,44 +451,38 @@ class PluginManager:
             plugin_name: 插件名称
             
         Returns:
-            (success, message)
+            bool: 卸载是否成功
         """
-        if plugin_name not in self.plugins:
-            return False, f"插件不存在: {plugin_name}"
+        return self.installer.uninstall(plugin_name)
+
+    def check_dependencies(self, plugin_name: str) -> List[str]:
+        """
+        检查插件依赖
         
-        plugin_info = self.plugins[plugin_name]
-        
-        # builtin中的插件不可卸载
-        if hasattr(plugin_info, 'source') and plugin_info.source == 'builtin':
-            return False, "内置插件不可卸载"
-        
-        # marketplace中的插件可卸载
-        if hasattr(plugin_info, 'source') and plugin_info.source == 'marketplace':
-            # 先卸载节点
-            if plugin_name in self.loaded_nodes:
-                self.unload_plugin_nodes(plugin_name)
+        Args:
+            plugin_name: 插件名称
             
-            # 再卸载文件
-            success, message = self.installer.uninstall_plugin(plugin_name)
+        Returns:
+            List[str]: 缺失的依赖列表
+        """
+        plugin_info = self.plugins.get(plugin_name)
+        if not plugin_info:
+            return []
+        
+        return self.dependency_resolver.check_dependencies(plugin_info.dependencies)
+
+    def install_dependencies(self, plugin_name: str) -> bool:
+        """
+        安装插件依赖
+        
+        Args:
+            plugin_name: 插件名称
             
-            if success:
-                # 从注册表中移除
-                if plugin_name in self.plugins:
-                    del self.plugins[plugin_name]
-            
-            return success, message
+        Returns:
+            bool: 安装是否成功
+        """
+        plugin_info = self.plugins.get(plugin_name)
+        if not plugin_info:
+            return False
         
-        # 兼容旧版本（没有source字段）
-        # 先卸载节点
-        if plugin_name in self.loaded_nodes:
-            self.unload_plugin_nodes(plugin_name)
-        
-        # 再卸载文件
-        success, message = self.installer.uninstall_plugin(plugin_name)
-        
-        if success:
-            # 从注册表中移除
-            if plugin_name in self.plugins:
-                del self.plugins[plugin_name]
-        
-        return success, message
+        return self.dependency_resolver.install_dependencies(plugin_info.dependencies)

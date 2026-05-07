@@ -16,20 +16,29 @@ from typing import Dict, Any, Optional, Callable
 import numpy as np
 
 from shared_libs.node_base import BaseNode
-# 修正导入路径：从上层目录导入camera_manager
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from camera_manager import CameraManager
-
-# Phase 3: 导入环形缓冲区和发布-订阅管理器
 try:
-    from ..circular_buffer import CircularBuffer
-    from ..pubsub_manager import PubSubManager
+    from camera_manager import CameraManager
 except ImportError:
-    # 降级方案：如果模块不存在，使用None占位
-    CircularBuffer = None
-    PubSubManager = None
+    from plugin_packages.builtin.camera_manager import CameraManager
+
+try:
+    from circular_buffer import CircularBuffer
+except ImportError:
+    try:
+        from plugin_packages.builtin.circular_buffer import CircularBuffer
+    except ImportError:
+        CircularBuffer = None
+
+try:
+    from pubsub_manager import PubSubManager
+except ImportError:
+    try:
+        from plugin_packages.builtin.pubsub_manager import PubSubManager
+    except ImportError:
+        PubSubManager = None
 
 
 class CameraCaptureNode(BaseNode):
