@@ -32,7 +32,6 @@
 import cv2
 import numpy as np
 import logging
-from PySide2 import QtCore
 from shared_libs.node_base import BaseNode
 
 logger = logging.getLogger('image_operation')
@@ -802,11 +801,6 @@ class ImageOperationNode(BaseNode):
             items=method_items,
             tab='properties'
         )
-        
-        method_combo = self.get_widget('method')
-        if method_combo:
-            method_combo.setMaximumHeight(200)
-            method_combo.view().setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
 
         self.add_text_input('status', '状态', tab='properties')
         self.set_property('status', '就绪')
