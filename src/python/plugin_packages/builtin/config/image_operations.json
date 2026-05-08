@@ -1,0 +1,175 @@
+{
+  "categories": {
+    "unary": {
+      "name": "一元操作",
+      "methods": [
+        {
+          "id": "cvAbs",
+          "name": "绝对值",
+          "description": "计算图像/矩阵的绝对值",
+          "inputs": 1,
+          "params": []
+        },
+        {
+          "id": "cvFlip",
+          "name": "翻转",
+          "description": "图像翻转",
+          "inputs": 1,
+          "params": [
+            {"name": "flip_code", "type": "int", "default": 0, "description": "0: 垂直翻转, 1: 水平翻转, -1: 两者都翻转"}
+          ]
+        },
+        {
+          "id": "cvNot",
+          "name": "按位取反",
+          "description": "对图像进行按位取反操作",
+          "inputs": 1,
+          "params": []
+        },
+        {
+          "id": "cvNormalize",
+          "name": "归一化",
+          "description": "归一化数组值到指定范围",
+          "inputs": 1,
+          "params": [
+            {"name": "alpha", "type": "float", "default": 1, "description": "归一化下限"},
+            {"name": "beta", "type": "float", "default": 0, "description": "归一化上限"}
+          ]
+        },
+        {
+          "id": "cvTranspose",
+          "name": "转置",
+          "description": "矩阵转置",
+          "inputs": 1,
+          "params": []
+        },
+        {
+          "id": "cvCountNonZero",
+          "name": "非零计数",
+          "description": "计算非零元素的数量",
+          "inputs": 1,
+          "params": [],
+          "output_type": "scalar"
+        }
+      ]
+    },
+    "binary": {
+      "name": "二元操作",
+      "methods": [
+        {
+          "id": "cvAdd",
+          "name": "加法",
+          "description": "两图像或矩阵相加",
+          "inputs": 2,
+          "params": []
+        },
+        {
+          "id": "cvSub",
+          "name": "减法",
+          "description": "两图像或矩阵相减",
+          "inputs": 2,
+          "params": []
+        },
+        {
+          "id": "cvMul",
+          "name": "乘法",
+          "description": "两图像或矩阵相乘",
+          "inputs": 2,
+          "params": [
+            {"name": "scale", "type": "float", "default": 1, "description": "缩放因子"}
+          ]
+        },
+        {
+          "id": "cvDiv",
+          "name": "除法",
+          "description": "两图像或矩阵相除",
+          "inputs": 2,
+          "params": [
+            {"name": "scale", "type": "float", "default": 1, "description": "缩放因子"}
+          ]
+        },
+        {
+          "id": "cvMax",
+          "name": "最大值",
+          "description": "取两输入的最大值",
+          "inputs": 2,
+          "params": []
+        },
+        {
+          "id": "cvMin",
+          "name": "最小值",
+          "description": "取两输入的最小值",
+          "inputs": 2,
+          "params": []
+        },
+        {
+          "id": "cvAnd",
+          "name": "按位与",
+          "description": "两图像进行按位与操作",
+          "inputs": 2,
+          "params": []
+        },
+        {
+          "id": "cvOr",
+          "name": "按位或",
+          "description": "两图像进行按位或操作",
+          "inputs": 2,
+          "params": []
+        },
+        {
+          "id": "cvXor",
+          "name": "按位异或",
+          "description": "两图像进行按位异或操作",
+          "inputs": 2,
+          "params": []
+        }
+      ]
+    },
+    "matrix": {
+      "name": "矩阵操作",
+      "methods": [
+        {
+          "id": "cvAvg",
+          "name": "平均值",
+          "description": "计算图像或矩阵所有元素的平均值",
+          "inputs": 1,
+          "params": [],
+          "output_type": "scalar"
+        },
+        {
+          "id": "cvDet",
+          "name": "行列式",
+          "description": "计算2D矩阵的行列式",
+          "inputs": 1,
+          "params": [],
+          "output_type": "scalar"
+        },
+        {
+          "id": "cvSum",
+          "name": "元素和",
+          "description": "计算图像或矩阵所有元素的和",
+          "inputs": 1,
+          "params": [],
+          "output_type": "scalar"
+        },
+        {
+          "id": "cvInvert",
+          "name": "矩阵求逆",
+          "description": "矩阵求逆运算",
+          "inputs": 1,
+          "params": []
+        },
+        {
+          "id": "cvGEMM",
+          "name": "矩阵乘法",
+          "description": "广义矩阵乘法",
+          "inputs": 2,
+          "params": [
+            {"name": "alpha", "type": "float", "default": 1, "description": "第一个矩阵的系数"},
+            {"name": "beta", "type": "float", "default": 0, "description": "加到结果的值"}
+          ]
+        }
+      ]
+    }
+  }
+}

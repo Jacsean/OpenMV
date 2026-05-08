@@ -3,6 +3,7 @@
 ## 📋 更新历史
 
 ### v1.0 - 初始版本 (2026-04-22)
+
 - ✅ 实现主窗口框架 ([MainWindow](file://d:\example\projects\StduyOpenCV\src\python_graph\ui\main_window.py))
 - ✅ 集成NodeGraphQt画布组件
 - ✅ 实现节点库面板（左侧）
@@ -15,27 +16,30 @@
 - ✅ 添加节点双击事件处理（打开图像预览）
 
 ### v1.1 - 代码重构 (2026-04-24)
-- ✅ 将 ImagePreviewDialog 从 main_window.py 提取到独立的 image_preview.py
+
+- ✅ 将 ImagePreviewDialog 从 main\_window\.py 提取到独立的 image\_preview\.py
 - ✅ 优化模块结构，提高代码可维护性
 - ✅ 更新 ui/__init__.py 导出配置
 
----
+***
 
 ## 🎯 概况
 
 **用户界面模块**提供图形化视觉编程系统的交互界面，基于 **PySide2 (Qt)** 和 **NodeGraphQt** 框架构建。采用经典的三栏布局：左侧节点库、中间画布、右侧属性面板，类似工业视觉软件（海康VM、基恩士CV-X）的操作体验。
 
 ### 设计理念
+
 - **直观易用**: 拖拽式节点编辑，所见即所得
 - **模块化布局**: 可停靠的面板，支持自定义工作区
 - **实时反馈**: 参数调整后即时查看效果
 - **专业外观**: 深色主题，符合工业软件审美
 
----
+***
 
 ## 💻 部署环境要求
 
 ### 技术栈
+
 - **Python**: 3.7+
 - **PySide2**: >=5.15.0
 - **NodeGraphQt**: >=0.6.30
@@ -43,21 +47,24 @@
 - **NumPy**: >=1.19.0, <2.0.0 (与PySide2兼容)
 
 ### 安装依赖
+
 ```bash
 cd src/python_graph
 pip install -r requirements.txt
 ```
 
 ### 运行程序
+
 ```bash
 python main.py
 ```
 
----
+***
 
 ## 📦 基本功能
 
 ### 模块结构
+
 ```
 ui/
 ├── __init__.py              # 模块导出配置
@@ -67,15 +74,16 @@ ui/
 
 ### 核心类说明
 
-#### 1. MainWindow ([main_window.py](file://d:\example\projects\StduyOpenCV\src\python_graph\ui\main_window.py))
+#### 1. MainWindow ([main\_window.py](file://d:\example\projects\StduyOpenCV\src\python_graph\ui\main_window.py))
 
 主窗口类，继承自 `QtWidgets.QMainWindow`，整合所有UI组件。
 
 **主要组件**:
 
 ##### 节点图画布 (NodeGraph Widget)
+
 - **位置**: 中央区域
-- **功能**: 
+- **功能**:
   - 显示节点图
   - 支持拖拽添加节点
   - 支持连线连接端口
@@ -83,6 +91,7 @@ ui/
   - 右键菜单操作
 
 ##### 节点库面板 (NodesPaletteWidget)
+
 - **位置**: 左侧停靠面板
 - **功能**:
   - 按分类显示可用节点
@@ -95,6 +104,7 @@ ui/
   - `nodeGraphQt.nodes`: NodeGraphQt内置节点（通常为空）
 
 ##### 属性面板 (PropertiesBinWidget)
+
 - **位置**: 右侧停靠面板
 - **功能**:
   - 显示选中节点的属性
@@ -102,6 +112,7 @@ ui/
   - 查看节点信息
 
 ##### 工具栏 (Toolbar)
+
 - **位置**: 顶部
 - **按钮**:
   - ▶ 运行: 执行节点图
@@ -111,6 +122,7 @@ ui/
   - ⊞ 适应: 自动调整视图以适应所有节点
 
 ##### 菜单栏 (MenuBar)
+
 - **文件菜单**:
   - 新建
   - 打开
@@ -127,11 +139,12 @@ ui/
 - **帮助菜单**:
   - 关于
 
-#### 2. ImagePreviewDialog ([image_preview.py](file://d:\example\projects\StduyOpenCV\src\python\ui\image_preview.py))
+#### 2. ImagePreviewDialog ([image\_preview.py](file://d:\example\projects\StduyOpenCV\src\python\ui\image_preview.py))
 
 图像预览对话框，用于显示完整的图像内容。
 
 **功能特性**:
+
 - ✅ 非模态窗口，可同时打开多个预览
 - ✅ 显示原始尺寸的图像
 - ✅ 自动缩放以适应窗口大小
@@ -145,9 +158,11 @@ ui/
 - ✅ 与节点关联，支持手动刷新预览
 
 **触发方式**:
+
 - 双击 [ImageViewNode](file://d:\example\projects\StduyOpenCV\src\python_graph\nodes\display_nodes.py) 节点
 
 **使用示例**:
+
 ```
 from ui.image_preview import ImagePreviewDialog
 
@@ -156,7 +171,7 @@ dialog = ImagePreviewDialog(image, node=node_instance, title="图像预览", par
 dialog.show()  # 使用 show() 而非 exec_()，保持非模态
 ```
 
----
+***
 
 ## 🎨 界面布局
 
@@ -194,17 +209,19 @@ dialog.show()  # 使用 show() 而非 exec_()，保持非模态
 ### 节点库标签位置
 
 当前配置为**右侧显示**（垂直排列），通过以下代码实现：
+
 ```
 nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
 ```
 
 可选位置：
+
 - `North`: 顶部（默认）
 - `South`: 底部
 - `West`: 左侧
 - `East`: 右侧（当前配置）
 
----
+***
 
 ## 🔧 关键实现细节
 
@@ -289,7 +306,7 @@ def _on_node_double_clicked(self, node):
 
 ### 4. 图像预览对话框实现
 
-**文件位置**: [image_preview.py](file://d:\example\projects\StduyOpenCV\src\python\ui\image_preview.py)
+**文件位置**: [image\_preview.py](file://d:\example\projects\StduyOpenCV\src\python\ui\image_preview.py)
 
 ```python
 class ImagePreviewDialog(QtWidgets.QDialog):
@@ -351,21 +368,22 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 self.display_image()
 ```
 
-
----
+***
 
 ## ⚠️ API陷阱与解决方案
 
 根据项目开发经验，以下API使用需要特别注意：
 
-### 1. NodesPaletteWidget的tab_widget访问
+### 1. NodesPaletteWidget的tab\_widget访问
 
 ❌ **错误方式**:
+
 ```python
 nodes_palette.tabWidget().setTabPosition(...)  # AttributeError
 ```
 
 ✅ **正确方式**:
+
 ```python
 nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
 ```
@@ -375,12 +393,14 @@ nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
 ### 2. 节点按钮事件绑定
 
 ❌ **不支持**:
+
 ```python
 button = node.add_button('btn', '点击')
 button.clicked.connect(handler)  # AttributeError: NodeButton无clicked信号
 ```
 
 ✅ **替代方案**:
+
 ```python
 # 使用文本输入框让用户直接输入
 node.add_text_input('file_path', '文件路径')
@@ -389,22 +409,25 @@ node.add_text_input('file_path', '文件路径')
 ### 3. 节点滑块控件
 
 ❌ **不存在**:
+
 ```python
 node.add_slider('param', '参数', 0, 100, 50)  # AttributeError
 ```
 
 ✅ **替代方案**:
+
 ```python
 node.add_text_input('param', '参数')
 # 在process()中进行数值验证
 param = int(self.get_property('param'))
 ```
 
----
+***
 
 ## 🚀 优化及改进计划
 
 ### 短期目标 (v1.x)
+
 - [ ] 添加状态栏信息显示（节点数、连接数、执行状态）
 - [ ] 实现撤销/重做功能
 - [ ] 添加节点搜索框（快速定位节点）
@@ -412,6 +435,7 @@ param = int(self.get_property('param'))
 - [ ] 添加快捷键提示对话框
 
 ### 中期目标 (v2.x)
+
 - [ ] 实现多文档界面（同时打开多个节点图）
 - [ ] 添加节点缩略图预览（鼠标悬停显示）
 - [ ] 实现工作区布局保存/加载
@@ -419,43 +443,50 @@ param = int(self.get_property('param'))
 - [ ] 实现节点分组和折叠功能
 
 ### 长期目标 (v3.x)
+
 - [ ] 插件系统（动态加载第三方节点）
 - [ ] 云端同步（工作流共享）
 - [ ] 协作编辑（多人同时编辑）
 - [ ] VR/AR界面支持
 - [ ] 语音控制接口
 
----
+***
 
 ## 🐛 常见问题
 
 ### Q: 节点库标签显示在顶部，如何改为右侧？
+
 **A**: 在 `_setup_ui()` 中修改：
-``python
-nodes_palette.tab_widget.setTabPosition(QtWidgets.QTabWidget.East)
-```
+\`\`python
+nodes\_palette.tab\_widget.setTabPosition(QtWidgets.QTabWidget.East)
+
+````
 
 ### Q: 双击节点没有反应？
 **A**: 检查是否已连接 `node_double_clicked` 信号：
 ```python
 self.node_graph.node_double_clicked.connect(self._on_node_double_clicked)
-```
+````
 
 ### Q: 图像预览窗口显示颜色异常？
+
 **A**: 确保进行了BGR到RGB的转换：
+
 ```python
 rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 ```
 
 ### Q: 如何添加新的工具栏按钮？
+
 **A**: 在 `_create_toolbar()` 方法中添加：
+
 ```python
 new_action = QtWidgets.QAction("新按钮", self)
 new_action.triggered.connect(self.new_function)
 toolbar.addAction(new_action)
 ```
 
----
+***
 
 ## 📚 相关文档
 
@@ -465,13 +496,15 @@ toolbar.addAction(new_action)
 - 🔗 [PySide2官方文档](https://doc.qt.io/qtforpython/)
 - 🔗 [NodeGraphQt文档](https://github.com/jchanvfx/NodeGraphQt)
 
----
+***
 
 ## 🤝 贡献指南
 
 如需改进UI模块，请遵循以下原则：
+
 1. 保持界面简洁直观
 2. 遵循Qt编码规范
 3. 测试不同分辨率下的显示效果
 4. 更新本文档
 5. 添加必要的注释和文档字符串
+

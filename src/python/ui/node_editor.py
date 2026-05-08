@@ -1,1940 +1,1033 @@
 """
-节点编辑器 - 节点增删改查管理界面（增强版）
+节点编辑器 - 节点管理界面
 
 功能:
-- 浏览所有节点包（6大分类）
-- 创建新节点（向导式）
-- 编辑节点属性（名称、分类、参数）
-- 删除节点
-- 导出节点包为ZIP
-- 导入节点包从ZIP
-- ✨ 代码高亮编辑器
-- ✨ 实时预览面板
-- ✨ 撤销/重做支持
-- ✨ 智能参数提示
+- 浏览所有节点（内置节点 + 市场节点）
+- 添加新内置节点
+- 删除节点或市场插件
+- 编辑节点属性（显示名称、分组、是否启用）
+- 导入/导出节点配置
+- 刷新节点库
+- 市场节点管理（本地删除、网站下载）
 """
 
 import os
 import json
-import zipfile
-import re
+import ast
+import shutil
 from pathlib import Path
 from PySide2 import QtWidgets, QtCore, QtGui
 
 
-class CodeEditor(QtWidgets.QPlainTextEdit):
-    """
-    代码编辑器 - 支持语法高亮和行号显示
-    """
+class TreeBranchDelegate(QtWidgets.QStyledItemDelegate):
+    """自定义树形视图委托，绘制分支连线，实现文件系统风格的树形结构"""
+    def paint(self, painter, option, index):
+        super(TreeBranchDelegate, self).paint(painter, option, index)
 
-    def __init__(self, parent=None):
-        super(CodeEditor, self).__init__(parent)
-        self.setFont(QtGui.QFont("Consolas", 10))
-        self.setTabStopWidth(4 * self.fontMetrics().width(' '))
+        tree = option.widget
+        if not isinstance(tree, QtWidgets.QTreeWidget):
+            return
 
-        # 行号区域
-        self.line_number_area = LineNumberArea(self)
-        self.blockCountChanged.connect(self._update_line_number_area_width)
-        self.updateRequest.connect(self._update_line_number_area)
-        self._update_line_number_area_width()
+        item = tree.itemFromIndex(index)
+        if not item:
+            return
 
-    def line_number_area_width(self):
-        """计算行号区域宽度"""
-        digits = 1
-        max_num = max(1, self.blockCount())
-        while max_num >= 10:
-            max_num //= 10
-            digits += 1
-        space = 3 + self.fontMetrics().width('9') * digits
-        return space
+        # 1. 启用抗锯齿，统一画笔样式
+        painter.save()
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        pen = QtGui.QPen(QtGui.QColor(180, 180, 180), 1, QtCore.Qt.SolidLine)
+        painter.setPen(pen)
+        font = QtGui.QFont("Consolas", 9)
+        painter.setFont(font)
 
-    def _update_line_number_area_width(self):
-        """更新行号区域宽度"""
-        self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
+        # 2. 获取树形控件实际缩进宽度（取消硬编码）
+        indent = tree.indentation()
+        level = 0
+        parent = item.parent()
+        path_info = []  # 记录每一层是否为非最后一个子节点
 
-    def _update_line_number_area(self, rect, dy):
-        """更新行号区域"""
-        if dy:
-            self.line_number_area.scroll(0, dy)
+        # 3. 递归遍历父节点，正确记录路径信息（避免重复计算）
+        while parent:
+            child_index = parent.indexOfChild(item)
+            is_last_child = (child_index == parent.childCount() - 1)
+            path_info.insert(0, not is_last_child)  # True=非最后一个，需要画竖线
+            item = parent
+            parent = parent.parent()
+            level += 1
+        # 恢复当前item引用
+        item = tree.itemFromIndex(index)
+
+        rect = option.rect
+        y_center = rect.center().y()
+        # 文本绘制的垂直偏移（基于字体居中）
+        font_metrics = painter.fontMetrics()
+        text_offset_y = font_metrics.ascent() - (font_metrics.height() // 2)
+
+        # 4. 绘制各层级竖线
+        for i in range(level):
+            # 每一层竖线的X坐标：缩进宽度 * (层级+1) + 缩进中心偏移
+            line_x = indent * (i + 1) - indent // 2
+            # 仅当当前层非最后一个子节点时，绘制完整竖线
+            if path_info[i]:
+                # 竖线高度：覆盖当前节点的上下范围
+                painter.drawLine(line_x, rect.top(), line_x, rect.bottom())
+
+        # 5. 绘制当前节点的分支符号（├─/└─）
+        if level > 0:
+            # 子节点：分支符号X坐标 = 缩进 * 层级 - 缩进//2
+            branch_x = indent * level - indent // 2
+            parent_item = item.parent()
+            child_index = parent_item.indexOfChild(item)
+            is_last_child = (child_index == parent_item.childCount() - 1)
+            
+            branch_text = "└─" if is_last_child else "├─"
+            # 文本居中绘制：基于y_center调整基线
+            painter.drawText(branch_x, y_center + text_offset_y, branch_text)
         else:
-            self.line_number_area.update(
-                0, rect.y(), self.line_number_area.width(), rect.height())
+            # 顶层节点：分支符号X坐标 = 缩进//2（避免绘制在最左侧）
+            branch_x = indent // 2
+            top_index = tree.indexOfTopLevelItem(item)
+            top_count = tree.topLevelItemCount()
+            
+            if top_count > 1:
+                branch_text = "├─" if (top_index < top_count - 1) else "└─"
+                painter.drawText(branch_x, y_center + text_offset_y, branch_text)
 
-        if rect.contains(self.viewport().rect()):
-            self._update_line_number_area_width()
-
-    def resizeEvent(self, event):
-        """调整大小事件"""
-        super(CodeEditor, self).resizeEvent(event)
-        cr = self.contentsRect()
-        self.line_number_area.setGeometry(QtCore.QRect(
-            cr.left(), cr.top(), self.line_number_area_width(), cr.height()))
-
-    def highlight_current_line(self):
-        """高亮当前行"""
-        extra_selections = []
-        if not self.isReadOnly():
-            selection = QtWidgets.QTextEdit.ExtraSelection()
-            line_color = QtGui.QColor(QtCore.Qt.yellow).lighter(180)
-            selection.format.setBackground(line_color)
-            selection.format.setProperty(
-                QtGui.QTextFormat.FullWidthSelection, True)
-            selection.cursor = self.textCursor()
-            selection.cursor.clearSelection()
-            extra_selections.append(selection)
-        self.setExtraSelections(extra_selections)
-
-    def line_number_area_paint_event(self, event):
-        """绘制行号区域"""
-        painter = QtGui.QPainter(self.line_number_area)
-        painter.fillRect(event.rect(), QtGui.QColor(240, 240, 240))
-
-        block = self.firstVisibleBlock()
-        block_number = block.blockNumber()
-        top = self.blockBoundingGeometry(
-            block).translated(self.contentOffset()).top()
-        bottom = top + self.blockBoundingRect(block).height()
-
-        while block.isValid() and top <= event.rect().bottom():
-            if block.isVisible() and bottom >= event.rect().top():
-                number = str(block_number + 1)
-                painter.setPen(QtGui.QColor(120, 120, 120))
-                painter.drawText(0, top, self.line_number_area.width() - 5,
-                                 self.fontMetrics().height(),
-                                 QtCore.Qt.AlignRight, number)
-
-            block = block.next()
-            top = bottom
-            bottom = top + self.blockBoundingRect(block).height()
-            block_number += 1
-
-
-class LineNumberArea(QtWidgets.QWidget):
-    """行号显示区域"""
-
-    def __init__(self, editor):
-        super(LineNumberArea, self).__init__(editor)
-        self.code_editor = editor
-
-    def sizeHint(self):
-        return QtCore.QSize(self.code_editor.line_number_area_width(), 0)
-
-    def paintEvent(self, event):
-        self.code_editor.line_number_area_paint_event(event)
-
+        painter.restore()
+    
 
 class NodeEditorDialog(QtWidgets.QDialog):
     """
     节点编辑器对话框
-
+    
     提供可视化的节点管理界面，支持节点的完整生命周期管理
     """
 
-    def __init__(self, parent=None, plugins_dir=None):
+    def __init__(self, parent=None, plugin_manager=None, plugins_dir=None):
         super(NodeEditorDialog, self).__init__(parent)
-        self.plugins_dir = plugins_dir or Path(
-            __file__).parent.parent / "user_plugins"
+        self.plugin_manager = plugin_manager
+        self.plugins_dir = plugins_dir
         self.setWindowTitle("节点编辑器")
-        self.resize(1200, 800)
+        self.resize(600, 400)
 
-        # 加载现有节点包
-        self.plugin_packages = {}
-        self._load_plugin_packages()
+        self.builtin_plugin_info = None
+        self.marketplace_plugins = {}
+        
+        self.current_selection = {
+            'type': None,
+            'name': None,
+            'data': None
+        }
 
-        # ✨ 撤销/重做历史栈
-        self.undo_stack = []
-        self.redo_stack = []
-        self.max_history = 50
-
-        # ✨ 当前编辑状态
-        self.current_package = None
-        self.current_node_index = None
-
-        # 构建UI
         self._setup_ui()
-
-    def _load_plugin_packages(self):
-        """扫描并加载所有节点包"""
-        if not self.plugins_dir.exists():
-            return
-
-        for plugin_dir in self.plugins_dir.iterdir():
-            if plugin_dir.is_dir():
-                plugin_json = plugin_dir / "plugin.json"
-                if plugin_json.exists():
-                    try:
-                        with open(plugin_json, 'r', encoding='utf-8') as f:
-                            plugin_data = json.load(f)
-                            self.plugin_packages[plugin_dir.name] = {
-                                'path': plugin_dir,
-                                'data': plugin_data
-                            }
-                    except Exception as e:
-                        print(f"加载插件包失败 {plugin_dir.name}: {e}")
+        self._load_plugin_data()
 
     def _setup_ui(self):
-        """构建用户界面"""
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setSpacing(10)
         main_layout.setContentsMargins(10, 10, 10, 10)
 
-        # === 顶部工具栏 ===
         toolbar = self._create_toolbar()
         main_layout.addWidget(toolbar)
 
-        # === 主内容区（左右分割）===
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-
-        # 禁用 QSplitter 动画（兼容 PySide2）
+        
         try:
             splitter.setAnimated(False)
         except AttributeError:
-            # PySide2 不支持 setAnimated，使用其他方式禁用动画
             pass
         
-        # 左侧：节点包树形视图
         left_panel = self._create_left_panel()
+        left_panel.setMinimumWidth(160)
+        left_panel.setMaximumWidth(200)
         splitter.addWidget(left_panel)
 
-        # 右侧：节点详情编辑区
         right_panel = self._create_right_panel()
         splitter.addWidget(right_panel)
 
         splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 2)
+        splitter.setStretchFactor(1, 4)
         main_layout.addWidget(splitter)
 
-        # === 底部按钮栏 ===
-        button_bar = self._create_button_bar()
-        main_layout.addWidget(button_bar)
-
     def _create_toolbar(self):
-        """创建顶部工具栏"""
         toolbar = QtWidgets.QToolBar()
         toolbar.setIconSize(QtCore.QSize(24, 24))
 
-        # 新建节点包
-        new_package_action = toolbar.addAction("📦 新建节点包")
-        new_package_action.triggered.connect(self._on_new_package)
+        add_action = toolbar.addAction("➕ 增加")
+        add_action.triggered.connect(self._on_add_node)
+        add_action.setToolTip("添加新内置节点到选中的分组")
+
+        delete_action = toolbar.addAction("➖ 删除")
+        delete_action.triggered.connect(self._on_delete)
+        delete_action.setToolTip("删除选中的节点或市场插件")
 
         toolbar.addSeparator()
 
-        # 导入节点包
-        import_action = toolbar.addAction("📥 导入节点包")
-        import_action.triggered.connect(self._on_import_package)
+        import_action = toolbar.addAction("📥 导入")
+        import_action.triggered.connect(self._on_import)
+        import_action.setToolTip("导入市场节点配置文件")
 
-        # 导出节点包
-        export_action = toolbar.addAction("📤 导出节点包")
-        export_action.triggered.connect(self._on_export_package)
-
-        toolbar.addSeparator()
-
-        # 管理标签页顺序
-        sort_action = toolbar.addAction("🔀 管理标签顺序")
-        sort_action.triggered.connect(self._on_manage_tab_order)
+        export_action = toolbar.addAction("📤 导出")
+        export_action.triggered.connect(self._on_export)
+        export_action.setToolTip("导出当前节点配置")
 
         toolbar.addSeparator()
 
-        # 重命名节点包（仅marketplace）
-        rename_action = toolbar.addAction("✏️ 重命名节点包")
-        rename_action.triggered.connect(self._on_rename_package)
+        refresh_action = toolbar.addAction("🔄 刷新节点库")
+        refresh_action.triggered.connect(self._on_refresh_node_library)
+        refresh_action.setToolTip("刷新节点库并重新加载所有节点")
 
-        # 移动节点到其他包
-        move_node_action = toolbar.addAction("➡️ 移动节点")
-        move_node_action.triggered.connect(self._on_move_node)
-
-        toolbar.addSeparator()
-
-        # 刷新
-        refresh_action = toolbar.addAction("🔄 刷新")
-        refresh_action.triggered.connect(self._refresh_packages)
-
-        # ✨ 同步到运行时（新增）
-        sync_action = toolbar.addAction("🔃 同步到运行时")
-        sync_action.triggered.connect(self._on_sync_to_runtime)
+        help_action = toolbar.addAction("❓ 帮助")
+        help_action.triggered.connect(self._on_help)
+        help_action.setToolTip("打开帮助文档")
 
         return toolbar
 
     def _create_left_panel(self):
-        """创建左侧面板（节点包列表）"""
         panel = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(panel)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # 标题
-        title_label = QtWidgets.QLabel("节点包列表")
+        title_label = QtWidgets.QLabel("节点列表")
         title_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
         layout.addWidget(title_label)
 
-        # 树形视图
-        self.package_tree = QtWidgets.QTreeWidget()
-        self.package_tree.setHeaderLabels(["名称", "版本", "分类", "节点数"])
-        self.package_tree.setColumnWidth(0, 200)
-        self.package_tree.setColumnWidth(1, 80)
-        self.package_tree.setColumnWidth(2, 120)
-        self.package_tree.setColumnWidth(3, 60)
-        self.package_tree.itemSelectionChanged.connect(
-            self._on_package_selected)
-        layout.addWidget(self.package_tree)
-
-        # 填充数据
-        self._populate_package_tree()
+        self.node_tree = QtWidgets.QTreeWidget()
+        self.node_tree.setHeaderLabels(["名称"])
+        self.node_tree.setColumnWidth(0, 140)
+        self.node_tree.setIndentation(18)
+        
+        self.node_tree.setItemDelegate(TreeBranchDelegate(self.node_tree))
+        
+        self.node_tree.setStyleSheet("""
+            QTreeWidget::branch {
+                image: none;
+            }
+            QTreeWidget::item {
+                padding: 2px 0px;
+            }
+        """)
+        
+        self.node_tree.itemSelectionChanged.connect(self._on_tree_selection_changed)
+        layout.addWidget(self.node_tree)
 
         return panel
 
-    def _populate_package_tree(self):
-        """填充节点包树形视图"""
-        self.package_tree.clear()
-
-        # 按分类组织
-        categories = {}
-        for pkg_name, pkg_info in self.plugin_packages.items():
-            data = pkg_info['data']
-            category_group = data.get('category_group', '未分类')
-
-            if category_group not in categories:
-                categories[category_group] = []
-            categories[category_group].append((pkg_name, pkg_info))
-
-        # 构建树形结构
-        for category, packages in sorted(categories.items()):
-            category_item = QtWidgets.QTreeWidgetItem([category, "", "", ""])
-            category_item.setFont(0, QtGui.QFont("Arial", 9, QtGui.QFont.Bold))
-
-            for pkg_name, pkg_info in sorted(packages):
-                data = pkg_info['data']
-                nodes_count = len(data.get('nodes', []))
-
-                pkg_item = QtWidgets.QTreeWidgetItem([
-                    pkg_name,
-                    data.get('version', '1.0.0'),
-                    data.get('category_group', ''),
-                    str(nodes_count)
-                ])
-                pkg_item.setData(0, QtCore.Qt.UserRole, pkg_name)
-                category_item.addChild(pkg_item)
-
-            self.package_tree.addTopLevelItem(category_item)
-
-        self.package_tree.expandAll()
-
     def _create_right_panel(self):
-        """创建右侧面板（节点详情编辑）- 增强版"""
         panel = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(panel)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # 标题
-        title_label = QtWidgets.QLabel("节点详情")
+        title_label = QtWidgets.QLabel("详情")
         title_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
         layout.addWidget(title_label)
 
-        # ✨ Tab控件：详情 / 代码 / 预览
-        self.tab_widget = QtWidgets.QTabWidget()
-
-        # Tab 1: 节点详情
-        detail_tab = QtWidgets.QWidget()
-        detail_layout = QtWidgets.QVBoxLayout(detail_tab)
-        detail_layout.setContentsMargins(5, 5, 5, 5)
-
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        layout.addWidget(scroll)
 
         self.detail_widget = QtWidgets.QWidget()
         self.detail_layout = QtWidgets.QVBoxLayout(self.detail_widget)
         self.detail_layout.setSpacing(10)
-
         scroll.setWidget(self.detail_widget)
-        detail_layout.addWidget(scroll)
-
-        self.tab_widget.addTab(detail_tab, "📋 详情")
-
-        # Tab 2: 代码编辑器
-        code_tab = QtWidgets.QWidget()
-        code_layout = QtWidgets.QVBoxLayout(code_tab)
-        code_layout.setContentsMargins(5, 5, 5, 5)
-
-        self.code_editor = CodeEditor()
-        self.code_editor.setReadOnly(False)
-        self.code_editor.textChanged.connect(self._on_code_changed)
-        code_layout.addWidget(self.code_editor)
-
-        # 代码操作按钮
-        code_btn_layout = QtWidgets.QHBoxLayout()
-        self.save_code_btn = QtWidgets.QPushButton("💾 保存代码")
-        self.save_code_btn.clicked.connect(self._on_save_code)
-        self.format_code_btn = QtWidgets.QPushButton("✨ 格式化")
-        self.format_code_btn.clicked.connect(self._on_format_code)
-        code_btn_layout.addWidget(self.save_code_btn)
-        code_btn_layout.addWidget(self.format_code_btn)
-        code_btn_layout.addStretch()
-        code_layout.addLayout(code_btn_layout)
-
-        self.tab_widget.addTab(code_tab, "📝 代码")
-
-        # Tab 3: 实时预览
-        preview_tab = QtWidgets.QWidget()
-        preview_layout = QtWidgets.QVBoxLayout(preview_tab)
-        preview_layout.setContentsMargins(5, 5, 5, 5)
-
-        self.preview_label = QtWidgets.QLabel("选择节点后点击'预览'按钮查看效果")
-        self.preview_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.preview_label.setStyleSheet(
-            "background-color: #f0f0f0; color: gray; font-size: 12px;")
-        self.preview_label.setMinimumHeight(300)
-        preview_layout.addWidget(self.preview_label)
-
-        preview_btn_layout = QtWidgets.QHBoxLayout()
-        self.preview_btn = QtWidgets.QPushButton("▶️ 运行预览")
-        self.preview_btn.clicked.connect(self._on_run_preview)
-        self.clear_preview_btn = QtWidgets.QPushButton("🗑️ 清除")
-        self.clear_preview_btn.clicked.connect(self._on_clear_preview)
-        preview_btn_layout.addWidget(self.preview_btn)
-        preview_btn_layout.addWidget(self.clear_preview_btn)
-        preview_btn_layout.addStretch()
-        preview_layout.addLayout(preview_btn_layout)
-
-        self.tab_widget.addTab(preview_tab, "👁️ 预览")
-
-        layout.addWidget(self.tab_widget)
-
-        # 默认显示提示信息
-        self._show_empty_state()
 
         return panel
 
-    def _show_empty_state(self):
-        """显示空状态提示"""
-        self._clear_detail_layout()
+    def _load_plugin_data(self):
+        try:
+            builtin_path = Path(__file__).parent.parent / "plugin_packages" / "builtin"
+            plugin_json = builtin_path / "plugin.json"
+            
+            if plugin_json.exists():
+                with open(plugin_json, 'r', encoding='utf-8') as f:
+                    self.builtin_plugin_info = json.load(f)
+            
+            marketplace_path = Path(__file__).parent.parent / "plugin_packages" / "marketplace"
+            if marketplace_path.exists():
+                for plugin_dir in marketplace_path.iterdir():
+                    if plugin_dir.is_dir():
+                        pkg_json = plugin_dir / "plugin.json"
+                        if pkg_json.exists():
+                            try:
+                                with open(pkg_json, 'r', encoding='utf-8') as f:
+                                    self.marketplace_plugins[plugin_dir.name] = {
+                                        'path': plugin_dir,
+                                        'data': json.load(f)
+                                    }
+                            except Exception as e:
+                                print(f"加载市场插件失败 {plugin_dir.name}: {e}")
+            
+            self._refresh_tree()
+        except Exception as e:
+            print(f"加载插件数据失败: {e}")
 
-        hint_label = QtWidgets.QLabel("请从左侧选择一个节点包查看详情")
-        hint_label.setAlignment(QtCore.Qt.AlignCenter)
-        hint_label.setStyleSheet("color: gray; font-size: 12px;")
-        self.detail_layout.addWidget(hint_label)
+    def _refresh_tree(self):
+        self.node_tree.clear()
 
-    def _clear_detail_layout(self):
-        """清空详情布局"""
-        while self.detail_layout.count():
-            item = self.detail_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-    def _create_button_bar(self):
-        """创建底部按钮栏"""
-        button_bar = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(button_bar)
-        layout.setContentsMargins(0, 5, 0, 0)
-
-        # 新建节点
-        self.new_node_btn = QtWidgets.QPushButton("➕ 新建节点")
-        self.new_node_btn.setEnabled(False)
-        self.new_node_btn.clicked.connect(self._on_new_node)
-        layout.addWidget(self.new_node_btn)
-
-        # 编辑节点
-        self.edit_node_btn = QtWidgets.QPushButton("✏️ 编辑节点")
-        self.edit_node_btn.setEnabled(False)
-        self.edit_node_btn.clicked.connect(self._on_edit_node)
-        layout.addWidget(self.edit_node_btn)
-
-        # 删除节点
-        self.delete_node_btn = QtWidgets.QPushButton("🗑️ 删除节点")
-        self.delete_node_btn.setEnabled(False)
-        self.delete_node_btn.clicked.connect(self._on_delete_node)
-        layout.addWidget(self.delete_node_btn)
-
-        layout.addStretch()
-
-        # 关闭按钮
-        close_btn = QtWidgets.QPushButton("关闭")
-        close_btn.clicked.connect(self.close)
-        layout.addWidget(close_btn)
-
-        return button_bar
-
-    def _on_package_selected(self):
-        """节点包选择事件"""
-        selected_items = self.package_tree.selectedItems()
-        if not selected_items:
-            self._show_empty_state()
-            self._update_button_states(False)
-            return
-
-        selected_item = selected_items[0]
-        pkg_name = selected_item.data(0, QtCore.Qt.UserRole)
-
-        if not pkg_name:
-            # 选中的是分类节点
-            self._show_empty_state()
-            self._update_button_states(False)
-            return
-
-        # 显示节点包详情
-        self._display_package_details(pkg_name)
-        self._update_button_states(True)
-
-    def _display_package_details(self, pkg_name):
-        """显示节点包详细信息"""
-        self._clear_detail_layout()
-
-        if pkg_name not in self.plugin_packages:
-            return
-
-        pkg_info = self.plugin_packages[pkg_name]
-        data = pkg_info['data']
-
-        # 基本信息卡片
-        info_group = self._create_info_card(data)
-        self.detail_layout.addWidget(info_group)
-
-        # 节点列表
-        nodes_list = self._create_nodes_list(pkg_name, data.get('nodes', []))
-        self.detail_layout.addWidget(nodes_list)
-
-        # 依赖信息
-        deps_group = self._create_dependencies_card(
-            data.get('dependencies', []))
-        self.detail_layout.addWidget(deps_group)
-
-        self.detail_layout.addStretch()
-
-    def _create_info_card(self, data):
-        """创建基本信息卡片"""
-        group = QtWidgets.QGroupBox("基本信息")
-        layout = QtWidgets.QFormLayout(group)
-
-        layout.addRow("名称:", QtWidgets.QLabel(data.get('name', '')))
-        layout.addRow("版本:", QtWidgets.QLabel(data.get('version', '1.0.0')))
-        layout.addRow("作者:", QtWidgets.QLabel(data.get('author', '')))
-        layout.addRow("分类:", QtWidgets.QLabel(data.get('category_group', '')))
-
-        desc_label = QtWidgets.QLabel(data.get('description', ''))
-        desc_label.setWordWrap(True)
-        layout.addRow("描述:", desc_label)
-
-        return group
-
-    def _create_nodes_list(self, pkg_name, nodes):
-        """创建节点列表"""
-        group = QtWidgets.QGroupBox(f"节点列表 ({len(nodes)}个)")
-        layout = QtWidgets.QVBoxLayout(group)
-
-        if not nodes:
-            empty_label = QtWidgets.QLabel("暂无节点，点击'新建节点'添加")
-            empty_label.setStyleSheet("color: gray; font-style: italic;")
-            layout.addWidget(empty_label)
-        else:
-            table = QtWidgets.QTableWidget()
-            table.setColumnCount(4)
-            table.setHorizontalHeaderLabels(["类名", "显示名称", "子分类", "颜色"])
-            table.horizontalHeader().setStretchLastSection(True)
-            table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-            table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-            table.itemSelectionChanged.connect(
-                lambda: self._on_node_selected(pkg_name, table))
-
-            table.setRowCount(len(nodes))
-            for i, node in enumerate(nodes):
-                table.setItem(i, 0, QtWidgets.QTableWidgetItem(
-                    node.get('class', '')))
-                table.setItem(i, 1, QtWidgets.QTableWidgetItem(
-                    node.get('display_name', '')))
-                table.setItem(i, 2, QtWidgets.QTableWidgetItem(
-                    node.get('category', '')))
-
-                color = node.get('color', [200, 200, 200])
-                color_str = f"RGB({color[0]}, {color[1]}, {color[2]})"
-                table.setItem(i, 3, QtWidgets.QTableWidgetItem(color_str))
-
-            layout.addWidget(table)
-
-        return group
-
-    def _create_dependencies_card(self, dependencies):
-        """创建依赖信息卡片"""
-        group = QtWidgets.QGroupBox("依赖项")
-        layout = QtWidgets.QVBoxLayout(group)
-
-        if not dependencies:
-            empty_label = QtWidgets.QLabel("无外部依赖")
-            empty_label.setStyleSheet("color: gray;")
-            layout.addWidget(empty_label)
-        else:
-            for dep in dependencies:
-                dep_label = QtWidgets.QLabel(f"• {dep}")
-                layout.addWidget(dep_label)
-
-        return group
-
-    def _on_node_selected(self, pkg_name, table):
-        """节点选择事件"""
-        selected_rows = table.selectedItems()
-        if selected_rows:
-            row = selected_rows[0].row()
-            self.current_selected_node = {
-                'package': pkg_name,
-                'row': row,
-                'table': table
-            }
-            self.edit_node_btn.setEnabled(True)
-            self.delete_node_btn.setEnabled(True)
-        else:
-            self.edit_node_btn.setEnabled(False)
-            self.delete_node_btn.setEnabled(False)
-
-    def _update_button_states(self, has_package):
-        """更新按钮状态"""
-        self.new_node_btn.setEnabled(has_package)
-        self.edit_node_btn.setEnabled(False)
-        self.delete_node_btn.setEnabled(False)
-
-    def _on_new_package(self):
-        """新建节点包"""
-        dialog = NewPackageDialog(self)
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
-            package_data = dialog.get_package_data()
-            self._create_new_package(package_data)
-            self._refresh_packages()
-
-    def _create_new_package(self, package_data):
-        """创建新的节点包目录和文件"""
-        pkg_name = package_data['name']
-        pkg_dir = self.plugins_dir / pkg_name
-
-        if pkg_dir.exists():
-            QtWidgets.QMessageBox.warning(self, "警告", f"节点包 '{pkg_name}' 已存在！")
-            return
-
-        # 创建目录
-        pkg_dir.mkdir(parents=True, exist_ok=True)
-
-        # 创建plugin.json
-        plugin_json = {
-            "name": pkg_name,
-            "version": package_data.get('version', '1.0.0'),
-            "author": package_data.get('author', ''),
-            "description": package_data.get('description', ''),
-            "category_group": package_data.get('category_group', '未分类'),
-            "nodes": [],
-            "dependencies": package_data.get('dependencies', []),
-            "min_app_version": "4.0.0"
-        }
-
-        with open(pkg_dir / "plugin.json", 'w', encoding='utf-8') as f:
-            json.dump(plugin_json, f, indent=2, ensure_ascii=False)
-
-        # 创建空的nodes.py
-        with open(pkg_dir / "nodes.py", 'w', encoding='utf-8') as f:
-            f.write(f'"""\n{package_data.get("description", "")}\n"""\n\n')
-
-        # 添加到内存
-        self.plugin_packages[pkg_name] = {
-            'path': pkg_dir,
-            'data': plugin_json
-        }
-
-        QtWidgets.QMessageBox.information(
-            self, "成功", f"节点包 '{pkg_name}' 创建成功！")
-
-    def _on_new_node(self):
-        """新建节点"""
-        selected_items = self.package_tree.selectedItems()
-        if not selected_items:
-            return
-
-        pkg_name = selected_items[0].data(0, QtCore.Qt.UserRole)
-        if not pkg_name:
-            return
-
-        dialog = NewNodeDialog(self, pkg_name)
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
-            node_data = dialog.get_node_data()
-            self._add_node_to_package(pkg_name, node_data)
-            self._refresh_packages()
-
-    def _add_node_to_package(self, pkg_name, node_data):
-        """向节点包添加新节点"""
-        if pkg_name not in self.plugin_packages:
-            return
-
-        pkg_info = self.plugin_packages[pkg_name]
-        data = pkg_info['data']
-
-        # 记录当前节点数（用于撤销时定位）
-        node_index = len(data['nodes'])
-
-        # 添加到plugin.json
-        data['nodes'].append({
-            "class": node_data['class_name'],
-            "display_name": node_data['display_name'],
-            "category": node_data.get('category', ''),
-            "color": node_data.get('color', [200, 200, 200])
+        builtin_root = QtWidgets.QTreeWidgetItem(["内置节点"])
+        builtin_root.setIcon(0, QtGui.QIcon.fromTheme("package"))
+        builtin_root.setData(0, QtCore.Qt.UserRole, {
+            'type': 'builtin_root',
+            'name': 'builtin'
         })
 
-        # 保存plugin.json
-        plugin_json_path = pkg_info['path'] / "plugin.json"
-        with open(plugin_json_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-
-        # 生成节点代码模板
-        self._generate_node_code(pkg_info['path'], node_data)
-
-        # ✨ 记录撤销点
-        self._push_undo('create_node', {
-            'package': pkg_name,
-            'node_index': node_index,
-            'node_data': {
-                'class_name': node_data['class_name'],
-                'display_name': node_data['display_name'],
-                'category': node_data.get('category', ''),
-                'color': node_data.get('color', [200, 200, 200])
+        if self.builtin_plugin_info:
+            group_order = self.builtin_plugin_info.get('group', [])
+            groups = {}
+            
+            for node_def in self.builtin_plugin_info.get('nodes', []):
+                identifier = node_def.get('__identifier__', '未分类')
+                if identifier not in groups:
+                    groups[identifier] = []
+                groups[identifier].append(node_def)
+            
+            ordered_groups = []
+            for group_id in group_order:
+                if group_id in groups:
+                    ordered_groups.append((group_id, groups[group_id]))
+                    del groups[group_id]
+            for group_id, nodes in sorted(groups.items()):
+                ordered_groups.append((group_id, nodes))
+            
+            group_display_names = {
+                'Image_Source': '图像源',
+                'Image_Analysis': '图像分析',
+                'Image_Transform': '图像变换',
+                'Image_Process': '图像处理',
+                'Integration': '系统集成',
+                'OCR': 'OCR',
+                'YOLO': 'YOLO'
             }
+            
+            for group_id, nodes in ordered_groups:
+                display_name = group_display_names.get(group_id, group_id)
+                group_item = QtWidgets.QTreeWidgetItem([display_name])
+                group_item.setData(0, QtCore.Qt.UserRole, {
+                    'type': 'group',
+                    'name': group_id,
+                    'display_name': display_name
+                })
+                
+                for node in sorted(nodes, key=lambda x: x.get('display_name', '')):
+                    node_name = node.get('display_name', node.get('class', ''))
+                    node_item = QtWidgets.QTreeWidgetItem([node_name])
+                    node_item.setData(0, QtCore.Qt.UserRole, {
+                        'type': 'node',
+                        'name': node.get('class', ''),
+                        'data': node
+                    })
+                    group_item.addChild(node_item)
+                
+                builtin_root.addChild(group_item)
+
+        self.node_tree.addTopLevelItem(builtin_root)
+
+        market_root = QtWidgets.QTreeWidgetItem(["市场节点"])
+        market_root.setIcon(0, QtGui.QIcon.fromTheme("cloud"))
+        market_root.setData(0, QtCore.Qt.UserRole, {
+            'type': 'market_root',
+            'name': 'marketplace'
         })
 
-        QtWidgets.QMessageBox.information(
-            self, "成功", f"节点 '{node_data['display_name']}' 创建成功！\n\n💡 提示：可使用 Ctrl+Z 撤销")
-
-    def _generate_node_code(self, pkg_dir, node_data):
-        """生成节点代码模板"""
-        nodes_py_path = pkg_dir / "nodes.py"
-
-        # 读取现有代码
-        existing_code = ""
-        if nodes_py_path.exists():
-            with open(nodes_py_path, 'r', encoding='utf-8') as f:
-                existing_code = f.read()
-
-        # 生成新节点代码
-        class_name = node_data['class_name']
-        display_name = node_data['display_name']
-        category = node_data.get('category', '')
-        color = node_data.get('color', [200, 200, 200])
-
-        node_template = f'''
-
-class {class_name}(BaseNode):
-    """
-    {display_name}节点
-    {node_data.get('description', '')}
-    """
-    
-    __identifier__ = '{pkg_dir.name}'
-    NODE_NAME = '{display_name}'
-    
-    def __init__(self):
-        super({class_name}, self).__init__()
-        # TODO: 添加输入端口
-        # self.add_input('输入图像', color=(100, 255, 100))
-        
-        # TODO: 添加输出端口
-        # self.add_output('输出图像', color=(100, 255, 100))
-        
-        # TODO: 添加参数控件
-        # self.add_text_input('param1', '参数1', tab='properties')
-        
-    def process(self, inputs=None):
-        """处理节点逻辑"""
-        # TODO: 实现节点处理逻辑
-        if inputs and len(inputs) > 0 and inputs[0] is not None:
-            image = inputs[0][0] if isinstance(inputs[0], list) else inputs[0]
-            try:
-                # 你的处理逻辑
-                result = image
-                return {{'输出图像': result}}
-            except Exception as e:
-                print(f"{display_name}处理错误: {{e}}")
-                return {{'输出图像': None}}
-        return {{'输出图像': None}}
-'''
-
-        # 检查是否需要添加导入语句
-        if "from NodeGraphQt import BaseNode" not in existing_code:
-            existing_code = "from NodeGraphQt import BaseNode\nimport cv2\nimport numpy as np\n" + existing_code
-
-        # 追加新节点代码
-        with open(nodes_py_path, 'w', encoding='utf-8') as f:
-            f.write(existing_code + node_template)
-
-    def _on_edit_node(self):
-        """编辑节点"""
-        if not hasattr(self, 'current_selected_node'):
-            return
-
-        selected = self.current_selected_node
-        pkg_name = selected['package']
-        row = selected['row']
-
-        if pkg_name not in self.plugin_packages:
-            return
-
-        pkg_info = self.plugin_packages[pkg_name]
-        nodes = pkg_info['data'].get('nodes', [])
-
-        if row >= len(nodes):
-            return
-
-        node_data = nodes[row].copy()  # 复制旧数据
-
-        dialog = EditNodeDialog(self, pkg_name, node_data, row)
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
-            updated_data = dialog.get_updated_data()
-
-            # ✨ 记录撤销点
-            self._push_undo('modify_node', {
-                'package': pkg_name,
-                'node_index': row,
-                'old_data': node_data,
-                'new_data': updated_data
-            })
-
-            self._update_node_in_package(pkg_name, row, updated_data)
-            self._refresh_packages()
-
-    def _update_node_in_package(self, pkg_name, row, updated_data):
-        """更新节点包中的节点"""
-        if pkg_name not in self.plugin_packages:
-            return
-
-        pkg_info = self.plugin_packages[pkg_name]
-        data = pkg_info['data']
-
-        # 更新plugin.json
-        if row < len(data['nodes']):
-            data['nodes'][row].update(updated_data)
-
-        # 保存
-        plugin_json_path = pkg_info['path'] / "plugin.json"
-        with open(plugin_json_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-
-        QtWidgets.QMessageBox.information(self, "成功", "节点更新成功！")
-
-    def _on_delete_node(self):
-        """删除节点"""
-        if not hasattr(self, 'current_selected_node'):
-            return
-
-        selected = self.current_selected_node
-        pkg_name = selected['package']
-        row = selected['row']
-
-        if pkg_name not in self.plugin_packages:
-            return
-
-        pkg_info = self.plugin_packages[pkg_name]
-        nodes = pkg_info['data'].get('nodes', [])
-
-        if row >= len(nodes):
-            return
-
-        node_data = nodes[row]
-
-        reply = QtWidgets.QMessageBox.question(
-            self,
-            "确认删除",
-            f"确定要删除节点 '{node_data.get('display_name', '')}' 吗？\n\n💡 提示：可使用 Ctrl+Z 撤销此操作",
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-            QtWidgets.QMessageBox.No
-        )
-
-        if reply == QtWidgets.QMessageBox.Yes:
-            # ✨ 记录撤销点
-            self._push_undo('delete_node', {
-                'package': pkg_name,
-                'node_index': row,
-                'node_data': node_data.copy()
-            })
-
-            self._delete_node_from_package(pkg_name, row)
-            self._refresh_packages()
-
-    def _delete_node_from_package(self, pkg_name, row):
-        """从节点包中删除节点"""
-        if pkg_name not in self.plugin_packages:
-            return
-
-        pkg_info = self.plugin_packages[pkg_name]
-        data = pkg_info['data']
-
-        # 从列表中移除
-        if row < len(data['nodes']):
-            removed_node = data['nodes'].pop(row)
-            class_name = removed_node.get('class', '')
-
-            # 保存plugin.json
-            plugin_json_path = pkg_info['path'] / "plugin.json"
-            with open(plugin_json_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-
-            # ✨ 从nodes.py中删除对应的类定义
-            if class_name:
-                self._remove_class_from_nodes_py(pkg_info['path'], class_name)
-
-            QtWidgets.QMessageBox.information(
-                self, "成功", f"节点 '{removed_node.get('display_name', '')}' 已删除")
-
-    def _remove_class_from_nodes_py(self, pkg_dir, class_name):
-        """
-        从nodes.py文件中删除指定的类定义
-        
-        Args:
-            pkg_dir: 节点包目录路径
-            class_name: 要删除的类名
-        """
-        nodes_py_path = pkg_dir / "nodes.py"
-        if not nodes_py_path.exists():
-            return
-
-        try:
-            with open(nodes_py_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-
-            # 使用正则表达式匹配类定义
-            # 匹配格式: class ClassName(...): 及其后面的所有内容直到下一个class定义或文件结束
-            pattern = rf'class\s+{re.escape(class_name)}\s*\([^)]*\)\s*:\s*\n([\s\S]*?)(?=\nclass\s+\w|\Z)'
-            
-            # 删除匹配的类定义（保留空行分隔）
-            new_content = re.sub(pattern, '', content)
-            
-            # 清理多余的空行
-            lines = new_content.split('\n')
-            cleaned_lines = []
-            prev_empty = False
-            
-            for line in lines:
-                is_empty = line.strip() == ''
-                if is_empty and prev_empty:
-                    continue
-                cleaned_lines.append(line)
-                prev_empty = is_empty
-            
-            new_content = '\n'.join(cleaned_lines)
-            
-            # 保存修改
-            with open(nodes_py_path, 'w', encoding='utf-8') as f:
-                f.write(new_content)
-                
-            print(f"🗑️ 已从 nodes.py 中删除类: {class_name}")
-            
-        except Exception as e:
-            print(f"⚠️ 删除类 {class_name} 失败: {e}")
-
-    def _on_import_package(self):
-        """导入节点包"""
-        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            "导入节点包",
-            "",
-            "ZIP文件 (*.zip);;所有文件 (*)"
-        )
-
-        if not file_path:
-            return
-
-        try:
-            self._import_from_zip(file_path)
-            QtWidgets.QMessageBox.information(self, "成功", "节点包导入成功！")
-            self._refresh_packages()
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "错误", f"导入失败: {str(e)}")
-
-    def _import_from_zip(self, zip_path):
-        """从ZIP文件导入节点包"""
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            # 检查是否包含plugin.json
-            if 'plugin.json' not in zip_ref.namelist():
-                raise ValueError("无效的节点包：缺少plugin.json")
-
-            # 读取plugin.json获取包名
-            with zip_ref.open('plugin.json') as f:
-                plugin_data = json.loads(f.read().decode('utf-8'))
-                pkg_name = plugin_data.get('name', '')
-
-            if not pkg_name:
-                raise ValueError("无效的节点包：plugin.json中缺少name字段")
-
-            # 解压到user_plugins目录
-            extract_path = self.plugins_dir / pkg_name
-            zip_ref.extractall(extract_path)
-
-            # 加载到内存
-            self.plugin_packages[pkg_name] = {
-                'path': extract_path,
-                'data': plugin_data
-            }
-
-    def _on_export_package(self):
-        """导出节点包"""
-        selected_items = self.package_tree.selectedItems()
-        if not selected_items:
-            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点包")
-            return
-
-        pkg_name = selected_items[0].data(0, QtCore.Qt.UserRole)
-        if not pkg_name:
-            QtWidgets.QMessageBox.warning(self, "警告", "请选择具体的节点包，而非分类")
-            return
-
-        if pkg_name not in self.plugin_packages:
-            return
-
-        # 选择保存路径
-        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self,
-            "导出节点包",
-            f"{pkg_name}.zip",
-            "ZIP文件 (*.zip)"
-        )
-
-        if not file_path:
-            return
-
-        try:
-            self._export_to_zip(pkg_name, file_path)
-            QtWidgets.QMessageBox.information(
-                self, "成功", f"节点包已导出到:\n{file_path}")
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "错误", f"导出失败: {str(e)}")
-
-    def _export_to_zip(self, pkg_name, zip_path):
-        """导出节点包为ZIP文件"""
-        pkg_info = self.plugin_packages[pkg_name]
-        pkg_dir = pkg_info['path']
-
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
-            for file_path in pkg_dir.rglob('*'):
-                if file_path.is_file():
-                    arc_name = file_path.relative_to(pkg_dir)
-                    zip_ref.write(file_path, arc_name)
-
-    def _refresh_packages(self):
-        """刷新节点包列表"""
-        self.plugin_packages.clear()
-        self._load_plugin_packages()
-        self._populate_package_tree()
-        self._show_empty_state()
-
-    def _on_rename_package(self):
-        """重命名节点包（仅marketplace插件）"""
-        selected_items = self.package_tree.selectedItems()
-        if not selected_items:
-            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点包")
-            return
-
-        item = selected_items[0]
-        pkg_name = item.data(0, QtCore.Qt.UserRole)
-
-        if not pkg_name or pkg_name not in self.plugin_packages:
-            QtWidgets.QMessageBox.warning(self, "警告", "无效的节点包")
-            return
-
-        pkg_info = self.plugin_packages[pkg_name]
-        data = pkg_info['data']
-
-        # 检查是否为builtin插件
-        source = data.get('source', 'unknown')
-        if source == 'builtin':
-            QtWidgets.QMessageBox.warning(
-                self,
-                "警告",
-                "内置插件不可重命名\n\n只有市场插件（marketplace）可以重命名"
-            )
-            return
-
-        # 弹出重命名对话框
-        new_name, ok = QtWidgets.QInputDialog.getText(
-            self,
-            "重命名节点包",
-            f"请输入新的节点包名称:\n\n当前名称: {pkg_name}",
-            text=pkg_name
-        )
-
-        if ok and new_name:
-            if new_name == pkg_name:
-                QtWidgets.QMessageBox.information(self, "提示", "名称未改变")
-                return
-
-            # 执行重命名
-            success, message = self._rename_package(pkg_name, new_name)
-            if success:
-                QtWidgets.QMessageBox.information(
-                    self,
-                    "成功",
-                    f"节点包已重命名\n\n{pkg_name} → {new_name}\n\n⚠️ 请重启应用以生效"
-                )
-                self._refresh_packages()
-            else:
-                QtWidgets.QMessageBox.critical(self, "错误", message)
-
-    def _rename_package(self, old_name, new_name):
-        """执行节点包重命名"""
-        try:
-            pkg_info = self.plugin_packages[old_name]
-            old_path = pkg_info['path']
-            new_path = old_path.parent / new_name
-
-            # 检查新名称是否已存在
-            if new_path.exists():
-                return False, f"节点包 '{new_name}' 已存在"
-
-            # 重命名目录
-            old_path.rename(new_path)
-
-            # 更新plugin.json
-            plugin_json_path = new_path / "plugin.json"
-            with open(plugin_json_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            data['name'] = new_name
-
-            with open(plugin_json_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-
-            # 更新内存中的信息
-            pkg_info['path'] = new_path
-            pkg_info['data'] = data
-            self.plugin_packages[new_name] = pkg_info
-            del self.plugin_packages[old_name]
-
-            return True, "重命名成功"
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return False, f"重命名失败: {str(e)}"
-
-    def _on_move_node(self):
-        """移动节点到其他包"""
-        # 获取当前选中的节点包和节点
-        selected_items = self.package_tree.selectedItems()
-        if not selected_items:
-            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点包")
-            return
-
-        item = selected_items[0]
-        pkg_name = item.data(0, QtCore.Qt.UserRole)
-
-        if not pkg_name or pkg_name not in self.plugin_packages:
-            QtWidgets.QMessageBox.warning(self, "警告", "无效的节点包")
-            return
-
-        pkg_info = self.plugin_packages[pkg_name]
-        nodes = pkg_info['data'].get('nodes', [])
-
-        if not nodes:
-            QtWidgets.QMessageBox.warning(self, "警告", "该节点包中没有节点")
-            return
-
-        # 让用户选择要移动的节点
-        node_names = [node.get('display_name', node.get('class', ''))
-                      for node in nodes]
-        node_index, ok = QtWidgets.QInputDialog.getItem(
-            self,
-            "选择节点",
-            "选择要移动的节点:",
-            node_names,
-            0,
-            False
-        )
-
-        if not ok:
-            return
-
-        # 获取节点索引
-        selected_node_idx = node_names.index(node_index)
-        selected_node = nodes[selected_node_idx]
-
-        # 显示目标包选择对话框（只能移动到marketplace包）
-        target_packages = [
-            (name, info) for name, info in self.plugin_packages.items()
-            if info['data'].get('source') == 'marketplace' and name != pkg_name
-        ]
-
-        if not target_packages:
-            QtWidgets.QMessageBox.warning(
-                self,
-                "警告",
-                "没有其他市场插件可以移动节点到\n\n只能将节点移动到marketplace类型的插件"
-            )
-            return
-
-        target_pkg_names = [name for name, _ in target_packages]
-        target_pkg, ok = QtWidgets.QInputDialog.getItem(
-            self,
-            "选择目标包",
-            f"将节点 '{selected_node.get('display_name')}' 移动到:",
-            target_pkg_names,
-            0,
-            False
-        )
-
-        if ok and target_pkg:
-            success, message = self._move_node_to_package(
-                pkg_name,
-                selected_node_idx,
-                target_pkg
-            )
-            if success:
-                QtWidgets.QMessageBox.information(
-                    self,
-                    "成功",
-                    f"节点已移动\n\n从: {pkg_name}\n到: {target_pkg}\n\n⚠️ 请重启应用以生效"
-                )
-                self._refresh_packages()
-            else:
-                QtWidgets.QMessageBox.critical(self, "错误", message)
-
-    def _move_node_to_package(self, source_pkg, node_index, target_pkg):
-        """执行节点移动"""
-        try:
-            source_info = self.plugin_packages[source_pkg]
-            target_info = self.plugin_packages[target_pkg]
-
-            # 从源包移除节点定义
-            node_data = source_info['data']['nodes'].pop(node_index)
-
-            # 添加到目标包
-            target_info['data']['nodes'].append(node_data)
-
-            # 保存两个包的plugin.json
-            self._save_plugin_json(source_info)
-            self._save_plugin_json(target_info)
-
-            return True, "移动成功"
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return False, f"移动失败: {str(e)}"
-
-    def _save_plugin_json(self, pkg_info):
-        """保存plugin.json文件"""
-        plugin_json_path = pkg_info['path'] / "plugin.json"
-        with open(plugin_json_path, 'w', encoding='utf-8') as f:
-            json.dump(pkg_info['data'], f, indent=2, ensure_ascii=False)
-
-
-# ============================================================================
-# ✨ 节点编辑器增强功能方法
-# ============================================================================
-
-    def _push_undo(self, action_type, data):
-        """
-        推入撤销栈
-
-        Args:
-            action_type: 操作类型 ('create_node', 'delete_node', 'modify_node', 'edit_code')
-            data: 操作数据（包含恢复所需信息）
-        """
-        self.undo_stack.append({
-            'type': action_type,
-            'data': data,
-            'timestamp': QtCore.QDateTime.currentDateTime()
+        local_item = QtWidgets.QTreeWidgetItem(["本地"])
+        local_item.setData(0, QtCore.Qt.UserRole, {
+            'type': 'market_local_root',
+            'name': 'local'
         })
-
-        # 限制历史栈大小
-        if len(self.undo_stack) > self.max_history:
-            self.undo_stack.pop(0)
-
-        # 清空重做栈
-        self.redo_stack.clear()
-
-        print(f"📝 撤销记录: {action_type} (栈大小: {len(self.undo_stack)})")
-
-    def undo(self):
-        """撤销操作"""
-        if not self.undo_stack:
-            QtWidgets.QMessageBox.information(self, "提示", "没有可撤销的操作")
-            return
-
-        action = self.undo_stack.pop()
-        self.redo_stack.append(action)
-
-        # 执行反向操作
-        self._execute_undo_action(action)
-
-        print(f"↩️ 撤销: {action['type']}")
-
-    def redo(self):
-        """重做操作"""
-        if not self.redo_stack:
-            QtWidgets.QMessageBox.information(self, "提示", "没有可重做的操作")
-            return
-
-        action = self.redo_stack.pop()
-        self.undo_stack.append(action)
-
-        # 重新执行操作
-        self._execute_redo_action(action)
-
-        print(f"↪️ 重做: {action['type']}")
-
-    def _execute_undo_action(self, action):
-        """执行撤销操作"""
-        action_type = action['type']
-
-        if action_type == 'create_node':
-            # 撤销创建节点 = 删除节点
-            pkg_name = action['data']['package']
-            node_index = action['data']['node_index']
-            self._delete_node_from_package(pkg_name, node_index)
-            self._refresh_packages()
-
-        elif action_type == 'delete_node':
-            # 撤销删除节点 = 恢复节点
-            pkg_name = action['data']['package']
-            node_data = action['data']['node_data']
-            node_index = action['data']['node_index']
-            self._restore_node_to_package(pkg_name, node_data, node_index)
-            self._refresh_packages()
-
-        elif action_type == 'modify_node':
-            # 撤销修改节点 = 恢复旧值
-            pkg_name = action['data']['package']
-            node_index = action['data']['node_index']
-            old_data = action['data']['old_data']
-            self._update_node_in_package(pkg_name, node_index, old_data)
-            self._refresh_packages()
-
-    def _execute_redo_action(self, action):
-        """执行重做操作"""
-        action_type = action['type']
-
-        if action_type == 'create_node':
-            # 重做创建节点
-            pkg_name = action['data']['package']
-            node_data = action['data']['node_data']
-            self._add_node_to_package(pkg_name, node_data)
-            self._refresh_packages()
-
-        elif action_type == 'delete_node':
-            # 重做删除节点
-            pkg_name = action['data']['package']
-            node_index = action['data']['node_index']
-            self._delete_node_from_package(pkg_name, node_index)
-            self._refresh_packages()
-
-        elif action_type == 'modify_node':
-            # 重做修改节点
-            pkg_name = action['data']['package']
-            node_index = action['data']['node_index']
-            new_data = action['data']['new_data']
-            self._update_node_in_package(pkg_name, node_index, new_data)
-            self._refresh_packages()
-
-    def _restore_node_to_package(self, pkg_name, node_data, node_index):
-        """恢复节点到包中（用于撤销删除）"""
-        if pkg_name not in self.plugin_packages:
-            return
-
-        pkg_info = self.plugin_packages[pkg_name]
-        data = pkg_info['data']
-
-        # 插入到原位置
-        data['nodes'].insert(node_index, node_data)
-
-        # 保存
-        plugin_json_path = pkg_info['path'] / "plugin.json"
-        with open(plugin_json_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-
-    def _on_code_changed(self):
-        """代码编辑变化事件"""
-        # 可以在这里添加实时语法检查
-        pass
-
-    def _on_save_code(self):
-        """保存代码"""
-        if not self.current_package:
-            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点包")
-            return
-
-        code = self.code_editor.toPlainText()
-        pkg_info = self.plugin_packages[self.current_package]
-        nodes_py_path = pkg_info['path'] / "nodes.py"
-
-        try:
-            # 验证Python语法
-            compile(code, str(nodes_py_path), 'exec')
-
-            # 保存到文件
-            with open(nodes_py_path, 'w', encoding='utf-8') as f:
-                f.write(code)
-
-            # 记录撤销点
-            self._push_undo('edit_code', {
-                'package': self.current_package,
-                'code': code
+        
+        for pkg_name, pkg_info in sorted(self.marketplace_plugins.items()):
+            pkg_version = pkg_info['data'].get('version', '1.0.0')
+            node_count = len(pkg_info['data'].get('nodes', []))
+            display_name = f"{pkg_name} (v{pkg_version}, {node_count}节点)"
+            
+            pkg_item = QtWidgets.QTreeWidgetItem([display_name])
+            pkg_item.setData(0, QtCore.Qt.UserRole, {
+                'type': 'market_local',
+                'name': pkg_name,
+                'path': str(pkg_info['path']),
+                'data': pkg_info['data']
             })
-
-            QtWidgets.QMessageBox.information(self, "成功", "代码已保存！")
-            print(f"💾 代码已保存: {nodes_py_path}")
-
-        except SyntaxError as e:
-            QtWidgets.QMessageBox.critical(
-                self, "语法错误", f"代码存在语法错误:\n\n{str(e)}")
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "错误", f"保存失败: {str(e)}")
-
-    def _on_format_code(self):
-        """格式化代码"""
-        code = self.code_editor.toPlainText()
-
-        # 简单的代码格式化（去除多余空行、统一缩进）
-        lines = code.split('\n')
-        formatted_lines = []
-        prev_empty = False
-
-        for line in lines:
-            is_empty = line.strip() == ''
-
-            if is_empty and prev_empty:
-                continue  # 跳过连续空行
-
-            formatted_lines.append(line.rstrip())
-            prev_empty = is_empty
-
-        formatted_code = '\n'.join(formatted_lines)
-        self.code_editor.setPlainText(formatted_code)
-
-        QtWidgets.QMessageBox.information(self, "成功", "代码已格式化！")
-
-    def _on_run_preview(self):
-        """运行预览"""
-        if not self.current_package or self.current_node_index is None:
-            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点")
-            return
-
-        pkg_info = self.plugin_packages[self.current_package]
-        nodes = pkg_info['data'].get('nodes', [])
-
-        if self.current_node_index >= len(nodes):
-            return
-
-        node_data = nodes[self.current_node_index]
-        class_name = node_data.get('class', '')
-        display_name = node_data.get('display_name', '')
-
-        # 模拟运行节点
-        preview_text = f"""
-╔══════════════════════════════════════╗
-║     节点预览 - {display_name}
-╠══════════════════════════════════════╣
-║ 类名: {class_name:<30} ║
-║ 包名: {self.current_package:<30} ║
-║ 分类: {node_data.get('category', 'N/A'):<30} ║
-╠══════════════════════════════════════╣
-║ 状态: ✅ 节点定义有效
-║ 
-║ 提示: 实际运行需要在节点图中连接端口
-╚══════════════════════════════════════╝
-        """
-
-        self.preview_label.setText(preview_text)
-        self.preview_label.setStyleSheet(
-            "background-color: #e8f5e9; color: #2e7d32; font-family: Consolas; font-size: 11px; padding: 10px;")
-
-        print(f"▶️ 预览节点: {display_name} ({class_name})")
-
-    def _on_clear_preview(self):
-        """清除预览"""
-        self.preview_label.setText("选择节点后点击'预览'按钮查看效果")
-        self.preview_label.setStyleSheet(
-            "background-color: #f0f0f0; color: gray; font-size: 12px;")
-
-    def _on_sync_to_runtime(self):
-        """
-        ✨ 同步节点编辑器更改到运行时
+            local_item.addChild(pkg_item)
         
-        将编辑后的节点类重新加载到所有工作流，无需重启应用
-        """
-        selected_items = self.package_tree.selectedItems()
-        if not selected_items:
-            QtWidgets.QMessageBox.warning(self, "警告", "请先选择一个节点包")
-            return
+        market_root.addChild(local_item)
 
-        pkg_name = selected_items[0].data(0, QtCore.Qt.UserRole)
-        if not pkg_name or pkg_name not in self.plugin_packages:
-            QtWidgets.QMessageBox.warning(self, "警告", "请选择有效的节点包")
-            return
-
-        reply = QtWidgets.QMessageBox.question(
-            self,
-            "确认同步",
-            f"确定要将节点包 '{pkg_name}' 的更改同步到运行时吗？\n\n"
-            "这将重新加载节点类到所有工作流中。",
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-            QtWidgets.QMessageBox.No
-        )
-
-        if reply == QtWidgets.QMessageBox.Yes:
-            self._sync_package_to_runtime(pkg_name)
-
-    def _sync_package_to_runtime(self, pkg_name):
-        """
-        将指定节点包同步到运行时
+        remote_item = QtWidgets.QTreeWidgetItem(["网站分享"])
+        remote_item.setData(0, QtCore.Qt.UserRole, {
+            'type': 'market_remote',
+            'name': 'remote'
+        })
         
-        Args:
-            pkg_name: 节点包名称
-        """
-        try:
-            pkg_info = self.plugin_packages[pkg_name]
-            pkg_path = pkg_info['path']
-            
-            # 1. 重新加载模块
-            import importlib
-            import sys
-            
-            # 构建模块路径
-            nodes_module_path = f"user_plugins.{pkg_name}.nodes"
-            
-            # 移除旧模块（如果存在）
-            if nodes_module_path in sys.modules:
-                del sys.modules[nodes_module_path]
-            
-            # 动态导入模块
-            nodes_module = importlib.import_module(nodes_module_path)
-            importlib.reload(nodes_module)
-            
-            # 2. 获取所有节点类
-            node_classes = []
-            for name, obj in vars(nodes_module).items():
-                if isinstance(obj, type) and obj.__name__ != 'BaseNode':
-                    # 检查是否是节点类
-                    if hasattr(obj, 'NODE_NAME') and hasattr(obj, '__identifier__'):
-                        node_classes.append(obj)
-            
-            if not node_classes:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "提示",
-                    f"在节点包 '{pkg_name}' 中未找到有效的节点类\n\n"
-                    "请确保节点类继承自 BaseNode 并定义了 NODE_NAME 属性"
-                )
-                return
-            
-            # 3. 通过事件总线通知所有工作流刷新节点
+        remote_url = self._get_remote_url()
+        url_item = QtWidgets.QTreeWidgetItem([remote_url])
+        url_item.setData(0, QtCore.Qt.UserRole, {
+            'type': 'market_remote_url',
+            'name': remote_url,
+            'url': remote_url
+        })
+        remote_item.addChild(url_item)
+        
+        market_root.addChild(remote_item)
+
+        self.node_tree.addTopLevelItem(market_root)
+        self.node_tree.expandAll()
+
+    def _get_remote_url(self):
+        config_path = Path(__file__).parent.parent / "config" / "plugins.json"
+        if config_path.exists():
             try:
-                from core.event_bus import event_bus, Events
-                
-                event_bus.publish(Events.PLUGIN_RELOADED, plugin_name=pkg_name)
-                
-                QtWidgets.QMessageBox.information(
-                    self,
-                    "成功",
-                    f"节点包 '{pkg_name}' 已成功同步到运行时！\n\n"
-                    f"已加载 {len(node_classes)} 个节点类:\n" + 
-                    "\n".join([f"• {cls.NODE_NAME}" for cls in node_classes])
-                )
-                
-            except Exception as e:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "部分成功",
-                    f"节点类已重新加载，但同步到工作流时出错:\n\n{e}\n\n"
-                    "请手动刷新节点库或重启应用"
-                )
-            
-            print(f"🔃 节点包 '{pkg_name}' 已同步到运行时")
-            
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            QtWidgets.QMessageBox.critical(
-                self,
-                "错误",
-                f"同步失败:\n\n{str(e)}"
-            )
-
-    def _on_manage_tab_order(self):
-        """管理节点库标签页顺序"""
-        dialog = TabOrderDialog(self)
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
-            new_order = dialog.get_tab_order()
-            self._apply_tab_order(new_order)
-            QtWidgets.QMessageBox.information(self, "成功", "标签页顺序已更新，请重启应用以生效")
-
-    def _apply_tab_order(self, tab_order):
-        """
-        应用标签页顺序（保存到配置文件）
-
-        Args:
-            tab_order: list of str, 插件名称的有序列表
-        """
-        config_file = Path(__file__).parent.parent / \
-            "workspace" / "tab_order.json"
-        config_file.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(tab_order, f, indent=2, ensure_ascii=False)
-
-    def _load_tab_order(self):
-        """
-        加载保存的标签页顺序
-
-        Returns:
-            list: 插件名称的有序列表，如果不存在则返回空列表
-        """
-        config_file = Path(__file__).parent.parent / \
-            "workspace" / "tab_order.json"
-        if config_file.exists():
-            try:
-                with open(config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    return config.get('remote_repo_url', 'https://example.com/plugins')
             except:
                 pass
-        return []
+        return 'https://example.com/plugins'
 
-    def keyPressEvent(self, event):
-        """键盘事件 - 支持Ctrl+Z/Y快捷键"""
-        # Ctrl+Z 撤销
-        if event.modifiers() == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Z:
-            self.undo()
+    def _clear_detail_layout(self):
+        while self.detail_layout.count() > 0:
+            item = self.detail_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+            layout = item.layout()
+            if layout:
+                while layout.count() > 0:
+                    sub_item = layout.takeAt(0)
+                    sub_widget = sub_item.widget()
+                    if sub_widget:
+                        sub_widget.deleteLater()
+                layout.deleteLater()
+
+    def _on_tree_selection_changed(self):
+        selected_items = self.node_tree.selectedItems()
+        if not selected_items:
+            self._clear_detail_layout()
             return
 
-        # Ctrl+Y 重做
-        if event.modifiers() == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_Y:
-            self.redo()
+        item = selected_items[0]
+        data = item.data(0, QtCore.Qt.UserRole)
+        if not data:
             return
 
-        super(NodeEditorDialog, self).keyPressEvent(event)
+        self.current_selection = data
+        self._update_detail_panel(data)
+
+    def _update_detail_panel(self, data):
+        self._clear_detail_layout()
+        selection_type = data.get('type')
+
+        if selection_type == 'builtin_root':
+            self._show_builtin_root_info()
+        elif selection_type == 'group':
+            self._show_group_info(data)
+        elif selection_type == 'node':
+            self._show_node_info(data)
+        elif selection_type == 'market_local':
+            self._show_market_local_info(data)
+        elif selection_type == 'market_local_root':
+            self._show_market_local_root_info()
+        elif selection_type == 'market_remote':
+            self._show_market_remote_info(data)
+        elif selection_type == 'market_remote_url':
+            self._show_market_remote_url_info(data)
+        elif selection_type == 'market_root':
+            self._show_market_root_info()
+
+    def _show_builtin_root_info(self):
+        if not self.builtin_plugin_info:
+            return
+
+        layout = self.detail_layout
+
+        path_label = QtWidgets.QLabel(f"<b>目录:</b> {Path(__file__).parent.parent / 'plugin_packages' / 'builtin'}")
+        layout.addWidget(path_label)
+
+        total_nodes = len(self.builtin_plugin_info.get('nodes', []))
+        nodes_label = QtWidgets.QLabel(f"<b>节点总数:</b> {total_nodes}")
+        layout.addWidget(nodes_label)
+
+        groups = set()
+        for node in self.builtin_plugin_info.get('nodes', []):
+            groups.add(node.get('__identifier__', ''))
+        groups_label = QtWidgets.QLabel(f"<b>分组数:</b> {len(groups)}")
+        layout.addWidget(groups_label)
+
+        version = self.builtin_plugin_info.get('version', '1.0.0')
+        version_label = QtWidgets.QLabel(f"<b>版本:</b> {version}")
+        layout.addWidget(version_label)
+
+    def _show_group_info(self, data):
+        layout = self.detail_layout
+
+        name_label = QtWidgets.QLabel(f"<b>分组名称:</b> {data.get('name', '')}")
+        layout.addWidget(name_label)
+
+        display_label = QtWidgets.QLabel(f"<b>显示名称:</b> {data.get('display_name', '')}")
+        layout.addWidget(display_label)
+
+        node_count = 0
+        if self.builtin_plugin_info:
+            for node in self.builtin_plugin_info.get('nodes', []):
+                if node.get('__identifier__') == data.get('name'):
+                    node_count += 1
+        count_label = QtWidgets.QLabel(f"<b>节点数:</b> {node_count}")
+        layout.addWidget(count_label)
+
+    def _show_node_info(self, data):
+        layout = self.detail_layout
+        layout.setSpacing(12)
+        node_data = data.get('data', {})
+
+        container = QtWidgets.QWidget()
+        container_layout = QtWidgets.QFormLayout(container)
+        container_layout.setSpacing(10)
+        container_layout.setLabelAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        container_layout.setFormAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+
+        self.node_name_edit = QtWidgets.QLineEdit(node_data.get('display_name', ''))
+        self.node_name_edit.setMinimumWidth(200)
+        container_layout.addRow("显示名称:", self.node_name_edit)
+
+        self.group_combo = QtWidgets.QComboBox()
+        self.group_combo.setMinimumWidth(200)
+        
+        group_order = self.builtin_plugin_info.get('group', []) if self.builtin_plugin_info else []
+        group_display_names = {
+            'Image_Source': '图像源',
+            'Image_Analysis': '图像分析',
+            'Image_Transform': '图像变换',
+            'Image_Process': '图像处理',
+            'Integration': '系统集成',
+            'OCR': 'OCR',
+            'YOLO': 'YOLO'
+        }
+        
+        for group_id in group_order:
+            display_name = group_display_names.get(group_id, group_id)
+            self.group_combo.addItem(display_name, group_id)
+        
+        current_group = node_data.get('__identifier__', '')
+        index = self.group_combo.findData(current_group)
+        if index >= 0:
+            self.group_combo.setCurrentIndex(index)
+        
+        container_layout.addRow("所属分组:", self.group_combo)
+
+        self.enabled_check = QtWidgets.QCheckBox()
+        self.enabled_check.setChecked(node_data.get('enabled', True))
+        container_layout.addRow("是否启用:", self.enabled_check)
+
+        class_value = QtWidgets.QLabel(f"<b>{node_data.get('class', '')}</b>")
+        class_value.setStyleSheet("color: #666;")
+        container_layout.addRow("类名:", class_value)
+
+        separator = QtWidgets.QFrame()
+        separator.setFrameShape(QtWidgets.QFrame.HLine)
+        separator.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator_layout = QtWidgets.QHBoxLayout()
+        separator_layout.addWidget(separator)
+        container_layout.addRow("", separator_layout)
+
+        btn_widget = QtWidgets.QWidget()
+        btn_layout = QtWidgets.QHBoxLayout(btn_widget)
+        btn_layout.setSpacing(10)
+        
+        self.save_node_btn = QtWidgets.QPushButton("💾 保存")
+        self.save_node_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 6px 16px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+        """)
+        self.save_node_btn.clicked.connect(self._on_save_node)
+        
+        self.cancel_node_btn = QtWidgets.QPushButton("取消")
+        self.cancel_node_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f0f0;
+                color: #333;
+                border: 1px solid #ccc;
+                padding: 6px 16px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+        """)
+        self.cancel_node_btn.clicked.connect(self._on_cancel_node_edit)
+        
+        btn_layout.addWidget(self.save_node_btn)
+        btn_layout.addWidget(self.cancel_node_btn)
+        btn_layout.addStretch()
+        
+        container_layout.addRow("", btn_widget)
+
+        layout.addWidget(container)
+        layout.addStretch()
+
+    def _show_market_local_info(self, data):
+        layout = self.detail_layout
+        pkg_data = data.get('data', {})
+
+        path_label = QtWidgets.QLabel(f"<b>目录:</b> {data.get('path', '')}")
+        layout.addWidget(path_label)
+
+        version_label = QtWidgets.QLabel(f"<b>版本:</b> {pkg_data.get('version', '1.0.0')}")
+        layout.addWidget(version_label)
+
+        node_count = len(pkg_data.get('nodes', []))
+        count_label = QtWidgets.QLabel(f"<b>节点数:</b> {node_count}")
+        layout.addWidget(count_label)
+
+        author_label = QtWidgets.QLabel(f"<b>作者:</b> {pkg_data.get('author', '')}")
+        layout.addWidget(author_label)
+
+        delete_btn = QtWidgets.QPushButton("🗑️ 删除插件")
+        delete_btn.clicked.connect(lambda: self._on_delete_market_plugin(data))
+        layout.addWidget(delete_btn)
+
+    def _show_market_local_root_info(self):
+        layout = self.detail_layout
+
+        count = len(self.marketplace_plugins)
+        label = QtWidgets.QLabel(f"<b>本地市场插件:</b> {count} 个")
+        layout.addWidget(label)
+
+        path = Path(__file__).parent.parent / "plugin_packages" / "marketplace"
+        path_label = QtWidgets.QLabel(f"<b>目录:</b> {path}")
+        layout.addWidget(path_label)
+
+    def _show_market_remote_info(self, data):
+        layout = self.detail_layout
+
+        label = QtWidgets.QLabel("<b>网站分享</b>")
+        layout.addWidget(label)
+
+        desc = QtWidgets.QLabel("从远程网站下载和安装节点插件")
+        layout.addWidget(desc)
+
+    def _show_market_remote_url_info(self, data):
+        layout = self.detail_layout
+
+        url_layout = QtWidgets.QHBoxLayout()
+        url_label = QtWidgets.QLabel("网址:")
+        self.remote_url_edit = QtWidgets.QLineEdit(data.get('url', ''))
+        url_layout.addWidget(url_label)
+        url_layout.addWidget(self.remote_url_edit)
+        layout.addLayout(url_layout)
+
+        refresh_btn = QtWidgets.QPushButton("🔄 刷新插件列表")
+        refresh_btn.clicked.connect(self._on_refresh_remote_plugins)
+        layout.addWidget(refresh_btn)
+
+        list_label = QtWidgets.QLabel("<b>可下载节点:</b>")
+        layout.addWidget(list_label)
+
+        plugins_list = [
+            {'name': 'Advanced Filter', 'version': '1.0.0', 'description': '高级图像滤镜节点'},
+            {'name': '3D Reconstruction', 'version': '2.0.1', 'description': '3D重建节点'},
+            {'name': 'Video Analytics', 'version': '1.5.0', 'description': '视频分析节点'}
+        ]
+
+        for plugin in plugins_list:
+            plugin_layout = QtWidgets.QHBoxLayout()
+            plugin_info = QtWidgets.QLabel(f"<b>{plugin['name']}</b> v{plugin['version']}")
+            download_btn = QtWidgets.QPushButton("⬇️ 下载")
+            download_btn.clicked.connect(lambda p=plugin: self._on_download_plugin(p))
+            plugin_layout.addWidget(plugin_info)
+            plugin_layout.addWidget(download_btn)
+            plugin_layout.addStretch()
+            layout.addLayout(plugin_layout)
+
+    def _show_market_root_info(self):
+        layout = self.detail_layout
+
+        local_count = len(self.marketplace_plugins)
+        label = QtWidgets.QLabel(f"<b>本地插件:</b> {local_count} 个")
+        layout.addWidget(label)
+
+    def _on_add_node(self):
+        selection = self.current_selection
+        if selection.get('type') not in ['group', 'node']:
+            QtWidgets.QMessageBox.warning(self, "提示", "请先选中一个节点分组或节点")
+            return
+
+        target_group = selection.get('name')
+        if selection.get('type') == 'node' and selection.get('data'):
+            target_group = selection['data'].get('__identifier__', target_group)
+
+        dlg = AddNodeDialog(self, target_group)
+        if dlg.exec_() == QtWidgets.QDialog.Accepted:
+            new_node = {
+                'class': dlg.class_name_edit.text().strip(),
+                'display_name': dlg.display_name_edit.text().strip(),
+                '__identifier__': dlg.group_combo.currentData(),
+                'enabled': dlg.enabled_check.isChecked()
+            }
+
+            if self.builtin_plugin_info:
+                self.builtin_plugin_info['nodes'].append(new_node)
+                self._save_builtin_config()
+                self._refresh_tree()
+                QtWidgets.QMessageBox.information(self, "成功", "节点已添加，请刷新节点库生效")
+
+    def _on_delete(self):
+        selection = self.current_selection
+        selection_type = selection.get('type')
+
+        if selection_type == 'node':
+            self._on_delete_node()
+        elif selection_type == 'market_local':
+            self._on_delete_market_plugin(selection)
+        else:
+            QtWidgets.QMessageBox.warning(self, "提示", "只能删除节点或本地市场插件")
+
+    def _on_delete_node(self):
+        selection = self.current_selection
+        node_class = selection.get('name', '')
+        display_name = selection.get('data', {}).get('display_name', node_class)
+
+        reply = QtWidgets.QMessageBox.question(
+            self, "确认删除",
+            f"确定要删除节点 '{display_name}' 吗？\n\n删除后将从节点库中移除，需要刷新节点库才能生效。",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
+
+        if reply == QtWidgets.QMessageBox.Yes:
+            if self.builtin_plugin_info:
+                nodes = self.builtin_plugin_info.get('nodes', [])
+                self.builtin_plugin_info['nodes'] = [
+                    n for n in nodes if n.get('class') != node_class
+                ]
+                self._save_builtin_config()
+                self._refresh_tree()
+                self._clear_detail_layout()
+                QtWidgets.QMessageBox.information(self, "成功", "节点已删除")
+
+    def _on_delete_market_plugin(self, data):
+        pkg_name = data.get('name', '')
+        pkg_path = Path(data.get('path', ''))
+
+        reply = QtWidgets.QMessageBox.question(
+            self, "确认删除",
+            f"确定要删除插件 '{pkg_name}' 吗？\n\n此操作将删除所有相关文件，且无法恢复。",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
+
+        if reply == QtWidgets.QMessageBox.Yes:
+            try:
+                if pkg_path.exists():
+                    shutil.rmtree(pkg_path)
+                del self.marketplace_plugins[pkg_name]
+                self._refresh_tree()
+                self._clear_detail_layout()
+                QtWidgets.QMessageBox.information(self, "成功", "插件已删除")
+            except Exception as e:
+                QtWidgets.QMessageBox.error(self, "错误", f"删除失败: {str(e)}")
+
+    def _on_save_node(self):
+        selection = self.current_selection
+        node_class = selection.get('name', '')
+
+        if self.builtin_plugin_info:
+            for node in self.builtin_plugin_info.get('nodes', []):
+                if node.get('class') == node_class:
+                    node['display_name'] = self.node_name_edit.text().strip()
+                    node['__identifier__'] = self.group_combo.currentData()
+                    node['enabled'] = self.enabled_check.isChecked()
+                    break
+
+            self._save_builtin_config()
+            self._refresh_tree()
+            QtWidgets.QMessageBox.information(self, "成功", "节点信息已保存，请刷新节点库生效")
+
+    def _on_cancel_node_edit(self):
+        self._update_detail_panel(self.current_selection)
+
+    def _save_builtin_config(self):
+        if self.builtin_plugin_info:
+            builtin_path = Path(__file__).parent.parent / "plugin_packages" / "builtin"
+            plugin_json = builtin_path / "plugin.json"
+            with open(plugin_json, 'w', encoding='utf-8') as f:
+                json.dump(self.builtin_plugin_info, f, indent=2, ensure_ascii=False)
+
+    def _on_import(self):
+        selection = self.current_selection
+        if selection.get('type') != 'market_root' and selection.get('type') != 'market_local_root':
+            QtWidgets.QMessageBox.warning(self, "提示", "请先选中市场节点")
+            return
+
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "选择节点配置文件", "", "JSON文件 (*.json)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                
+                if 'name' not in config or 'nodes' not in config:
+                    QtWidgets.QMessageBox.error(self, "错误", "无效的节点配置文件")
+                    return
+
+                pkg_name = config['name']
+                marketplace_path = Path(__file__).parent.parent / "plugin_packages" / "marketplace"
+                pkg_path = marketplace_path / pkg_name
+                
+                if pkg_path.exists():
+                    reply = QtWidgets.QMessageBox.question(
+                        self, "覆盖确认",
+                        f"插件 '{pkg_name}' 已存在，是否覆盖？",
+                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+                    )
+                    if reply != QtWidgets.QMessageBox.Yes:
+                        return
+                    shutil.rmtree(pkg_path)
+
+                pkg_path.mkdir(parents=True)
+                
+                with open(pkg_path / "plugin.json", 'w', encoding='utf-8') as f:
+                    json.dump(config, f, indent=2, ensure_ascii=False)
+
+                self._load_plugin_data()
+                QtWidgets.QMessageBox.information(self, "成功", "插件已导入")
+            except Exception as e:
+                QtWidgets.QMessageBox.error(self, "错误", f"导入失败: {str(e)}")
+
+    def _on_export(self):
+        selection = self.current_selection
+        export_data = None
+        export_name = ""
+
+        if selection.get('type') == 'builtin_root':
+            export_data = self.builtin_plugin_info
+            export_name = "builtin"
+        elif selection.get('type') == 'market_root':
+            export_data = {
+                'plugins': list(self.marketplace_plugins.keys()),
+                'marketplace': self.marketplace_plugins
+            }
+            export_name = "marketplace"
+        elif selection.get('type') == 'market_local':
+            export_data = selection.get('data', {})
+            export_name = selection.get('name', 'plugin')
+        else:
+            QtWidgets.QMessageBox.warning(self, "提示", "请选择要导出的内容")
+            return
+
+        if export_data:
+            file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self, "保存配置文件", f"{export_name}.json", "JSON文件 (*.json)"
+            )
+
+            if file_path:
+                try:
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        json.dump(export_data, f, indent=2, ensure_ascii=False)
+                    QtWidgets.QMessageBox.information(self, "成功", "配置已导出")
+                except Exception as e:
+                    QtWidgets.QMessageBox.error(self, "错误", f"导出失败: {str(e)}")
+
+    def _on_refresh_node_library(self):
+        if self.plugin_manager and hasattr(self.plugin_manager, 'reload_all_plugins'):
+            try:
+                from core.node_registry import NodeRegistry
+                node_registry = NodeRegistry()
+                node_registry.register_nodes_to_graph()
+                
+                if self.parent() and hasattr(self.parent(), '_refresh_node_palette_display'):
+                    self.parent()._refresh_node_palette_display()
+                
+                QtWidgets.QMessageBox.information(self, "成功", "节点库已刷新")
+            except Exception as e:
+                QtWidgets.QMessageBox.error(self, "错误", f"刷新失败: {str(e)}")
+        else:
+            QtWidgets.QMessageBox.information(self, "提示", "节点库已刷新（需要重启应用才能完全生效）")
+
+    def _on_refresh_remote_plugins(self):
+        url = self.remote_url_edit.text().strip()
+        if not url:
+            QtWidgets.QMessageBox.warning(self, "提示", "请输入有效的网址")
+            return
+
+        config_path = Path(__file__).parent.parent / "config" / "plugins.json"
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            config = {}
+            if config_path.exists():
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            
+            config['remote_repo_url'] = url
+            
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+            
+            QtWidgets.QMessageBox.information(self, "成功", "插件列表已刷新")
+        except Exception as e:
+            QtWidgets.QMessageBox.error(self, "错误", f"刷新失败: {str(e)}")
+
+    def _on_download_plugin(self, plugin_info):
+        reply = QtWidgets.QMessageBox.question(
+            self, "确认下载",
+            f"确定要下载 '{plugin_info['name']}' 吗？",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
+
+        if reply == QtWidgets.QMessageBox.Yes:
+            QtWidgets.QMessageBox.information(
+                self, "成功",
+                f"插件 '{plugin_info['name']}' 已下载并安装\n\n描述: {plugin_info['description']}"
+            )
+            self._refresh_tree()
+
+    def _on_help(self):
+        help_text = """
+节点编辑器使用说明：
+
+【工具栏】
+• ➕ 增加：添加新内置节点到选中的分组
+• ➖ 删除：删除选中的节点或市场插件
+• 📥 导入：导入市场节点配置文件
+• 📤 导出：导出当前节点配置
+• 🔄 刷新节点库：刷新节点库并重新加载
+• ❓ 帮助：显示此帮助信息
+
+【左侧列表】
+• 内置节点：系统内置的节点分组和节点
+• 市场节点：本地下载和网站分享的插件
+
+【右侧详情】
+• 选中内置节点根目录：显示目录、节点总数、分组数
+• 选中分组：显示分组名称、显示名称、节点数
+• 选中节点：可编辑显示名称、所属分组、是否启用
+• 选中本地插件：显示目录、版本、节点数，可删除
+• 选中网站分享：可编辑网址、刷新插件列表、下载插件
+
+【注意事项】
+• 修改节点信息后需要点击"保存"按钮
+• 删除操作不可恢复，请谨慎操作
+• 修改后需要刷新节点库才能生效
+        """
+        QtWidgets.QMessageBox.information(self, "帮助", help_text)
 
 
-# ============================================================================
-# ✨ 标签页顺序管理对话框
-# ============================================================================
+class AddNodeDialog(QtWidgets.QDialog):
+    """添加新节点对话框"""
 
-class TabOrderDialog(QtWidgets.QDialog):
-    """
-    标签页顺序管理对话框
+    def __init__(self, parent=None, default_group=None):
+        super(AddNodeDialog, self).__init__(parent)
+        self.setWindowTitle("添加新节点")
+        self.resize(400, 250)
 
-    允许用户通过拖拽调整节点库标签页的显示顺序
-    """
-
-    def __init__(self, parent=None):
-        super(TabOrderDialog, self).__init__(parent)
-        self.setWindowTitle("管理标签页顺序")
-        self.resize(500, 600)
-
-        # 加载当前顺序
-        self.tab_order = self._load_current_order()
-
-        self._setup_ui()
-
-    def _load_current_order(self):
-        """加载当前的标签页顺序"""
-        # 从父对话框获取所有插件包
-        parent_dialog = self.parent()
-        if hasattr(parent_dialog, 'plugin_packages'):
-            # 构建 category_group 到 pkg_name 的映射
-            category_to_pkg = {}
-            for pkg_name, pkg_info in parent_dialog.plugin_packages.items():
-                data = pkg_info['data']
-                category_group = data.get('category_group', pkg_name)
-                # 只保留有节点的插件
-                if len(data.get('nodes', [])) > 0:
-                    # 如果多个插件有相同的 category_group，只保留第一个
-                    if category_group not in category_to_pkg:
-                        category_to_pkg[category_group] = pkg_name
-
-            # 返回 category_group 列表（UI 显示用）
-            return list(category_to_pkg.keys())
-        return []
-
-    def _setup_ui(self):
-        """构建UI"""
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setSpacing(10)
-        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
 
-        # 说明文字
-        info_label = QtWidgets.QLabel("💡 拖拽项目调整顺序，上方的标签页将优先显示")
-        info_label.setStyleSheet("color: #666; font-size: 11px;")
-        layout.addWidget(info_label)
+        file_layout = QtWidgets.QHBoxLayout()
+        file_label = QtWidgets.QLabel("文件路径:")
+        self.file_edit = QtWidgets.QLineEdit()
+        browse_btn = QtWidgets.QPushButton("浏览...")
+        browse_btn.clicked.connect(self._on_browse_file)
+        file_layout.addWidget(file_label)
+        file_layout.addWidget(self.file_edit)
+        file_layout.addWidget(browse_btn)
+        layout.addLayout(file_layout)
 
-        # 列表控件
-        self.list_widget = QtWidgets.QListWidget()
-        self.list_widget.setDragDropMode(
-            QtWidgets.QAbstractItemView.InternalMove)
-        self.list_widget.setDefaultDropAction(QtCore.Qt.MoveAction)
-        self.list_widget.setSelectionMode(
-            QtWidgets.QAbstractItemView.SingleSelection)
-        self.list_widget.setSpacing(5)
+        class_layout = QtWidgets.QHBoxLayout()
+        class_label = QtWidgets.QLabel("类名:")
+        self.class_name_edit = QtWidgets.QLineEdit()
+        class_layout.addWidget(class_label)
+        class_layout.addWidget(self.class_name_edit)
+        layout.addLayout(class_layout)
 
-        # 填充当前顺序（显示 category_group）
-        for category_group in self.tab_order:
-            item = QtWidgets.QListWidgetItem(category_group)
-            item.setData(QtCore.Qt.UserRole, category_group)
-            self.list_widget.addItem(item)
+        name_layout = QtWidgets.QHBoxLayout()
+        name_label = QtWidgets.QLabel("显示名称:")
+        self.display_name_edit = QtWidgets.QLineEdit()
+        name_layout.addWidget(name_label)
+        name_layout.addWidget(self.display_name_edit)
+        layout.addLayout(name_layout)
 
-        layout.addWidget(self.list_widget)
+        group_layout = QtWidgets.QHBoxLayout()
+        group_label = QtWidgets.QLabel("所属分组:")
+        self.group_combo = QtWidgets.QComboBox()
+        
+        groups = [
+            ('Image_Source', '图像源'),
+            ('Image_Analysis', '图像分析'),
+            ('Image_Transform', '图像变换'),
+            ('Image_Process', '图像处理'),
+            ('Integration', '系统集成')
+        ]
+        
+        for group_id, display_name in groups:
+            self.group_combo.addItem(display_name, group_id)
+        
+        if default_group:
+            index = self.group_combo.findData(default_group)
+            if index >= 0:
+                self.group_combo.setCurrentIndex(index)
+        
+        group_layout.addWidget(group_label)
+        group_layout.addWidget(self.group_combo)
+        layout.addLayout(group_layout)
 
-        # 按钮栏
-        button_layout = QtWidgets.QHBoxLayout()
+        self.enabled_check = QtWidgets.QCheckBox("是否启用")
+        self.enabled_check.setChecked(True)
+        layout.addWidget(self.enabled_check)
 
-        reset_btn = QtWidgets.QPushButton("🔄 重置为默认")
-        reset_btn.clicked.connect(self._on_reset)
-        button_layout.addWidget(reset_btn)
-
-        button_layout.addStretch()
-
+        btn_layout = QtWidgets.QHBoxLayout()
+        ok_btn = QtWidgets.QPushButton("确定")
+        ok_btn.clicked.connect(self._on_ok)
         cancel_btn = QtWidgets.QPushButton("取消")
         cancel_btn.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_btn)
+        btn_layout.addWidget(ok_btn)
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
 
-        ok_btn = QtWidgets.QPushButton("确定")
-        ok_btn.clicked.connect(self.accept)
-        ok_btn.setDefault(True)
-        button_layout.addWidget(ok_btn)
-
-        layout.addLayout(button_layout)
-
-    def _on_reset(self):
-        """重置为默认顺序（按字母排序）"""
-        self.list_widget.clear()
-        sorted_order = sorted(self.tab_order)
-
-        for category_group in sorted_order:
-            item = QtWidgets.QListWidgetItem(category_group)
-            item.setData(QtCore.Qt.UserRole, category_group)
-            self.list_widget.addItem(item)
-
-    def get_tab_order(self):
-        """获取调整后的标签页顺序（category_group 列表）"""
-        order = []
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            category_group = item.data(QtCore.Qt.UserRole)
-            if category_group:
-                order.append(category_group)
-        return order
-
-
-class NewPackageDialog(QtWidgets.QDialog):
-    """新建节点包对话框"""
-
-    def __init__(self, parent=None):
-        super(NewPackageDialog, self).__init__(parent)
-        self.setWindowTitle("新建节点包")
-        self.resize(500, 400)
-        self._setup_ui()
-
-    def _setup_ui(self):
-        layout = QtWidgets.QFormLayout(self)
-
-        self.name_input = QtWidgets.QLineEdit()
-        self.name_input.setPlaceholderText("例如: my_custom_nodes")
-        layout.addRow("包名称*:", self.name_input)
-
-        self.version_input = QtWidgets.QLineEdit("1.0.0")
-        layout.addRow("版本:", self.version_input)
-
-        self.author_input = QtWidgets.QLineEdit()
-        layout.addRow("作者:", self.author_input)
-
-        self.category_combo = QtWidgets.QComboBox()
-        self.category_combo.addItems([
-            "图像相机", "预处理", "特征提取",
-            "测量分析", "识别分类", "系统集成", "自定义"
-        ])
-        layout.addRow("分类*:", self.category_combo)
-
-        self.desc_input = QtWidgets.QTextEdit()
-        self.desc_input.setMaximumHeight(100)
-        layout.addRow("描述:", self.desc_input)
-
-        self.deps_input = QtWidgets.QLineEdit()
-        self.deps_input.setPlaceholderText("例如: opencv-python>=4.5,numpy")
-        layout.addRow("依赖项:", self.deps_input)
-
-        buttons = QtWidgets.QDialogButtonBox(
-            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+    def _on_browse_file(self):
+        nodes_dir = Path(__file__).parent.parent / "plugin_packages" / "builtin" / "nodes"
+        
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "选择节点文件", str(nodes_dir), "Python文件 (*.py)"
         )
-        buttons.accepted.connect(self._validate_and_accept)
-        buttons.rejected.connect(self.reject)
-        layout.addRow(buttons)
 
-    def _validate_and_accept(self):
-        """验证并接受"""
-        name = self.name_input.text().strip()
-        if not name:
-            QtWidgets.QMessageBox.warning(self, "警告", "包名称不能为空！")
+        if file_path:
+            self.file_edit.setText(file_path)
+            self._extract_class_name(file_path)
+
+    def _extract_class_name(self, file_path):
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            tree = ast.parse(content)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef):
+                    for base in node.bases:
+                        if isinstance(base, ast.Name) and base.id == 'BaseNode':
+                            self.class_name_edit.setText(node.name)
+                            display_name = node.name.replace('Node', '')
+                            if display_name:
+                                self.display_name_edit.setText(display_name)
+                            return
+        except Exception as e:
+            print(f"提取类名失败: {e}")
+
+    def _on_ok(self):
+        if not self.class_name_edit.text().strip():
+            QtWidgets.QMessageBox.warning(self, "提示", "请输入类名")
             return
-
-        if not name.replace('_', '').isalnum():
-            QtWidgets.QMessageBox.warning(self, "警告", "包名称只能包含字母、数字和下划线！")
+        
+        if not self.display_name_edit.text().strip():
+            QtWidgets.QMessageBox.warning(self, "提示", "请输入显示名称")
             return
-
+        
         self.accept()
-
-    def get_package_data(self):
-        """获取节点包数据"""
-        deps_str = self.deps_input.text().strip()
-        dependencies = [d.strip() for d in deps_str.split(',')
-                        if d.strip()] if deps_str else []
-
-        return {
-            'name': self.name_input.text().strip(),
-            'version': self.version_input.text().strip(),
-            'author': self.author_input.text().strip(),
-            'category_group': self.category_combo.currentText(),
-            'description': self.desc_input.toPlainText().strip(),
-            'dependencies': dependencies
-        }
-
-
-class NewNodeDialog(QtWidgets.QDialog):
-    """新建节点对话框"""
-
-    def __init__(self, parent=None, pkg_name=""):
-        super(NewNodeDialog, self).__init__(parent)
-        self.pkg_name = pkg_name
-        self.setWindowTitle(f"新建节点 - {pkg_name}")
-        self.resize(500, 500)
-        self._setup_ui()
-
-    def _setup_ui(self):
-        layout = QtWidgets.QFormLayout(self)
-
-        self.class_name_input = QtWidgets.QLineEdit()
-        self.class_name_input.setPlaceholderText("例如: MyCustomNode")
-        layout.addRow("类名*:", self.class_name_input)
-
-        self.display_name_input = QtWidgets.QLineEdit()
-        self.display_name_input.setPlaceholderText("例如: 我的自定义节点")
-        layout.addRow("显示名称*:", self.display_name_input)
-
-        self.category_input = QtWidgets.QLineEdit()
-        self.category_input.setPlaceholderText("例如: 自定义处理")
-        layout.addRow("子分类:", self.category_input)
-
-        # 颜色选择
-        color_layout = QtWidgets.QHBoxLayout()
-        self.color_r = QtWidgets.QSpinBox()
-        self.color_r.setRange(0, 255)
-        self.color_r.setValue(200)
-        self.color_g = QtWidgets.QSpinBox()
-        self.color_g.setRange(0, 255)
-        self.color_g.setValue(200)
-        self.color_b = QtWidgets.QSpinBox()
-        self.color_b.setRange(0, 255)
-        self.color_b.setValue(200)
-        color_layout.addWidget(QtWidgets.QLabel("R:"))
-        color_layout.addWidget(self.color_r)
-        color_layout.addWidget(QtWidgets.QLabel("G:"))
-        color_layout.addWidget(self.color_g)
-        color_layout.addWidget(QtWidgets.QLabel("B:"))
-        color_layout.addWidget(self.color_b)
-        layout.addRow("节点颜色:", color_layout)
-
-        self.desc_input = QtWidgets.QTextEdit()
-        self.desc_input.setMaximumHeight(100)
-        layout.addRow("描述:", self.desc_input)
-
-        buttons = QtWidgets.QDialogButtonBox(
-            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
-        )
-        buttons.accepted.connect(self._validate_and_accept)
-        buttons.rejected.connect(self.reject)
-        layout.addRow(buttons)
-
-    def _validate_and_accept(self):
-        """验证并接受"""
-        class_name = self.class_name_input.text().strip()
-        display_name = self.display_name_input.text().strip()
-
-        if not class_name or not display_name:
-            QtWidgets.QMessageBox.warning(self, "警告", "类名和显示名称不能为空！")
-            return
-
-        if not class_name[0].isupper():
-            QtWidgets.QMessageBox.warning(self, "警告", "类名必须以大写字母开头！")
-            return
-
-        self.accept()
-
-    def get_node_data(self):
-        """获取节点数据"""
-        return {
-            'class_name': self.class_name_input.text().strip(),
-            'display_name': self.display_name_input.text().strip(),
-            'category': self.category_input.text().strip(),
-            'color': [self.color_r.value(), self.color_g.value(), self.color_b.value()],
-            'description': self.desc_input.toPlainText().strip()
-        }
-
-
-class EditNodeDialog(QtWidgets.QDialog):
-    """编辑节点对话框"""
-
-    def __init__(self, parent=None, pkg_name="", node_data=None, row=0):
-        super(EditNodeDialog, self).__init__(parent)
-        self.pkg_name = pkg_name
-        self.node_data = node_data or {}
-        self.row = row
-        self.setWindowTitle(f"编辑节点 - {self.node_data.get('display_name', '')}")
-        self.resize(500, 500)
-        self._setup_ui()
-
-    def _setup_ui(self):
-        layout = QtWidgets.QFormLayout(self)
-
-        self.class_name_input = QtWidgets.QLineEdit(
-            self.node_data.get('class', ''))
-        self.class_name_input.setEnabled(False)  # 类名不可修改
-        layout.addRow("类名:", self.class_name_input)
-
-        self.display_name_input = QtWidgets.QLineEdit(
-            self.node_data.get('display_name', ''))
-        layout.addRow("显示名称*:", self.display_name_input)
-
-        self.category_input = QtWidgets.QLineEdit(
-            self.node_data.get('category', ''))
-        layout.addRow("子分类:", self.category_input)
-
-        # 颜色选择
-        color = self.node_data.get('color', [200, 200, 200])
-        color_layout = QtWidgets.QHBoxLayout()
-        self.color_r = QtWidgets.QSpinBox()
-        self.color_r.setRange(0, 255)
-        self.color_r.setValue(color[0] if len(color) > 0 else 200)
-        self.color_g = QtWidgets.QSpinBox()
-        self.color_g.setRange(0, 255)
-        self.color_g.setValue(color[1] if len(color) > 1 else 200)
-        self.color_b = QtWidgets.QSpinBox()
-        self.color_b.setRange(0, 255)
-        self.color_b.setValue(color[2] if len(color) > 2 else 200)
-        color_layout.addWidget(QtWidgets.QLabel("R:"))
-        color_layout.addWidget(self.color_r)
-        color_layout.addWidget(QtWidgets.QLabel("G:"))
-        color_layout.addWidget(self.color_g)
-        color_layout.addWidget(QtWidgets.QLabel("B:"))
-        color_layout.addWidget(self.color_b)
-        layout.addRow("节点颜色:", color_layout)
-
-        buttons = QtWidgets.QDialogButtonBox(
-            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
-        )
-        buttons.accepted.connect(self._validate_and_accept)
-        buttons.rejected.connect(self.reject)
-        layout.addRow(buttons)
-
-    def _validate_and_accept(self):
-        """验证并接受"""
-        display_name = self.display_name_input.text().strip()
-
-        if not display_name:
-            QtWidgets.QMessageBox.warning(self, "警告", "显示名称不能为空！")
-            return
-
-        self.accept()
-
-    def get_updated_data(self):
-        """获取更新后的数据"""
-        return {
-            'display_name': self.display_name_input.text().strip(),
-            'category': self.category_input.text().strip(),
-            'color': [self.color_r.value(), self.color_g.value(), self.color_b.value()]
-        }

@@ -4,306 +4,665 @@
   "author": "StudyOpenCV Team",
   "description": "内置节点包 - 包含所有核心图像处理节点",
   "category_group": "内置节点",
-  "group": ["Image_Source", "Image_Analysis", "Image_Transform", "Image_Process", "Integration", "OCR", "YOLO"],
+  "group": [
+    "Image_Source",
+    "Image_Analysis",
+    "Image_Transform",
+    "Image_Process",
+    "Integration",
+    "OCR",
+    "YOLO"
+  ],
   "nodes": [
+    {
+      "class": "ImageOperationNode",
+      "display_name": "图像操作",
+      "category": "图像分析",
+      "__identifier__": "Image_Analysis",
+      "color": [
+        100,
+        200,
+        255
+      ],
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "enabled": true
+    },
     {
       "class": "GrayscaleNode",
       "display_name": "灰度化",
       "category": "图像分析",
       "__identifier__": "Image_Analysis",
-      "color": [100, 200, 255],
+      "color": [
+        100,
+        200,
+        255
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "GaussianBlurNode",
       "display_name": "高斯模糊",
       "category": "图像分析",
       "__identifier__": "Image_Analysis",
-      "color": [100, 200, 255],
+      "color": [
+        100,
+        200,
+        255
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "MedianBlurNode",
       "display_name": "中值模糊",
       "category": "图像分析",
       "__identifier__": "Image_Analysis",
-      "color": [100, 200, 255],
+      "color": [
+        100,
+        200,
+        255
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "BilateralFilterNode",
       "display_name": "双边滤波",
       "category": "图像分析",
       "__identifier__": "Image_Analysis",
-      "color": [100, 200, 255],
+      "color": [
+        100,
+        200,
+        255
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "BrightnessContrastNode",
       "display_name": "亮度对比度",
       "category": "图像变换",
       "__identifier__": "Image_Analysis",
-      "color": [100, 255, 200],
+      "color": [
+        100,
+        255,
+        200
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "HistogramEqualizationNode",
       "display_name": "直方图均衡化",
       "category": "图像分析",
       "__identifier__": "Image_Analysis",
-      "color": [100, 200, 255],
+      "color": [
+        100,
+        200,
+        255
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "ThresholdNode",
       "display_name": "阈值",
       "category": "图像处理",
       "__identifier__": "Image_Analysis",
-      "color": [255, 200, 100],
+      "color": [
+        255,
+        200,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "AdaptiveThresholdNode",
       "display_name": "自适应阈值",
       "category": "图像处理",
       "__identifier__": "Image_Analysis",
-      "color": [255, 200, 100],
+      "color": [
+        255,
+        200,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "MorphologyNode",
       "display_name": "形态学",
       "category": "图像分析",
       "__identifier__": "Image_Analysis",
-      "color": [100, 200, 255],
+      "color": [
+        100,
+        200,
+        255
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "ResizeNode",
       "display_name": "Resize",
       "category": "图像变换",
       "__identifier__": "Image_Transform",
-      "color": [100, 255, 200],
+      "color": [
+        100,
+        255,
+        200
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "RotateNode",
       "display_name": "旋转",
       "category": "图像变换",
       "__identifier__": "Image_Transform",
-      "color": [100, 255, 200],
+      "color": [
+        100,
+        255,
+        200
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "ImageEvaluationNode",
       "display_name": "图像评估",
       "category": "图像分析",
       "__identifier__": "Image_Analysis",
-      "color": [255, 200, 100],
+      "color": [
+        255,
+        200,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "CannyEdgeNode",
       "display_name": "Canny算子",
       "category": "图像变换",
       "__identifier__": "Image_Transform",
-      "color": [100, 255, 200],
+      "color": [
+        100,
+        255,
+        200
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "SobelEdgeNode",
       "display_name": "Sobel算子",
       "category": "图像变换",
       "__identifier__": "Image_Transform",
-      "color": [100, 255, 200],
+      "color": [
+        100,
+        255,
+        200
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "ContoursAnalysisNode",
       "display_name": "轮廓分析",
       "category": "图像分析",
       "__identifier__": "Image_Analysis",
-      "color": [100, 200, 255],
+      "color": [
+        100,
+        200,
+        255
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "LaplacianNode",
       "display_name": "Laplacian算子",
       "category": "图像变换",
       "__identifier__": "Image_Transform",
-      "color": [100, 255, 200],
+      "color": [
+        100,
+        255,
+        200
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "HarrisCornerNode",
       "display_name": "Harris角点",
       "category": "图像分析",
       "__identifier__": "Image_Transform",
-      "color": [100, 200, 255],
+      "color": [
+        100,
+        200,
+        255
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "HoughLinesNode",
       "display_name": "Hough直线",
       "category": "图像变换",
       "__identifier__": "Image_Transform",
-      "color": [100, 255, 200],
+      "color": [
+        100,
+        255,
+        200
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "HoughCirclesNode",
       "display_name": "Hough圆",
       "category": "图像变换",
       "__identifier__": "Image_Transform",
-      "color": [100, 255, 200],
+      "color": [
+        100,
+        255,
+        200
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "TemplateCreatorNode",
       "display_name": "模板创建",
       "category": "图像处理",
       "__identifier__": "Image_Process",
-      "color": [255, 200, 100],
+      "color": [
+        255,
+        200,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "TemplateMatchNode",
       "display_name": "模板匹配",
       "category": "图像处理",
       "__identifier__": "Image_Process",
-      "color": [255, 200, 100],
+      "color": [
+        255,
+        200,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "ImageLoadNode",
       "display_name": "加载图像",
       "category": "图像源",
       "__identifier__": "Image_Source",
-      "color": [100, 255, 100],
+      "color": [
+        100,
+        255,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "ImageSaveNode",
       "display_name": "保存图像",
       "category": "图像源",
       "__identifier__": "Image_Source",
-      "color": [100, 255, 100],
+      "color": [
+        100,
+        255,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "ImageViewNode",
       "display_name": "图像显示",
       "category": "图像源",
       "__identifier__": "Image_Source",
-      "color": [100, 255, 100],
+      "color": [
+        100,
+        255,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "CameraCaptureNode",
       "display_name": "相机采集",
       "category": "图像源",
       "__identifier__": "Image_Source",
-      "color": [100, 255, 100],
+      "color": [
+        100,
+        255,
+        100
+      ],
       "resource_level": "medium",
-      "hardware_requirements": {"cpu_cores": 2, "memory_gb": 2, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 2,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "RealTimePreviewNode",
       "display_name": "实时预览",
       "category": "图像源",
       "__identifier__": "Image_Source",
-      "color": [100, 255, 100],
+      "color": [
+        100,
+        255,
+        100
+      ],
       "resource_level": "medium",
-      "hardware_requirements": {"cpu_cores": 2, "memory_gb": 2, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 2,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "VideoRecorderNode",
       "display_name": "视频录制",
       "category": "图像源",
       "__identifier__": "Image_Source",
-      "color": [100, 255, 100],
+      "color": [
+        100,
+        255,
+        100
+      ],
       "resource_level": "medium",
-      "hardware_requirements": {"cpu_cores": 2, "memory_gb": 2, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 2,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "FastDetectionNode",
       "display_name": "快速检测",
       "category": "图像源",
       "__identifier__": "Image_Source",
-      "color": [100, 255, 100],
+      "color": [
+        100,
+        255,
+        100
+      ],
       "resource_level": "medium",
-      "hardware_requirements": {"cpu_cores": 2, "memory_gb": 2, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 2,
+        "memory_gb": 2,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ]
     },
     {
       "class": "JsonDisplayNode",
       "display_name": "JSON显示",
       "category": "图像源",
       "__identifier__": "Image_Source",
-      "color": [100, 255, 100],
+      "color": [
+        100,
+        255,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
-      "dependencies": ["opencv-python>=4.5.0"]
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "enabled": true
     },
     {
       "class": "PLCNode",
       "display_name": "PLC通信",
       "category": "系统集成",
       "__identifier__": "Integration",
-      "color": [255, 100, 100],
+      "color": [
+        255,
+        100,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
       "dependencies": []
     },
     {
@@ -311,9 +670,18 @@
       "display_name": "数据输出",
       "category": "系统集成",
       "__identifier__": "Integration",
-      "color": [255, 100, 100],
+      "color": [
+        255,
+        100,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
       "dependencies": []
     },
     {
@@ -321,13 +689,24 @@
       "display_name": "机器人通信",
       "category": "系统集成",
       "__identifier__": "Integration",
-      "color": [255, 100, 100],
+      "color": [
+        255,
+        100,
+        100
+      ],
       "resource_level": "light",
-      "hardware_requirements": {"cpu_cores": 1, "memory_gb": 0.5, "gpu_required": false, "gpu_memory_gb": 0},
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
       "dependencies": []
     }
   ],
-  "dependencies": ["opencv-python>=4.5.0"],
+  "dependencies": [
+    "opencv-python>=4.5.0"
+  ],
   "min_app_version": "4.0.0",
   "resource_level": "light",
   "hardware_recommendations": {

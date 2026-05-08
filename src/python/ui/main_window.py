@@ -161,17 +161,17 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         self.project_ui.remove_workflow_tab(index)
 
-    def _on_tab_changed(self, index):
-        """
-        标签页切换时的回调（委托给ProjectUIManager）
+    # def _on_tab_changed(self, index):
+    #     """
+    #     标签页切换时的回调（委托给ProjectUIManager）
 
-        Args:
-            index: 新的标签页索引
-        """
-        self.project_ui.on_tab_changed(index)
+    #     Args:
+    #         index: 新的标签页索引
+    #     """
+    #     self.project_ui.on_tab_changed(index)
         
-        # 更新共享组件的 NodeGraph 引用
-        self._update_shared_components()
+    #     # 更新共享组件的 NodeGraph 引用
+    #     self._update_shared_components()
     
     def _update_shared_components(self):
         """
@@ -237,7 +237,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.tab_widget.setMovable(True)       # 允许拖动排序
         self.tab_widget.setStyleSheet("QTabWidget::pane { border: 1px solid #3c3c3c; }")
         # self.tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
-        self.tab_widget.currentChanged.connect(self._on_tab_changed)
+        # self.tab_widget.currentChanged.connect(self._on_tab_changed)
         main_layout.addWidget(self.tab_widget)
 
         # === 共享组件延迟初始化 ===
