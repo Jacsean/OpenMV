@@ -4,6 +4,7 @@
 
 # 预处理节点
 from .grayscale import GrayscaleNode
+from .image_operation import ImageOperationNode
 from .gaussian_blur import GaussianBlurNode
 from .median_blur import MedianBlurNode
 from .bilateral_filter import BilateralFilterNode
@@ -45,6 +46,7 @@ from .robot_node import RobotNode
 __all__ = [
     # 预处理
     'GrayscaleNode',
+    'ImageOperationNode',
     'GaussianBlurNode',
     'MedianBlurNode',
     'BilateralFilterNode',

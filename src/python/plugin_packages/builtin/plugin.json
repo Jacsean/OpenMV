@@ -15,6 +15,28 @@
   ],
   "nodes": [
     {
+      "class": "ImageOperationNode",
+      "display_name": "图像操作",
+      "category": "图像分析",
+      "__identifier__": "Image_Analysis",
+      "color": [
+        100,
+        200,
+        255
+      ],
+      "resource_level": "light",
+      "hardware_requirements": {
+        "cpu_cores": 1,
+        "memory_gb": 0.5,
+        "gpu_required": false,
+        "gpu_memory_gb": 0
+      },
+      "dependencies": [
+        "opencv-python>=4.5.0"
+      ],
+      "enabled": true
+    },
+    {
       "class": "GrayscaleNode",
       "display_name": "灰度化",
       "category": "图像分析",
