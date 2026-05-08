@@ -795,8 +795,6 @@ class ImageOperationNode(BaseNode):
             tab='properties'
         )
 
-        self._setup_method_combo_box()
-
         self.add_text_input('status', '状态', tab='properties')
         self.set_property('status', '就绪')
 
@@ -810,14 +808,6 @@ class ImageOperationNode(BaseNode):
 
     def get_cached_image(self):
         return self._cached_image
-
-    def _setup_method_combo_box(self):
-        try:
-            combo_widget = self.get_property_widget('method')
-            if combo_widget is not None and hasattr(combo_widget, 'setMaxVisibleItems'):
-                combo_widget.setMaxVisibleItems(10)
-        except Exception as e:
-            logger.debug(f"Failed to setup method combo box: {e}")
 
     def process(self, inputs=None):
         try:
