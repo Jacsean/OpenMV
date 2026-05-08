@@ -27,23 +27,12 @@
 输出：
 - 输出图像: 处理后的图像或可视化结果
 - JSON数据: 元数据（方法名、参数、时间戳、结果信息）
-
-使用提示：双击节点打开方法选择窗口
 """
 
 import cv2
 import numpy as np
 import logging
 from shared_libs.node_base import BaseNode
-
-try:
-    from PySide2.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, 
-                                   QTreeWidget, QTreeWidgetItem, QPushButton,
-                                   QLineEdit, QHeaderView)
-    from PySide2.QtCore import Qt
-    HAS_QT = True
-except ImportError:
-    HAS_QT = False
 
 logger = logging.getLogger('image_operation')
 
@@ -822,12 +811,13 @@ class ImageOperationNode(BaseNode):
     def get_cached_image(self):
         return self._cached_image
 
-    def on_double_clicked(self):
-        if HAS_QT:
-            dialog = MethodSelectionDialog(self)
-            if dialog.exec_() == QDialog.Accepted:
-                self.set_property('method', dialog.selected_method)
-                self.set_property('status', f"✅ 已选择: {dialog.selected_method_name}")
+    def _setup_method_combo_box(self):
+        try:
+            combo_widget = self.get_property_widget('method')
+            if combo_widget is not None and hasattr(combo_widget, 'setMaxVisibleItems'):
+                combo_widget.setMaxVisibleItems(10)
+        except Exception as e:
+            logger.debug(f"Failed to setup method combo box: {e}")
 
     def process(self, inputs=None):
         try:
@@ -1325,115 +1315,3 @@ class ImageOperationNode(BaseNode):
             })
 
         return json_data
-
-
-if HAS_QT:
-    class MethodSelectionDialog(QDialog):
-        """
-        方法选择对话框
-        
-        提供树形结构展示所有图像操作方法，支持搜索过滤和滚动选择。
-        """
-        
-        def __init__(self, node, parent=None):
-            super().__init__(parent)
-            self.node = node
-            self.selected_method = None
-            self.selected_method_name = None
-            self.setup_ui()
-        
-        def setup_ui(self):
-            """构建UI界面"""
-            self.setWindowTitle("图像操作 - 方法选择")
-            self.setMinimumSize(450, 500)
-            
-            layout = QVBoxLayout(self)
-            
-            self.search_edit = QLineEdit()
-            self.search_edit.setPlaceholderText("搜索方法...")
-            self.search_edit.textChanged.connect(self._filter_methods)
-            layout.addWidget(self.search_edit)
-            
-            self.tree_widget = QTreeWidget()
-            self.tree_widget.setHeaderHidden(True)
-            self.tree_widget.setColumnCount(1)
-            self.tree_widget.header().setSectionResizeMode(0, QHeaderView.Stretch)
-            self.tree_widget.itemClicked.connect(self._on_item_clicked)
-            self.tree_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
-            layout.addWidget(self.tree_widget)
-            
-            button_layout = QHBoxLayout()
-            self.ok_btn = QPushButton("确定")
-            self.ok_btn.clicked.connect(self.accept)
-            self.ok_btn.setEnabled(False)
-            
-            self.cancel_btn = QPushButton("取消")
-            self.cancel_btn.clicked.connect(self.reject)
-            
-            button_layout.addStretch()
-            button_layout.addWidget(self.ok_btn)
-            button_layout.addWidget(self.cancel_btn)
-            layout.addLayout(button_layout)
-            
-            self._populate_methods()
-        
-        def _populate_methods(self):
-            """填充方法列表"""
-            self.tree_widget.clear()
-            self._method_items = {}
-            
-            categories = ['一元操作', '二元操作', '其他操作']
-            
-            for category in categories:
-                category_item = QTreeWidgetItem(self.tree_widget)
-                category_item.setText(0, category)
-                category_item.setExpanded(True)
-                
-                methods_in_category = []
-                for method_id, metadata in self.node.METHOD_METADATA.items():
-                    if metadata['category'] == category:
-                        methods_in_category.append((method_id, metadata['name']))
-                
-                methods_in_category.sort(key=lambda x: x[1])
-                
-                for method_id, method_name in methods_in_category:
-                    method_item = QTreeWidgetItem(category_item)
-                    method_item.setText(0, method_name)
-                    method_item.setData(0, Qt.UserRole, method_id)
-                    self._method_items[method_id] = method_item
-        
-        def _filter_methods(self, search_text):
-            """过滤方法列表"""
-            search_text = search_text.lower().strip()
-            
-            for method_id, item in self._method_items.items():
-                method_name = item.text(0)
-                metadata = self.node.METHOD_METADATA.get(method_id, {})
-                description = metadata.get('description', '')
-                
-                match = (search_text in method_name.lower() or 
-                        search_text in description.lower())
-                item.setHidden(not match)
-                
-                parent = item.parent()
-                if parent:
-                    visible_children = [child for child in range(parent.childCount()) 
-                                      if not parent.child(child).isHidden()]
-                    parent.setHidden(len(visible_children) == 0)
-                    parent.setExpanded(len(visible_children) > 0)
-        
-        def _on_item_clicked(self, item, column):
-            """处理项点击事件"""
-            if item.parent() is not None:
-                self.selected_method = item.data(0, Qt.UserRole)
-                self.selected_method_name = item.text(0)
-                self.ok_btn.setEnabled(True)
-                
-                for method_id, method_item in self._method_items.items():
-                    method_item.setSelected(method_id == self.selected_method)
-        
-        def _on_item_double_clicked(self, item, column):
-            """处理项双击事件"""
-            if item.parent() is not None:
-                self._on_item_clicked(item, column)
-                self.accept()
