@@ -33,6 +33,7 @@ import cv2
 import numpy as np
 import logging
 from shared_libs.node_base import BaseNode
+from PySide2 import QtWidgets, QtCore
 
 logger = logging.getLogger('image_operation')
 
@@ -779,17 +780,10 @@ class ImageOperationNode(BaseNode):
         self.add_output('输出图像', color=(100, 255, 100))
         self.add_output('JSON数据', color=(200, 200, 200))
 
-        category_labels = {
-            '一元操作': '[一元]',
-            '二元操作': '[二元]',
-            '其他操作': '[其他]'
-        }
-        
         method_items = []
         for category in ['一元操作', '二元操作', '其他操作']:
-            cat_label = category_labels[category]
             methods_in_category = [
-                f"{method_id}|{cat_label} {self.METHOD_METADATA[method_id]['name']}"
+                f"{method_id}|{self.METHOD_METADATA[method_id]['name']}"
                 for method_id in self.METHOD_METADATA
                 if self.METHOD_METADATA[method_id]['category'] == category
             ]
@@ -813,8 +807,35 @@ class ImageOperationNode(BaseNode):
 
         self._cached_image = None
 
+        QtCore.QTimer.singleShot(100, self._setup_method_combo)
+
     def get_cached_image(self):
         return self._cached_image
+
+    def _setup_method_combo(self):
+        try:
+            combo_widget = None
+            for child in self.widget().findChildren(QtWidgets.QComboBox):
+                if hasattr(child, 'objectName') and child.objectName() == 'method':
+                    combo_widget = child
+                    break
+            if not combo_widget:
+                combo_widget = self.widget().findChild(QtWidgets.QComboBox)
+            
+            if combo_widget:
+                combo_widget.setMaxVisibleItems(10)
+                combo_widget.setStyleSheet("""
+                    QComboBox {
+                        min-width: 120px;
+                        max-width: 250px;
+                    }
+                    QComboBox QAbstractItemView {
+                        max-height: 250px;
+                        border: 1px solid #ccc;
+                    }
+                """)
+        except Exception as e:
+            pass
 
     def process(self, inputs=None):
         try:
