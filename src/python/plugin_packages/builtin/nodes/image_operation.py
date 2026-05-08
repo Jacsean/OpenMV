@@ -802,7 +802,7 @@ class ImageOperationNode(BaseNode):
                 max-height: 280px;
             }
         """)
-        self.add_widget(self._method_combo, '方法', tab='properties')
+        self.add_custom_widget('method', self._method_combo, label='方法')
 
         self.add_text_input('status', '状态', tab='properties')
         self.set_property('status', '就绪')
