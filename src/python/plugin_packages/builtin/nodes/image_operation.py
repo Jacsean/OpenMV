@@ -789,20 +789,12 @@ class ImageOperationNode(BaseNode):
             ]
             method_items.extend(methods_in_category)
 
-        self._method_combo = QtWidgets.QComboBox()
-        self._method_combo.addItems(method_items)
-        self._method_combo.setMaxVisibleItems(10)
-        self._method_combo.setStyleSheet("""
-            QComboBox {
-                min-width: 150px;
-                max-width: 200px;
-                padding: 2px;
-            }
-            QComboBox QAbstractItemView {
-                max-height: 280px;
-            }
-        """)
-        self.add_custom_widget(self._method_combo, 'method', tab='properties')
+        self.add_combo_menu(
+            'method',
+            '方法',
+            items=method_items,
+            tab='properties'
+        )
 
         self.add_text_input('status', '状态', tab='properties')
         self.set_property('status', '就绪')
@@ -815,12 +807,124 @@ class ImageOperationNode(BaseNode):
 
         self._cached_image = None
 
+        self._method_combo_setup_done = False
+
     def get_cached_image(self):
         return self._cached_image
 
+    def on_selected(self):
+        super().on_selected()
+        if not self._method_combo_setup_done:
+            QtCore.QTimer.singleShot(200, self._setup_method_combo)
+
+    def _setup_method_combo(self):
+        try:
+            import gc
+            widgets = []
+            for obj in gc.get_objects():
+                if isinstance(obj, QtWidgets.QComboBox):
+                    try:
+                        parent = obj.parent()
+                        if parent:
+                            if 'properties' in str(parent.__class__.__name__).lower():
+                                widgets.append(obj)
+                    except:
+                        pass
+            
+            for combo in widgets:
+                if combo.count() > 10:
+                    combo.setMaxVisibleItems(10)
+                    combo.view().setMaximumHeight(250)
+                    combo.view().setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+            
+            self._method_combo_setup_done = True
+        except Exception as e:
+            pass
+
+    def _show_method_dialog(self):
+        dialog = QtWidgets.QDialog(None)
+        dialog.setWindowTitle("选择操作方法")
+        dialog.setMinimumSize(500, 400)
+
+        layout = QtWidgets.QVBoxLayout(dialog)
+
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+
+        tree = QtWidgets.QTreeWidget()
+        tree.setHeaderHidden(True)
+        tree.setMinimumWidth(150)
+
+        for category in ['一元操作', '二元操作', '其他操作']:
+            parent_item = QtWidgets.QTreeWidgetItem(tree)
+            parent_item.setText(0, category)
+            parent_item.setExpanded(True)
+            
+            for method_id in self.METHOD_METADATA:
+                if self.METHOD_METADATA[method_id]['category'] == category:
+                    child_item = QtWidgets.QTreeWidgetItem(parent_item)
+                    method_name = self.METHOD_METADATA[method_id]['name']
+                    child_item.setText(0, f"{method_id} | {method_name}")
+                    child_item.setData(0, QtCore.Qt.UserRole, f"{method_id}|{method_name}")
+
+        splitter.addWidget(tree)
+
+        detail_panel = QtWidgets.QWidget()
+        detail_layout = QtWidgets.QVBoxLayout(detail_panel)
+        
+        self.detail_label = QtWidgets.QLabel("选择一个方法查看详情")
+        self.detail_label.setWordWrap(True)
+        self.detail_label.setStyleSheet("padding: 10px;")
+        detail_layout.addWidget(self.detail_label)
+        
+        detail_layout.addStretch()
+        splitter.addWidget(detail_panel)
+
+        tree.itemClicked.connect(self._on_method_select)
+
+        btn_layout = QtWidgets.QHBoxLayout()
+        ok_btn = QtWidgets.QPushButton("确定")
+        ok_btn.clicked.connect(lambda: self._on_ok_method(dialog, tree))
+        cancel_btn = QtWidgets.QPushButton("取消")
+        cancel_btn.clicked.connect(dialog.reject)
+        
+        btn_layout.addStretch()
+        btn_layout.addWidget(ok_btn)
+        btn_layout.addWidget(cancel_btn)
+
+        layout.addWidget(splitter)
+        layout.addLayout(btn_layout)
+
+        dialog.exec_()
+
+    def _on_method_select(self, item, column):
+        if item.parent():
+            method_data = item.data(0, QtCore.Qt.UserRole)
+            if method_data:
+                method_id = method_data.split('|')[0]
+                metadata = self.METHOD_METADATA.get(method_id, {})
+                desc = metadata.get('description', '')
+                library = metadata.get('library', '')
+                inputs = metadata.get('inputs', 1)
+                
+                detail_text = f"<b>方法:</b> {metadata.get('name', '')}<br>"
+                detail_text += f"<b>描述:</b> {desc}<br>"
+                detail_text += f"<b>库:</b> {library}<br>"
+                detail_text += f"<b>输入数量:</b> {inputs}"
+                self.detail_label.setText(detail_text)
+
+    def _on_ok_method(self, dialog, tree):
+        selected_items = tree.selectedItems()
+        if selected_items:
+            item = selected_items[0]
+            if item.parent():
+                method_data = item.data(0, QtCore.Qt.UserRole)
+                if method_data:
+                    self.set_property('method', method_data)
+        dialog.accept()
+
     def process(self, inputs=None):
         try:
-            method_text = self._method_combo.currentText() if hasattr(self, '_method_combo') else self.get_property('method')
+            method_text = self.get_property('method')
             
             if not method_text or '|' not in method_text:
                 self.set_property('status', '❌ 请选择操作方法')
