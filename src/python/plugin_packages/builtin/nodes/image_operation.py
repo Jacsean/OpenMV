@@ -789,12 +789,20 @@ class ImageOperationNode(BaseNode):
             ]
             method_items.extend(methods_in_category)
 
-        self.add_combo_menu(
-            'method',
-            '方法',
-            items=method_items,
-            tab='properties'
-        )
+        self._method_combo = QtWidgets.QComboBox()
+        self._method_combo.addItems(method_items)
+        self._method_combo.setMaxVisibleItems(10)
+        self._method_combo.setStyleSheet("""
+            QComboBox {
+                min-width: 150px;
+                max-width: 200px;
+                padding: 2px;
+            }
+            QComboBox QAbstractItemView {
+                max-height: 280px;
+            }
+        """)
+        self.add_widget(self._method_combo, '方法', tab='properties')
 
         self.add_text_input('status', '状态', tab='properties')
         self.set_property('status', '就绪')
@@ -807,39 +815,12 @@ class ImageOperationNode(BaseNode):
 
         self._cached_image = None
 
-        QtCore.QTimer.singleShot(100, self._setup_method_combo)
-
     def get_cached_image(self):
         return self._cached_image
 
-    def _setup_method_combo(self):
-        try:
-            combo_widget = None
-            for child in self.widget().findChildren(QtWidgets.QComboBox):
-                if hasattr(child, 'objectName') and child.objectName() == 'method':
-                    combo_widget = child
-                    break
-            if not combo_widget:
-                combo_widget = self.widget().findChild(QtWidgets.QComboBox)
-            
-            if combo_widget:
-                combo_widget.setMaxVisibleItems(10)
-                combo_widget.setStyleSheet("""
-                    QComboBox {
-                        min-width: 120px;
-                        max-width: 250px;
-                    }
-                    QComboBox QAbstractItemView {
-                        max-height: 250px;
-                        border: 1px solid #ccc;
-                    }
-                """)
-        except Exception as e:
-            pass
-
     def process(self, inputs=None):
         try:
-            method_text = self.get_property('method')
+            method_text = self._method_combo.currentText() if hasattr(self, '_method_combo') else self.get_property('method')
             
             if not method_text or '|' not in method_text:
                 self.set_property('status', '❌ 请选择操作方法')
