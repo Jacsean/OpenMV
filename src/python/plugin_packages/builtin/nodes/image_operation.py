@@ -32,6 +32,7 @@
 import cv2
 import numpy as np
 import logging
+from PySide2 import QtCore
 from shared_libs.node_base import BaseNode
 
 logger = logging.getLogger('image_operation')
@@ -779,10 +780,17 @@ class ImageOperationNode(BaseNode):
         self.add_output('输出图像', color=(100, 255, 100))
         self.add_output('JSON数据', color=(200, 200, 200))
 
+        category_labels = {
+            '一元操作': '[一元]',
+            '二元操作': '[二元]',
+            '其他操作': '[其他]'
+        }
+        
         method_items = []
         for category in ['一元操作', '二元操作', '其他操作']:
+            cat_label = category_labels[category]
             methods_in_category = [
-                f"{method_id}|{self.METHOD_METADATA[method_id]['name']}"
+                f"{method_id}|{cat_label} {self.METHOD_METADATA[method_id]['name']}"
                 for method_id in self.METHOD_METADATA
                 if self.METHOD_METADATA[method_id]['category'] == category
             ]
@@ -794,6 +802,11 @@ class ImageOperationNode(BaseNode):
             items=method_items,
             tab='properties'
         )
+        
+        method_combo = self.get_widget('method')
+        if method_combo:
+            method_combo.setMaximumHeight(200)
+            method_combo.view().setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
 
         self.add_text_input('status', '状态', tab='properties')
         self.set_property('status', '就绪')
