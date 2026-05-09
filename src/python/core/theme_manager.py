@@ -278,33 +278,35 @@ class ThemeManager:
         colors = self._colors
         font_family = config_manager.get('system.font_family', 'Microsoft YaHei')
         font_size = config_manager.get('system.font_size', 9)
+        
+        text_rgb = self._hex_to_rgb(colors['text'])
 
-        stylesheet = f"""
+        stylesheet = """
 /* ===== 主题样式表 ===== */
 
 /* 基础字体 */
 QWidget {{
     font-family: {font_family};
     font-size: {font_size}px;
-    color: {colors['text']};
-    background-color: {colors['background']};
+    color: {text_color};
+    background-color: {bg_color};
 }}
 
 /* 主窗口 */
 QMainWindow {{
-    background-color: {colors['background']};
+    background-color: {bg_color};
 }}
 
 /* 中央部件 */
 QWidget#centralwidget {{
-    background-color: {colors['background']};
+    background-color: {bg_color};
 }}
 
 /* 菜单条 */
 QMenuBar {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border-bottom: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border-bottom: 1px solid {border_color};
 }}
 
 QMenuBar::item {{
@@ -312,13 +314,13 @@ QMenuBar::item {{
 }}
 
 QMenuBar::item:selected {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
 }}
 
 QMenu {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border: 1px solid {border_color};
 }}
 
 QMenu::item {{
@@ -326,18 +328,18 @@ QMenu::item {{
 }}
 
 QMenu::item:selected {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
 }}
 
 QMenu::separator {{
     height: 1px;
-    background-color: {colors['border']};
+    background-color: {border_color};
 }}
 
 /* 工具栏 */
 QToolBar {{
-    background-color: {colors['surface']};
-    border-bottom: 1px solid {colors['border']};
+    background-color: {surface_color};
+    border-bottom: 1px solid {border_color};
     spacing: 4px;
 }}
 
@@ -348,93 +350,98 @@ QToolBar QToolButton {{
 }}
 
 QToolBar QToolButton:hover {{
-    background-color: {colors['border']};
+    background-color: {border_color};
     border-radius: 4px;
 }}
 
 QToolBar QToolButton:pressed {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
 }}
 
 /* 按钮 */
 QPushButton {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
     color: white;
     border: none;
     border-radius: 4px;
-    padding: 6px 16px;
-    min-width: 80px;
+    padding: {button_padding}px {button_padding_x2}px;
+    min-width: {button_min_width}px;
+    font-size: {font_size}px;
 }}
 
 QPushButton:hover {{
-    background-color: {colors['accent']};
+    background-color: {accent_color};
 }}
 
 QPushButton:pressed {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
 }}
 
 QPushButton:disabled {{
-    background-color: {colors['border']};
-    color: {colors['text_disabled']};
+    background-color: {border_color};
+    color: {text_disabled_color};
 }}
 
 QPushButton#flatButton {{
     background-color: transparent;
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    color: {text_color};
+    border: 1px solid {border_color};
 }}
 
 QPushButton#flatButton:hover {{
-    background-color: {colors['border']};
+    background-color: {border_color};
 }}
 
 /* 标签 */
 QLabel {{
-    color: {colors['text']};
+    color: {text_color};
+    font-size: {font_size}px;
 }}
 
 QLabel#titleLabel {{
     font-weight: bold;
-    font-size: {font_size + 2}px;
+    font-size: {title_font_size}px;
 }}
 
 /* 文本框 */
 QLineEdit {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
     padding: 4px 8px;
+    font-size: {font_size}px;
 }}
 
 QLineEdit:focus {{
-    border-color: {colors['primary']};
+    border-color: {primary_color};
 }}
 
 QLineEdit:disabled {{
-    background-color: {colors['border']};
-    color: {colors['text_disabled']};
+    background-color: {border_color};
+    color: {text_disabled_color};
 }}
 
 /* 文本编辑 */
 QTextEdit {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
+    font-size: {font_size}px;
 }}
 
 QTextEdit:focus {{
-    border-color: {colors['primary']};
+    border-color: {primary_color};
 }}
 
 /* 列表框 */
 QListWidget {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
+    font-size: {font_size}px;
 }}
 
 QListWidget::item {{
@@ -442,15 +449,16 @@ QListWidget::item {{
 }}
 
 QListWidget::item:selected {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
 }}
 
 /* 树形控件 */
 QTreeWidget {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
+    font-size: {font_size}px;
 }}
 
 QTreeWidget::item {{
@@ -458,19 +466,20 @@ QTreeWidget::item {{
 }}
 
 QTreeWidget::item:selected {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
 }}
 
 QTreeWidget::branch {{
-    background-color: {colors['surface']};
+    background-color: {surface_color};
 }}
 
 /* 表格 */
 QTableWidget {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
+    font-size: {font_size}px;
 }}
 
 QTableWidget::item {{
@@ -478,92 +487,98 @@ QTableWidget::item {{
 }}
 
 QTableWidget::item:selected {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
 }}
 
 QTableWidget::horizontalHeader {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border-bottom: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border-bottom: 1px solid {border_color};
+    font-size: {font_size}px;
 }}
 
 QTableWidget::verticalHeader {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border-right: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border-right: 1px solid {border_color};
+    font-size: {font_size}px;
 }}
 
 /* 组合框 */
 QComboBox {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
     padding: 4px 8px;
     min-width: 120px;
+    font-size: {font_size}px;
 }}
 
 QComboBox::drop-down {{
     border: none;
-    background-color: {colors['surface']};
+    background-color: {surface_color};
 }}
 
 QComboBox::down-arrow {{
     image: none;
     border: 4px solid transparent;
-    border-top-color: {colors['text']};
+    border-top-color: {text_color};
     margin-right: 4px;
 }}
 
 QComboBox QAbstractItemView {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border: 1px solid {border_color};
+    font-size: {font_size}px;
 }}
 
 /* 复选框 */
 QCheckBox {{
-    color: {colors['text']};
+    color: {text_color};
+    font-size: {font_size}px;
 }}
 
 QCheckBox::indicator {{
-    width: 18px;
-    height: 18px;
-    border: 2px solid {colors['border']};
+    width: {indicator_size}px;
+    height: {indicator_size}px;
+    border: 2px solid {border_color};
     border-radius: 3px;
-    background-color: {colors['surface']};
+    background-color: {surface_color};
 }}
 
 QCheckBox::indicator:checked {{
-    background-color: {colors['primary']};
-    border-color: {colors['primary']};
+    background-color: {primary_color};
+    border-color: {primary_color};
 }}
 
 QCheckBox::indicator:checked::after {{
-    image: url(data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/></svg>);
+    image: url(data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"white\"><path d=\"M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z\"/></svg>);
 }}
 
 /* 单选按钮 */
 QRadioButton {{
-    color: {colors['text']};
+    color: {text_color};
+    font-size: {font_size}px;
 }}
 
 QRadioButton::indicator {{
-    width: 18px;
-    height: 18px;
-    border: 2px solid {colors['border']};
+    width: {indicator_size}px;
+    height: {indicator_size}px;
+    border: 2px solid {border_color};
     border-radius: 9px;
-    background-color: {colors['surface']};
+    background-color: {surface_color};
 }}
 
 QRadioButton::indicator:checked {{
-    background-color: {colors['primary']};
-    border-color: {colors['primary']};
+    background-color: {primary_color};
+    border-color: {primary_color};
 }}
 
 QRadioButton::indicator:checked::after {{
-    width: 8px;
-    height: 8px;
+    width: {radio_inner_size}px;
+    height: {radio_inner_size}px;
     border-radius: 4px;
     background-color: white;
     margin: 3px;
@@ -572,68 +587,69 @@ QRadioButton::indicator:checked::after {{
 /* 滑块 */
 QSlider::groove:horizontal {{
     height: 6px;
-    background-color: {colors['border']};
+    background-color: {border_color};
     border-radius: 3px;
 }}
 
 QSlider::handle:horizontal {{
-    width: 16px;
-    height: 16px;
-    background-color: {colors['primary']};
-    border-radius: 8px;
+    width: {slider_handle_size}px;
+    height: {slider_handle_size}px;
+    background-color: {primary_color};
+    border-radius: {slider_radius}px;
     margin: -5px 0;
 }}
 
 QSlider::groove:vertical {{
     width: 6px;
-    background-color: {colors['border']};
+    background-color: {border_color};
     border-radius: 3px;
 }}
 
 QSlider::handle:vertical {{
-    width: 16px;
-    height: 16px;
-    background-color: {colors['primary']};
-    border-radius: 8px;
+    width: {slider_handle_size}px;
+    height: {slider_handle_size}px;
+    background-color: {primary_color};
+    border-radius: {slider_radius}px;
     margin: 0 -5px;
 }}
 
 /* 滚动条 */
 QScrollBar::vertical {{
-    width: 12px;
-    background-color: {colors['surface']};
+    width: {scrollbar_width}px;
+    background-color: {surface_color};
 }}
 
 QScrollBar::handle:vertical {{
-    background-color: {colors['border']};
-    border-radius: 6px;
+    background-color: {border_color};
+    border-radius: {scrollbar_radius}px;
 }}
 
 QScrollBar::handle:vertical:hover {{
-    background-color: {colors['text_disabled']};
+    background-color: {text_disabled_color};
 }}
 
 QScrollBar::horizontal {{
-    height: 12px;
-    background-color: {colors['surface']};
+    height: {scrollbar_width}px;
+    background-color: {surface_color};
 }}
 
 QScrollBar::handle:horizontal {{
-    background-color: {colors['border']};
-    border-radius: 6px;
+    background-color: {border_color};
+    border-radius: {scrollbar_radius}px;
 }}
 
 QScrollBar::handle:horizontal:hover {{
-    background-color: {colors['text_disabled']};
+    background-color: {text_disabled_color};
 }}
 
 /* 分组框 */
 QGroupBox {{
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    color: {text_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
     margin-top: 10px;
     padding-top: 8px;
+    font-size: {font_size}px;
 }}
 
 QGroupBox::title {{
@@ -644,97 +660,102 @@ QGroupBox::title {{
 
 /* 选项卡 */
 QTabWidget::pane {{
-    background-color: {colors['surface']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
 }}
 
 QTabBar::tab {{
-    background-color: {colors['surface']};
-    color: {colors['text_disabled']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_disabled_color};
+    border: 1px solid {border_color};
     border-bottom: none;
     border-radius: 4px 4px 0 0;
     padding: 6px 16px;
     margin-right: 2px;
+    font-size: {font_size}px;
 }}
 
 QTabBar::tab:selected {{
-    background-color: {colors['background']};
-    color: {colors['text']};
-    border-color: {colors['border']};
+    background-color: {bg_color};
+    color: {text_color};
+    border-color: {border_color};
 }}
 
 QTabBar::tab:hover:not(selected) {{
-    color: {colors['text']};
+    color: {text_color};
 }}
 
 /* DockWidget */
 QDockWidget {{
-    titlebar-close-icon: url(data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='{self._hex_to_rgb(colors['text'])}'><path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/></svg>);
-    titlebar-normal-icon: url(data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='{self._hex_to_rgb(colors['text'])}'><path d='M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z'/></svg>);
+    titlebar-close-icon: url(data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"{text_rgb}\"><path d=\"M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z\"/></svg>);
+    titlebar-normal-icon: url(data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"{text_rgb}\"><path d=\"M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z\"/></svg>);
 }}
 
 QDockWidget::title {{
-    background-color: {colors['surface']};
+    background-color: {surface_color};
     padding: 4px 8px;
 }}
 
 /* 进度条 */
 QProgressBar {{
-    background-color: {colors['border']};
+    background-color: {border_color};
     border-radius: 4px;
     text-align: center;
+    font-size: {font_size}px;
 }}
 
 QProgressBar::chunk {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
     border-radius: 4px;
 }}
 
 /* 对话框 */
 QDialog {{
-    background-color: {colors['background']};
-    border: 1px solid {colors['border']};
+    background-color: {bg_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
 }}
 
 /* 消息框 */
 QMessageBox {{
-    background-color: {colors['background']};
-    color: {colors['text']};
+    background-color: {bg_color};
+    color: {text_color};
+    font-size: {font_size}px;
 }}
 
 /* 状态栏 */
 QStatusBar {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border-top: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border-top: 1px solid {border_color};
+    font-size: {font_size}px;
 }}
 
 /* 日志面板 */
 QTextBrowser#logPanel {{
-    background-color: {colors['background']};
-    color: {colors['text']};
+    background-color: {bg_color};
+    color: {text_color};
     font-family: Consolas, monospace;
+    font-size: {font_size}px;
 }}
 
 /* 节点编辑器相关 */
 NodeGraphQt--Node {{
-    background-color: {colors['surface']};
-    border-color: {colors['border']};
+    background-color: {surface_color};
+    border-color: {border_color};
 }}
 
 NodeGraphQt--Node.selected {{
-    border-color: {colors['primary']};
+    border-color: {primary_color};
 }}
 
 NodeGraphQt--Port {{
-    background-color: {colors['primary']};
+    background-color: {primary_color};
 }}
 
 NodeGraphQt--Port.selected {{
-    background-color: {colors['accent']};
+    background-color: {accent_color};
 }}
 
 /* 自定义滚动区域 */
@@ -749,13 +770,39 @@ QScrollArea QWidget {{
 
 /* 工具提示 */
 QToolTip {{
-    background-color: {colors['surface']};
-    color: {colors['text']};
-    border: 1px solid {colors['border']};
+    background-color: {surface_color};
+    color: {text_color};
+    border: 1px solid {border_color};
     border-radius: 4px;
     padding: 4px 8px;
+    font-size: {font_size}px;
 }}
-"""
+""".format(
+            font_family=font_family,
+            font_size=font_size,
+            title_font_size=font_size + 2,
+            indicator_size=int(font_size * 1.8),
+            radio_inner_size=int(font_size * 0.8),
+            slider_handle_size=int(font_size * 1.6),
+            slider_radius=int(font_size * 0.8),
+            scrollbar_width=int(font_size * 1.2),
+            scrollbar_radius=int(font_size * 0.6),
+            button_padding=int(font_size * 0.6),
+            button_padding_x2=int(font_size * 1.6),
+            button_min_width=int(font_size * 8),
+            text_rgb=text_rgb,
+            primary_color=colors['primary'],
+            accent_color=colors['accent'],
+            bg_color=colors['background'],
+            surface_color=colors['surface'],
+            text_color=colors['text'],
+            text_disabled_color=colors['text_disabled'],
+            border_color=colors['border'],
+            success_color=colors['success'],
+            warning_color=colors['warning'],
+            error_color=colors['error'],
+            info_color=colors['info']
+        )
 
         return stylesheet
 

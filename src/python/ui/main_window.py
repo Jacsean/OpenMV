@@ -1208,7 +1208,12 @@ class MainWindow(QtWidgets.QMainWindow):
         from core.theme_manager import theme_manager
         
         stylesheet = theme_manager.generate_stylesheet()
-        self.setStyleSheet(stylesheet)
+        
+        app = QtWidgets.QApplication.instance()
+        if app:
+            app.setStyleSheet(stylesheet)
+        else:
+            self.setStyleSheet(stylesheet)
         
         utils.logger.info("⚙️ 系统设置已更新", module="main_window")
 

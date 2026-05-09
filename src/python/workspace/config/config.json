@@ -1,0 +1,33 @@
+{
+    "system.recent_projects": [],
+    "system.window_state": {
+        "geometry": null,
+        "state": null,
+        "maximized": false
+    },
+    "plugin.enabled_list": [],
+    "system.tab_order": [],
+    "system.theme": "light",
+    "system.language": "zh_CN",
+    "system.font_family": "Microsoft YaHei",
+    "system.font_size": 10,
+    "system.window_width": 1600,
+    "system.window_height": 1024,
+    "system.window_maximized": false,
+    "system.auto_save": true,
+    "system.auto_save_interval": 300,
+    "theme.primary_color": "#2563eb",
+    "theme.accent_color": "#3b82f6",
+    "theme.bg_color": "#ffffff",
+    "theme.surface_color": "#252526",
+    "theme.text_color": "#cccccc",
+    "theme.text_disabled_color": "#adb5bd",
+    "theme.border_color": "#3c3c3c",
+    "theme.success_color": "#10b981",
+    "theme.warning_color": "#f59e0b",
+    "theme.error_color": "#dc2626",
+    "theme.info_color": "#3b82f6",
+    "system.theme_mode": "light",
+    "theme.background_color": "#1e1e1e",
+    "system.custom_theme_path": ""
+}
