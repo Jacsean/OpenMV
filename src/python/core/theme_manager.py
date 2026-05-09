@@ -280,6 +280,9 @@ class ThemeManager:
         font_size = config_manager.get('system.font_size', 9)
         
         text_rgb = self._hex_to_rgb(colors['text'])
+        
+        if ' ' in font_family:
+            font_family = f'"{font_family}"'
 
         stylesheet = """
 /* ===== 主题样式表 ===== */

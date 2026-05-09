@@ -35,7 +35,7 @@ class SettingsDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("系统设置")
-        self.setFixedSize(700, 500)
+        self.setFixedSize(700, 700)
 
         # 保存原始配置（用于取消时恢复）
         self._original_configs = {}
