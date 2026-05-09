@@ -415,7 +415,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             QtWidgets.QWidget: 日志面板组件
         """
-        from utils.qt_log_handler import QtLogHandler
+        from utils.logger import QtLogHandler
 
         # 创建容器widget
         panel = QtWidgets.QWidget()
@@ -427,7 +427,7 @@ class MainWindow(QtWidgets.QMainWindow):
         header_layout = QtWidgets.QHBoxLayout()
 
         # 标题
-        title_label = QtWidgets.QLabel("📋 运行日志")
+        title_label = QtWidgets.QLabel("运行日志")
         title_label.setFont(QtGui.QFont("Arial", 9, QtGui.QFont.Bold))
         header_layout.addWidget(title_label)
 
@@ -435,13 +435,13 @@ class MainWindow(QtWidgets.QMainWindow):
         header_layout.addStretch()
 
         # 清空按钮
-        clear_btn = QtWidgets.QPushButton("🗑️ 清空")
+        clear_btn = QtWidgets.QPushButton("清空")
         clear_btn.setMaximumWidth(80)
         clear_btn.clicked.connect(self._clear_logs)
         header_layout.addWidget(clear_btn)
 
         # 折叠/展开按钮
-        self.toggle_log_btn = QtWidgets.QPushButton("▼ 折叠")
+        self.toggle_log_btn = QtWidgets.QPushButton("折叠")
         self.toggle_log_btn.setMaximumWidth(80)
         self.toggle_log_btn.clicked.connect(self._toggle_log_panel)
         header_layout.addWidget(self.toggle_log_btn)
@@ -457,10 +457,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 border: 1px solid #3c3c3c;
                 border-radius: 4px;
                 padding: 8px;
+                color: #ffffff;
             }
         """)
-        self.log_text_browser.setMinimumHeight(50)  # 最小高度
-        self.log_text_browser.setMaximumHeight(150)  # 最大高度
+        self.log_text_browser.setMinimumHeight(50)
+        self.log_text_browser.setMaximumHeight(150)
 
         # 设置为只读
         self.log_text_browser.setReadOnly(True)
@@ -474,7 +475,7 @@ class MainWindow(QtWidgets.QMainWindow):
         status_layout = QtWidgets.QHBoxLayout()
 
         # 状态标签
-        self.status_label = QtWidgets.QLabel("✅ 就绪")
+        self.status_label = QtWidgets.QLabel("就绪")
         self.status_label.setStyleSheet("color: #2ecc71; font-weight: bold;")
         status_layout.addWidget(self.status_label)
 
@@ -491,8 +492,13 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addLayout(status_layout)
 
         # === 集成QtLogHandler到Logger ===
-        qt_handler = QtLogHandler(self.log_text_browser)
+        qt_handler = QtLogHandler(text_widget=self.log_text_browser)
         logger.add_handler(qt_handler)
+        
+        # 调试信息
+        print(f"[DEBUG] QtLogHandler added. Total handlers: {len(logger.handlers)}")
+        for i, h in enumerate(logger.handlers):
+            print(f"[DEBUG]   handler[{i}]: {type(h).__name__}")
 
         # 保存handler引用，便于后续操作
         self.qt_log_handler = qt_handler
@@ -519,11 +525,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _clear_logs(self):
         """
-        清空日志
+        清空日志（仅清空UI面板，不影响终端和文件输出）
         """
         if hasattr(self, 'qt_log_handler'):
             self.qt_log_handler.clear()
-            self.status_label.setText("✅ 日志已清空")
+            self.status_label.setText("日志已清空")
 
     def _connect_node_selection_signal(self):
         """

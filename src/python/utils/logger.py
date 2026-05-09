@@ -263,86 +263,130 @@ class QtLogHandler(LogHandler):
     """
     Qt界面日志处理器
 
-    将日志输出到Qt界面（如QTextEdit）
+    将日志输出到Qt界面（如QTextEdit/QTextBrowser）
+    
+    注意：此Handler使用QTimer实现线程安全的UI更新
     """
 
     def __init__(self, text_widget=None, max_lines: int = 1000):
         self.text_widget = text_widget
         self.max_lines = max_lines
-        self._queue = queue.Queue()
-        self._thread = None
-        self._running = False
+        self._pending_logs = []
+        self._timer = None
 
     def emit(self, record: LogRecord):
-        """将日志加入队列"""
-        self._queue.put(record)
+        """将日志加入待处理队列"""
+        if not self.text_widget:
+            return
+            
+        # 格式化日志消息
+        timestamp = record.timestamp.strftime('%H:%M:%S')
 
-        if not self._running:
-            self._start_processing()
+        func_part = ""
+        if record.func_name:
+            if record.line_number:
+                func_part = f"[{record.func_name}][{record.line_number}]"
+            else:
+                func_part = f"[{record.func_name}]"
 
-    def _start_processing(self):
-        """启动后台处理线程"""
-        self._running = True
-        self._thread = threading.Thread(target=self._process_queue, daemon=True)
-        self._thread.start()
+        if record.module:
+            formatted = f"[{timestamp}] [{record.level.name:<8}] [{record.module}] {func_part} {record.message}"
+        else:
+            formatted = f"[{timestamp}] [{record.level.name:<8}] {func_part} {record.message}"
 
-    def _process_queue(self):
-        """后台处理日志队列"""
-        while self._running or not self._queue.empty():
-            try:
-                record = self._queue.get(timeout=0.1)
-                self._append_to_widget(record)
-            except queue.Empty:
-                continue
+        if record.context:
+            context_str = ', '.join([f"{k}={v}" for k, v in record.context.items()])
+            formatted += f" | {context_str}"
 
-    def _append_to_widget(self, record: LogRecord):
-        """追加日志到Qt组件"""
+        # 直接在主线程中追加（如果text_widget存在）
+        try:
+            self._append_safe(formatted)
+        except Exception:
+            pass
+
+    def _append_safe(self, text: str):
+        """线程安全地追加日志到Qt组件"""
         if not self.text_widget:
             return
 
         try:
-            timestamp = record.timestamp.strftime('%H:%M:%S')
-
-            func_part = ""
-            if record.func_name:
-                if record.line_number:
-                    func_part = f"[{record.func_name}][{record.line_number}]"
-                else:
-                    func_part = f"[{record.func_name}]"
-
-            if record.module:
-                formatted = f"[{timestamp}] [{record.level.name:<8}] [{record.module}] {func_part} {record.message}"
-            else:
-                formatted = f"[{timestamp}] [{record.level.name:<8}] {func_part} {record.message}"
-
-            if record.context:
-                context_str = ', '.join([f"{k}={v}" for k, v in record.context.items()])
-                formatted += f" | {context_str}"
-
-            self.text_widget.append(formatted)
+            # 尝试使用QMetaObject.invokeMethod确保线程安全
+            try:
+                from PySide2.QtCore import QMetaObject, Qt, Q_ARG
+                
+                # 先追加文本
+                QMetaObject.invokeMethod(
+                    self.text_widget,
+                    "append",
+                    Qt.QueuedConnection,
+                    Q_ARG(str, text)
+                )
+                
+                # 延迟滚动到底部（确保append已完成）
+                from PySide2.QtCore import QTimer
+                QTimer.singleShot(10, self._scroll_to_bottom)
+                
+            except ImportError:
+                # 如果PySide2不可用，直接追加（可能在测试环境）
+                self.text_widget.append(text)
+                self._scroll_to_bottom()
 
             # 限制行数
-            cursor = self.text_widget.textCursor()
-            cursor.movePosition(cursor.Start)
-            while cursor.blockNumber() > self.max_lines:
-                cursor.select(cursor.LineUnderCursor)
-                cursor.removeSelectedText()
-                cursor.deleteChar()
-                cursor.setPosition(cursor.Start)
+            self._limit_lines()
 
         except Exception as e:
-            print(f"Qt日志输出失败: {e}", flush=True)
+            print(f"Qt log output failed: {e}", flush=True)
+
+    def _scroll_to_bottom(self):
+        """滚动到日志底部"""
+        if not self.text_widget:
+            return
+        try:
+            scrollbar = self.text_widget.verticalScrollBar()
+            scrollbar.setValue(scrollbar.maximum())
+        except Exception:
+            pass
+
+    def _limit_lines(self):
+        """限制日志行数，删除旧日志防止内存溢出"""
+        if not self.text_widget:
+            return
+
+        try:
+            document = self.text_widget.document()
+            line_count = document.blockCount()
+            
+            if line_count > self.max_lines:
+                # 删除多余的旧日志（保留后 max_lines 行）
+                cursor = self.text_widget.textCursor()
+                cursor.movePosition(cursor.Start)
+                
+                # 计算需要删除的行数
+                lines_to_delete = line_count - self.max_lines
+                
+                for _ in range(lines_to_delete):
+                    cursor.select(cursor.LineUnderCursor)
+                    cursor.removeSelectedText()
+                    cursor.deleteChar()  # 删除换行符
+                    
+        except Exception:
+            pass
+
+    def clear(self):
+        """清空日志面板（仅清空UI显示，不影响终端和文件输出）"""
+        if self.text_widget:
+            try:
+                self.text_widget.clear()
+            except Exception:
+                pass
 
     def flush(self):
         """刷新"""
-        while not self._queue.empty():
-            time.sleep(0.01)
+        pass
 
     def close(self):
         """关闭"""
-        self._running = False
-        if self._thread:
-            self._thread.join(timeout=1)
+        pass
 
 
 class Logger:
@@ -395,6 +439,14 @@ class Logger:
 
         # 默认添加控制台Handler
         self.add_handler(ConsoleHandler())
+        
+        # 默认添加文件Handler（自动启用）
+        try:
+            file_handler = FileHandler()
+            self.add_handler(file_handler)
+            print(f"[OK] Log file enabled, saved to: {file_handler.log_dir / file_handler.filename}")
+        except Exception as e:
+            print(f"[WARN] File log init failed: {e}")
 
         # 从环境变量读取日志级别
         env_level = os.getenv('LOG_LEVEL', 'INFO').upper()
