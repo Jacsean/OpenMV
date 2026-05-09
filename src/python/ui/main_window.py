@@ -105,6 +105,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # 应用主题配置
         self._apply_theme_on_startup()
+        self._setup_theme_listener()
 
         self._setup_event_subscriptions()
 
@@ -1219,6 +1220,20 @@ class MainWindow(QtWidgets.QMainWindow):
             self.setStyleSheet(stylesheet)
         
         utils.logger.info("⚙️ 系统设置已更新", module="main_window")
+
+    def _setup_theme_listener(self):
+        """设置主题变更监听器"""
+        from core.theme_manager import theme_manager
+        theme_manager.add_listener(self._on_theme_changed)
+
+    def _on_theme_changed(self, mode):
+        """主题变更回调"""
+        from core.theme_manager import theme_manager
+        stylesheet = theme_manager.generate_stylesheet()
+        app = QtWidgets.QApplication.instance()
+        if app:
+            app.setStyleSheet(stylesheet)
+        utils.logger.info(f"🎨 主题已变更并应用", module="main_window")
 
     def _apply_theme_on_startup(self):
         """
