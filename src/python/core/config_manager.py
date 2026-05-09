@@ -7,18 +7,22 @@
 - 配置热重载
 - 配置变更通知
 - 持久化存储
+- 两层配置体系（系统级 + 项目级）
 
 使用示例：
     from core.config_manager import config_manager, ConfigCategory
 
-    # 获取配置
+    # 获取配置（项目级优先）
     recent_projects = config_manager.get('system.recent_projects', [])
 
     # 设置配置
     config_manager.set('system.recent_projects', ['project1', 'project2'])
 
+    # 设置项目级配置
+    config_manager.set_project_config('auto_connect_nodes', True)
+
     # 订阅配置变更
-    config_manager.subscribe('system.recent_projects', lambda key, value: logger.info(f"配置变更: {value}", module="config"))
+    config_manager.subscribe('system.theme', lambda key, value: logger.info(f"主题变更: {value}", module="config"))
 
     # 热重载
     config_manager.reload()
@@ -76,7 +80,8 @@ class ConfigManager:
     - 配置热重载
     - 配置变更通知
     - Schema 验证
-    - 多存储后端支持
+    - 两层配置体系（系统级 + 项目级）
+    - 配置优先级：项目级 > 系统级
     """
 
     _instance = None
@@ -96,8 +101,14 @@ class ConfigManager:
 
         self._initialized = True
 
-        # 配置存储
-        self._configs: Dict[str, Any] = {}
+        # 系统级配置存储
+        self._system_configs: Dict[str, Any] = {}
+
+        # 项目级配置存储
+        self._project_configs: Dict[str, Any] = {}
+
+        # 当前项目路径
+        self._current_project_path: Optional[Path] = None
 
         # 配置Schema
         self._schemas: Dict[str, ConfigSchema] = {}
@@ -105,43 +116,53 @@ class ConfigManager:
         # 变更监听器
         self._listeners: Dict[str, List[Callable[[str, Any], None]]] = {}
 
-        # 存储路径
-        self._config_dir = Path(__file__).parent.parent / "workspace" / "config"
-        self._config_dir.mkdir(parents=True, exist_ok=True)
+        # 系统级配置存储路径
+        self._system_config_dir = Path(__file__).parent.parent / "workspace" / "config"
+        self._system_config_dir.mkdir(parents=True, exist_ok=True)
+        self._system_json_storage = self._system_config_dir / "config.json"
 
-        # 存储后端
-        self._json_storage = self._config_dir / "config.json"
+        # 项目级配置文件名
+        self._project_config_file = ".project_config.json"
 
         # 初始化
-        self._load_configs()
+        self._load_system_configs()
         self._register_default_schemas()
         self._setup_system_config()
 
     def _setup_system_config(self):
-        """设置系统级配置项"""
+        """设置系统级配置项默认值"""
         # 确保最近项目列表存在
-        if 'system.recent_projects' not in self._configs:
-            self._configs['system.recent_projects'] = []
+        if 'system.recent_projects' not in self._system_configs:
+            self._system_configs['system.recent_projects'] = []
 
         # 确保窗口状态配置存在
-        if 'system.window_state' not in self._configs:
-            self._configs['system.window_state'] = {
+        if 'system.window_state' not in self._system_configs:
+            self._system_configs['system.window_state'] = {
                 'geometry': None,
                 'state': None,
                 'maximized': False
             }
 
         # 确保插件配置存在
-        if 'plugin.enabled_list' not in self._configs:
-            self._configs['plugin.enabled_list'] = []
+        if 'plugin.enabled_list' not in self._system_configs:
+            self._system_configs['plugin.enabled_list'] = []
 
         # 确保标签页顺序配置存在
-        if 'system.tab_order' not in self._configs:
-            self._configs['system.tab_order'] = []
+        if 'system.tab_order' not in self._system_configs:
+            self._system_configs['system.tab_order'] = []
+
+        # 确保主题配置存在
+        if 'system.theme' not in self._system_configs:
+            self._system_configs['system.theme'] = 'dark'
+
+        # 确保语言配置存在
+        if 'system.language' not in self._system_configs:
+            self._system_configs['system.language'] = 'zh_CN'
 
     def _register_default_schemas(self):
         """注册默认配置Schema"""
         schemas = [
+            # === 系统级配置 ===
             ConfigSchema(
                 name='system.recent_projects',
                 default=[],
@@ -161,24 +182,64 @@ class ConfigManager:
                 description='窗口状态'
             ),
             ConfigSchema(
-                name='plugin.enabled_list',
-                default=[],
-                type=list,
-                description='已启用的插件列表'
+                name='system.window_width',
+                default=1600,
+                type=int,
+                description='默认窗口宽度',
+                validator=lambda v: 800 <= v <= 4000
             ),
             ConfigSchema(
-                name='user.language',
+                name='system.window_height',
+                default=1024,
+                type=int,
+                description='默认窗口高度',
+                validator=lambda v: 600 <= v <= 3000
+            ),
+            ConfigSchema(
+                name='system.window_maximized',
+                default=False,
+                type=bool,
+                description='启动时是否最大化'
+            ),
+            ConfigSchema(
+                name='system.theme',
+                default='dark',
+                type=str,
+                description='界面主题',
+                options=['system', 'light', 'dark', 'custom']
+            ),
+            ConfigSchema(
+                name='system.theme_mode',
+                default='dark',
+                type=str,
+                description='主题模式',
+                options=['system', 'light', 'dark', 'custom']
+            ),
+            ConfigSchema(
+                name='system.custom_theme_path',
+                default='',
+                type=str,
+                description='自定义主题文件路径'
+            ),
+            ConfigSchema(
+                name='system.language',
                 default='zh_CN',
                 type=str,
                 description='界面语言',
                 options=['zh_CN', 'en_US']
             ),
             ConfigSchema(
-                name='user.theme',
-                default='dark',
+                name='system.font_family',
+                default='Microsoft YaHei',
                 type=str,
-                description='界面主题',
-                options=['dark', 'light']
+                description='界面字体'
+            ),
+            ConfigSchema(
+                name='system.font_size',
+                default=9,
+                type=int,
+                description='字体大小(px)',
+                validator=lambda v: 6 <= v <= 24
             ),
             ConfigSchema(
                 name='system.auto_save',
@@ -193,34 +254,203 @@ class ConfigManager:
                 description='自动保存间隔（秒）',
                 validator=lambda v: 60 <= v <= 3600
             ),
+            ConfigSchema(
+                name='system.log_level',
+                default='INFO',
+                type=str,
+                description='日志级别',
+                options=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+            ),
+            # === 主题颜色配置 ===
+            ConfigSchema(
+                name='theme.primary_color',
+                default='#2563eb',
+                type=str,
+                description='主题色'
+            ),
+            ConfigSchema(
+                name='theme.accent_color',
+                default='#3b82f6',
+                type=str,
+                description='强调色'
+            ),
+            ConfigSchema(
+                name='theme.bg_color',
+                default='#1e1e1e',
+                type=str,
+                description='背景色'
+            ),
+            ConfigSchema(
+                name='theme.surface_color',
+                default='#252526',
+                type=str,
+                description='表面色'
+            ),
+            ConfigSchema(
+                name='theme.text_color',
+                default='#cccccc',
+                type=str,
+                description='文字色'
+            ),
+            ConfigSchema(
+                name='theme.text_disabled_color',
+                default='#858585',
+                type=str,
+                description='禁用文字色'
+            ),
+            ConfigSchema(
+                name='theme.border_color',
+                default='#3c3c3c',
+                type=str,
+                description='边框色'
+            ),
+            ConfigSchema(
+                name='theme.success_color',
+                default='#10b981',
+                type=str,
+                description='成功状态色'
+            ),
+            ConfigSchema(
+                name='theme.warning_color',
+                default='#f59e0b',
+                type=str,
+                description='警告状态色'
+            ),
+            ConfigSchema(
+                name='theme.error_color',
+                default='#dc2626',
+                type=str,
+                description='错误状态色'
+            ),
+            ConfigSchema(
+                name='theme.info_color',
+                default='#3b82f6',
+                type=str,
+                description='信息状态色'
+            ),
+            # === 插件配置 ===
+            ConfigSchema(
+                name='plugin.enabled_list',
+                default=[],
+                type=list,
+                description='已启用的插件列表'
+            ),
+            # === 项目级配置 ===
+            ConfigSchema(
+                name='project.default_workflow_name',
+                default='工作流',
+                type=str,
+                description='默认工作流名称'
+            ),
+            ConfigSchema(
+                name='project.auto_connect_nodes',
+                default=False,
+                type=bool,
+                description='自动连接节点'
+            ),
+            ConfigSchema(
+                name='project.show_node_description',
+                default=True,
+                type=bool,
+                description='显示节点描述'
+            ),
+            ConfigSchema(
+                name='project.execution_timeout',
+                default=30,
+                type=int,
+                description='执行超时时间(秒)',
+                validator=lambda v: 10 <= v <= 300
+            ),
+            ConfigSchema(
+                name='project.node_width',
+                default=200,
+                type=int,
+                description='节点默认宽度',
+                validator=lambda v: 100 <= v <= 400
+            ),
+            ConfigSchema(
+                name='project.node_spacing',
+                default=50,
+                type=int,
+                description='节点间距',
+                validator=lambda v: 10 <= v <= 200
+            ),
         ]
 
         for schema in schemas:
             self._schemas[schema.name] = schema
 
-    def _load_configs(self):
-        """从JSON文件加载配置"""
-        if not self._json_storage.exists():
+    def _load_system_configs(self):
+        """从JSON文件加载系统级配置"""
+        if not self._system_json_storage.exists():
             return
 
         try:
-            with open(self._json_storage, 'r', encoding='utf-8') as f:
+            with open(self._system_json_storage, 'r', encoding='utf-8') as f:
                 loaded = json.load(f)
-                self._configs.update(loaded)
+                self._system_configs.update(loaded)
         except Exception as e:
-            logger.warning(f"加载配置文件失败: {e}", module="config")
+            logger.warning(f"加载系统配置文件失败: {e}", module="config")
 
-    def _save_configs(self):
-        """保存配置到JSON文件"""
+    def _save_system_configs(self):
+        """保存系统级配置到JSON文件"""
         try:
-            with open(self._json_storage, 'w', encoding='utf-8') as f:
-                json.dump(self._configs, f, indent=4, ensure_ascii=False)
+            with open(self._system_json_storage, 'w', encoding='utf-8') as f:
+                json.dump(self._system_configs, f, indent=4, ensure_ascii=False)
         except Exception as e:
-            logger.error(f"保存配置文件失败: {e}", module="config")
+            logger.error(f"保存系统配置文件失败: {e}", module="config")
+
+    def _load_project_configs(self, project_path: Path):
+        """加载项目级配置"""
+        config_file = project_path / self._project_config_file
+        self._project_configs.clear()
+
+        if not config_file.exists():
+            return
+
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                loaded = json.load(f)
+                self._project_configs.update(loaded)
+            logger.info(f"已加载项目配置: {config_file}", module="config")
+        except Exception as e:
+            logger.warning(f"加载项目配置文件失败: {e}", module="config")
+
+    def _save_project_configs(self):
+        """保存项目级配置到文件"""
+        if not self._current_project_path:
+            return
+
+        config_file = self._current_project_path / self._project_config_file
+
+        try:
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump(self._project_configs, f, indent=4, ensure_ascii=False)
+            logger.info(f"已保存项目配置: {config_file}", module="config")
+        except Exception as e:
+            logger.error(f"保存项目配置文件失败: {e}", module="config")
+
+    def set_current_project(self, project_path: Optional[str]):
+        """
+        设置当前项目路径，加载项目级配置
+
+        Args:
+            project_path: 项目路径，None表示关闭项目
+        """
+        if project_path:
+            self._current_project_path = Path(project_path)
+            self._load_project_configs(self._current_project_path)
+        else:
+            self._current_project_path = None
+            self._project_configs.clear()
+
+    def get_current_project_path(self) -> Optional[Path]:
+        """获取当前项目路径"""
+        return self._current_project_path
 
     def get(self, key: str, default: Any = None) -> Any:
         """
-        获取配置值
+        获取配置值（优先级：项目级 > 系统级）
 
         Args:
             key: 配置键（格式：category.key，如 system.recent_projects）
@@ -229,15 +459,23 @@ class ConfigManager:
         Returns:
             配置值，如果不存在返回默认值
         """
-        # 兼容不带前缀的key
-        full_key = key if key.startswith(('system.', 'project.', 'plugin.', 'user.')) else f'system.{key}'
+        # 兼容不带前缀的key，默认为system级
+        full_key = key if key.startswith(('system.', 'project.', 'plugin.', 'user.', 'theme.')) else f'system.{key}'
 
-        if full_key in self._configs:
-            return self._configs[full_key]
+        # 1. 优先查找项目级配置
+        if self._current_project_path and full_key.startswith('project.'):
+            if full_key in self._project_configs:
+                return self._project_configs[full_key]
 
-        # 检查schema中的默认值
+        # 2. 查找系统级配置
+        if full_key in self._system_configs:
+            return self._system_configs[full_key]
+
+        # 3. 检查schema中的默认值
         if key in self._schemas:
             return self._schemas[key].default
+        if full_key in self._schemas:
+            return self._schemas[full_key].default
 
         return default
 
@@ -250,16 +488,24 @@ class ConfigManager:
             value: 配置值
             save: 是否立即保存到磁盘
         """
-        # 兼容不带前缀的key
-        full_key = key if key.startswith(('system.', 'project.', 'plugin.', 'user.')) else f'system.{key}'
+        # 兼容不带前缀的key，默认为system级
+        full_key = key if key.startswith(('system.', 'project.', 'plugin.', 'user.', 'theme.')) else f'system.{key}'
 
         # 验证配置
         if full_key in self._schemas:
             schema = self._schemas[full_key]
             value = self._validate_value(full_key, value, schema)
 
-        old_value = self._configs.get(full_key)
-        self._configs[full_key] = value
+        # 判断是系统级还是项目级配置
+        if full_key.startswith('project.'):
+            configs = self._project_configs
+            save_func = self._save_project_configs
+        else:
+            configs = self._system_configs
+            save_func = self._save_system_configs
+
+        old_value = configs.get(full_key)
+        configs[full_key] = value
 
         # 通知变更
         if old_value != value:
@@ -267,7 +513,7 @@ class ConfigManager:
 
         # 保存到磁盘
         if save:
-            self._save_configs()
+            save_func()
 
     def _validate_value(self, key: str, value: Any, schema: ConfigSchema) -> Any:
         """
@@ -330,6 +576,7 @@ class ConfigManager:
             old_value: 旧值
             new_value: 新值
         """
+        # 通知精确匹配的监听器
         if key in self._listeners:
             for callback in self._listeners[key]:
                 try:
@@ -337,11 +584,27 @@ class ConfigManager:
                 except Exception as e:
                     logger.error(f"配置变更通知失败: {e}", module="config")
 
+        # 通知通配符监听器（如 system.*）
+        for listener_key in list(self._listeners.keys()):
+            if listener_key.endswith('.*'):
+                prefix = listener_key[:-1]
+                if key.startswith(prefix):
+                    for callback in self._listeners[listener_key]:
+                        try:
+                            callback(key, new_value)
+                        except Exception as e:
+                            logger.error(f"配置变更通知失败: {e}", module="config")
+
     def reload(self):
         """重新加载配置（热重载）"""
-        self._configs.clear()
-        self._load_configs()
+        self._system_configs.clear()
+        self._load_system_configs()
         self._setup_system_config()
+
+        # 如果有当前项目，重新加载项目配置
+        if self._current_project_path:
+            self._load_project_configs(self._current_project_path)
+
         logger.info("配置已热重载", module="config")
 
     def get_category(self, category: ConfigCategory) -> Dict[str, Any]:
@@ -355,11 +618,24 @@ class ConfigManager:
             该分类的所有配置
         """
         prefix = f"{category.value}."
-        return {
+        
+        # 获取系统级配置
+        result = {
             k.replace(prefix, ''): v
-            for k, v in self._configs.items()
+            for k, v in self._system_configs.items()
             if k.startswith(prefix)
         }
+
+        # 如果是项目级配置，合并项目级配置（项目级覆盖系统级）
+        if category == ConfigCategory.PROJECT and self._current_project_path:
+            project_configs = {
+                k.replace(prefix, ''): v
+                for k, v in self._project_configs.items()
+                if k.startswith(prefix)
+            }
+            result.update(project_configs)
+
+        return result
 
     def set_category(self, category: ConfigCategory, configs: Dict[str, Any], save: bool = True):
         """
@@ -376,7 +652,10 @@ class ConfigManager:
             self.set(full_key, value, save=False)
 
         if save:
-            self._save_configs()
+            if category == ConfigCategory.PROJECT:
+                self._save_project_configs()
+            else:
+                self._save_system_configs()
 
     def reset(self, key: Optional[str] = None):
         """
@@ -389,10 +668,17 @@ class ConfigManager:
             if key in self._schemas:
                 self.set(key, self._schemas[key].default)
         else:
-            # 重置所有
+            # 重置所有系统级配置
             for schema_key, schema in self._schemas.items():
-                self._configs[schema_key] = schema.default
-            self._save_configs()
+                if schema_key.startswith('system.') or schema_key.startswith('theme.') or schema_key.startswith('plugin.'):
+                    self._system_configs[schema_key] = schema.default
+            self._save_system_configs()
+
+            # 重置项目级配置
+            for schema_key, schema in self._schemas.items():
+                if schema_key.startswith('project.'):
+                    self._project_configs[schema_key] = schema.default
+            self._save_project_configs()
 
     def register_schema(self, schema: ConfigSchema):
         """
@@ -417,7 +703,7 @@ class ConfigManager:
 
     def export_config(self, path: Optional[Path] = None) -> str:
         """
-        导出配置到文件
+        导出系统级配置到文件
 
         Args:
             path: 导出路径，None则返回JSON字符串
@@ -425,7 +711,25 @@ class ConfigManager:
         Returns:
             导出的JSON字符串
         """
-        json_str = json.dumps(self._configs, indent=4, ensure_ascii=False)
+        json_str = json.dumps(self._system_configs, indent=4, ensure_ascii=False)
+
+        if path:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(json_str)
+
+        return json_str
+
+    def export_project_config(self, path: Optional[Path] = None) -> str:
+        """
+        导出项目级配置到文件
+
+        Args:
+            path: 导出路径，None则返回JSON字符串
+
+        Returns:
+            导出的JSON字符串
+        """
+        json_str = json.dumps(self._project_configs, indent=4, ensure_ascii=False)
 
         if path:
             with open(path, 'w', encoding='utf-8') as f:
@@ -435,18 +739,18 @@ class ConfigManager:
 
     def import_config(self, data: str):
         """
-        从JSON导入配置
+        从JSON导入系统级配置
 
         Args:
             data: JSON字符串
         """
         try:
             imported = json.loads(data)
-            self._configs.update(imported)
-            self._save_configs()
-            logger.info("配置导入成功", module="config")
+            self._system_configs.update(imported)
+            self._save_system_configs()
+            logger.info("系统配置导入成功", module="config")
         except Exception as e:
-            logger.error(f"配置导入失败: {e}", module="config")
+            logger.error(f"系统配置导入失败: {e}", module="config")
 
     # === 便捷方法 ===
 

@@ -954,6 +954,15 @@ class MainWindow(QtWidgets.QMainWindow):
         reload_plugins_action.triggered.connect(self.reload_plugins)
         plugin_menu.addAction(reload_plugins_action)
 
+        # === 设置菜单 ===
+        settings_menu = menubar.addMenu("设置(&S)")
+
+        system_settings_action = QtWidgets.QAction("⚙️ 系统设置", self)
+        system_settings_action.setStatusTip("配置系统参数")
+        system_settings_action.setShortcut("Ctrl+,")
+        system_settings_action.triggered.connect(self.open_settings)
+        settings_menu.addAction(system_settings_action)
+
         # === 帮助菜单 ===
         help_menu = menubar.addMenu("帮助(&H)")
 
@@ -1181,6 +1190,27 @@ class MainWindow(QtWidgets.QMainWindow):
         if node_id in self.preview_windows:
             del self.preview_windows[node_id]
             utils.logger.info(f"🗑️ 预览窗口已关闭，清理引用", module="main_window")
+
+    def open_settings(self):
+        """
+        打开系统设置对话框
+        """
+        from ui.settings_dialog import SettingsDialog
+        
+        dialog = SettingsDialog(parent=self)
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            self._apply_settings_changes()
+
+    def _apply_settings_changes(self):
+        """
+        应用配置变更到界面
+        """
+        from core.theme_manager import theme_manager
+        
+        stylesheet = theme_manager.generate_stylesheet()
+        self.setStyleSheet(stylesheet)
+        
+        utils.logger.info("⚙️ 系统设置已更新", module="main_window")
 
     def show_about(self):
         """
