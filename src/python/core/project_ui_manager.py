@@ -666,6 +666,12 @@ class ProjectUIManager:
 
         if workflow:
             node_graph = NodeGraph()
+
+            if hasattr(self.main_window, 'plugin_manager'):
+                register_nodes_on_workflow_create(node_graph, workflow, self.main_window.plugin_manager)
+            else:
+                utils.logger.warning(f"⚠️ 未找到 plugin_manager，跳过节点注册", module="project_ui_manager")
+
             workflow.node_graph = node_graph
 
             node_graph.node_created.connect(lambda n, wf=workflow: self.main_window._on_node_created(n, wf))

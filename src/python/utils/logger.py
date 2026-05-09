@@ -42,6 +42,73 @@ from dataclasses import dataclass, field
 from concurrent.futures import ThreadPoolExecutor
 
 
+class StderrRedirector:
+    """
+    stderr 重定向器，将标准错误输出捕获并记录到日志
+    
+    使用方式：
+        redirector = StderrRedirector()
+        redirector.start()
+        # 之后所有 print 到 stderr 的内容都会被记录到日志
+        redirector.stop()
+    """
+    
+    def __init__(self):
+        self._original_stderr = None
+        self._is_active = False
+    
+    def write(self, message):
+        """重写 write 方法，捕获 stderr 输出"""
+        if not self._is_active:
+            return
+        
+        if self._original_stderr:
+            try:
+                self._original_stderr.write(message)
+                self._original_stderr.flush()
+            except Exception:
+                pass
+        
+        message = message.strip()
+        if message:
+            if not message.startswith("QSocketNotifier"):
+                logger.error(message, module="stderr")
+    
+    def flush(self):
+        """刷新缓冲区"""
+        if self._original_stderr:
+            try:
+                self._original_stderr.flush()
+            except Exception:
+                pass
+    
+    def start(self):
+        """开始重定向"""
+        if not self._is_active:
+            self._original_stderr = sys.stderr
+            sys.stderr = self
+            self._is_active = True
+    
+    def stop(self):
+        """停止重定向"""
+        if self._is_active:
+            sys.stderr = self._original_stderr
+            self._is_active = False
+
+
+_stderr_redirector = StderrRedirector()
+
+
+def capture_stderr():
+    """启动 stderr 捕获，将所有终端错误记录到日志"""
+    _stderr_redirector.start()
+
+
+def release_stderr():
+    """停止 stderr 捕获"""
+    _stderr_redirector.stop()
+
+
 class LogLevel(IntEnum):
     """日志级别枚举（数值越小级别越高）"""
     DEBUG = 10
@@ -451,6 +518,8 @@ class Logger:
         # 从环境变量读取日志级别
         env_level = os.getenv('LOG_LEVEL', 'INFO').upper()
         self.set_level(env_level)
+        
+        capture_stderr()
 
     def add_handler(self, handler: LogHandler):
         """
