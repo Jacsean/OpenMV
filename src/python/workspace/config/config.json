@@ -7,7 +7,7 @@
     },
     "plugin.enabled_list": [],
     "system.tab_order": [],
-    "system.theme": "light",
+    "system.theme": "system",
     "system.language": "zh_CN",
     "system.font_family": "Microsoft YaHei",
     "system.font_size": 16,
@@ -27,7 +27,7 @@
     "theme.warning_color": "#f59e0b",
     "theme.error_color": "#dc2626",
     "theme.info_color": "#3b82f6",
-    "system.theme_mode": "light",
+    "system.theme_mode": "system",
     "theme.background_color": "#1e1e1e",
     "system.custom_theme_path": ""
 }

@@ -557,7 +557,10 @@ QCheckBox::indicator:checked {{
 }}
 
 QCheckBox::indicator:checked::after {{
-    image: url(data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"white\"><path d=\"M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z\"/></svg>);
+    width: 6px;
+    height: 6px;
+    background-color: white;
+    margin: 4px;
 }}
 
 /* 单选按钮 */
@@ -691,13 +694,13 @@ QTabBar::tab:hover:not(selected) {{
 
 /* DockWidget */
 QDockWidget {{
-    titlebar-close-icon: url(data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"{text_rgb}\"><path d=\"M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z\"/></svg>);
-    titlebar-normal-icon: url(data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"{text_rgb}\"><path d=\"M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z\"/></svg>);
+    background-color: {bg_color};
 }}
 
 QDockWidget::title {{
     background-color: {surface_color};
     padding: 4px 8px;
+    color: {text_color};
 }}
 
 /* 进度条 */
