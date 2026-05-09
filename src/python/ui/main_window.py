@@ -1357,70 +1357,8 @@ class MainWindow(QtWidgets.QMainWindow):
                         utils.logger.info("✅ nodeGraphQt.nodes 标签已隐藏", module="main_window")
                         break
 
-                # 3. 添加刷新节点库按钮
-                self._add_refresh_button_to_palette(tab_widget)
-
         except Exception as e:
             utils.logger.error(f"❌ 自定义节点库失败: {e}", module="main_window")
-
-    def _add_refresh_button_to_palette(self, tab_widget):
-        """
-        在节点库面板添加刷新按钮
-
-        Args:
-            tab_widget: QTabWidget 实例
-        """
-        try:
-            from PySide2.QtWidgets import QPushButton, QHBoxLayout, QWidget
-            from PySide2.QtCore import Qt
-
-            # 检查是否已经添加过刷新按钮（检查 tab_widget 中是否已有刷新标签）
-            has_refresh_tab = False
-            for i in range(tab_widget.count()):
-                if tab_widget.tabText(i) == "🔄":
-                    has_refresh_tab = True
-                    break
-            if has_refresh_tab:
-                return
-
-            # 创建刷新按钮
-            refresh_btn = QPushButton("🔄 刷新节点库")
-            refresh_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #4CAF50;
-                    color: white;
-                    border: none;
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                    font-weight: bold;
-                }
-                QPushButton:hover {
-                    background-color: #45a049;
-                }
-                QPushButton:pressed {
-                    background-color: #3d8b40;
-                }
-            """)
-            refresh_btn.clicked.connect(self._on_refresh_node_library)
-
-            # 创建一个容器widget来放置按钮
-            btn_container = QWidget()
-            btn_layout = QHBoxLayout(btn_container)
-            btn_layout.setContentsMargins(5, 5, 5, 5)
-            btn_layout.addWidget(refresh_btn)
-            btn_layout.addStretch()
-
-            # 添加到标签页（作为最后一个标签）
-            tab_widget.addTab(btn_container, "🔄")
-            tab_widget.tabBar().setTabToolTip(tab_widget.count() - 1, "点击刷新节点库")
-
-            # 保存按钮引用
-            self._node_library_refresh_btn = refresh_btn
-
-            utils.logger.info("✅ 节点库刷新按钮已添加", module="main_window")
-
-        except Exception as e:
-            utils.logger.error(f"❌ 添加刷新按钮失败: {e}", module="main_window")
 
     def _clear_node_factory(self):
         """
