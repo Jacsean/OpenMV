@@ -103,6 +103,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # 创建默认工程和工作流（此时 UI 已就绪）
         self.project_ui.initialize_default_project()
 
+        # 应用主题配置
+        self._apply_theme_on_startup()
+
         self._setup_event_subscriptions()
 
     def _setup_event_subscriptions(self):
@@ -1216,6 +1219,21 @@ class MainWindow(QtWidgets.QMainWindow):
             self.setStyleSheet(stylesheet)
         
         utils.logger.info("⚙️ 系统设置已更新", module="main_window")
+
+    def _apply_theme_on_startup(self):
+        """
+        启动时应用保存的主题配置
+        """
+        from core.theme_manager import theme_manager
+        
+        stylesheet = theme_manager.generate_stylesheet()
+        
+        app = QtWidgets.QApplication.instance()
+        if app:
+            app.setStyleSheet(stylesheet)
+        
+        saved_theme = theme_manager.get_current_mode()
+        utils.logger.info(f"🎨 启动时应用主题: {saved_theme}", module="main_window")
 
     def show_about(self):
         """

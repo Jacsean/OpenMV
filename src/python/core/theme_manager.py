@@ -84,6 +84,7 @@ class ThemeManager:
         # 初始化
         self._load_default_colors()
         self._setup_config_listeners()
+        self._apply_saved_theme()
 
     def _load_default_colors(self):
         """加载默认颜色配置"""
@@ -109,9 +110,12 @@ class ThemeManager:
         config_manager.subscribe('theme.primary_color', self._on_color_changed)
         config_manager.subscribe('theme.accent_color', self._on_color_changed)
         config_manager.subscribe('theme.bg_color', self._on_color_changed)
-        config_manager.subscribe('theme.surface_color', self._on_color_changed)
-        config_manager.subscribe('theme.text_color', self._on_color_changed)
-        config_manager.subscribe('theme.border_color', self._on_color_changed)
+
+    def _apply_saved_theme(self):
+        """应用保存的主题配置"""
+        saved_theme = config_manager.get('system.theme', 'dark')
+        logger.info(f"启动时应用保存的主题: {saved_theme}", module="theme")
+        self.apply_theme(saved_theme)
 
     def _on_theme_changed(self, key: str, value: str):
         """主题变更回调"""
@@ -153,6 +157,15 @@ class ThemeManager:
         self._notify_listeners(self._current_mode)
 
         logger.info(f"主题已切换为: {mode}", module="theme")
+
+    def get_current_mode(self) -> str:
+        """
+        获取当前主题模式
+
+        Returns:
+            当前主题模式字符串 ('system', 'light', 'dark', 'custom')
+        """
+        return self._current_mode.value
 
     def _apply_system_theme(self):
         """跟随系统主题"""
