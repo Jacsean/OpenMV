@@ -103,6 +103,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # 创建默认工程和工作流（此时 UI 已就绪）
         self.project_ui.initialize_default_project()
 
+        # 应用主题配置
+        self._apply_theme_on_startup()
+        self._setup_theme_listener()
+
         self._setup_event_subscriptions()
 
     def _setup_event_subscriptions(self):
@@ -954,6 +958,15 @@ class MainWindow(QtWidgets.QMainWindow):
         reload_plugins_action.triggered.connect(self.reload_plugins)
         plugin_menu.addAction(reload_plugins_action)
 
+        # === 设置菜单 ===
+        settings_menu = menubar.addMenu("设置(&S)")
+
+        system_settings_action = QtWidgets.QAction("⚙️ 系统设置", self)
+        system_settings_action.setStatusTip("配置系统参数")
+        system_settings_action.setShortcut("Ctrl+,")
+        system_settings_action.triggered.connect(self.open_settings)
+        settings_menu.addAction(system_settings_action)
+
         # === 帮助菜单 ===
         help_menu = menubar.addMenu("帮助(&H)")
 
@@ -1181,6 +1194,61 @@ class MainWindow(QtWidgets.QMainWindow):
         if node_id in self.preview_windows:
             del self.preview_windows[node_id]
             utils.logger.info(f"🗑️ 预览窗口已关闭，清理引用", module="main_window")
+
+    def open_settings(self):
+        """
+        打开系统设置对话框
+        """
+        from ui.settings_dialog import SettingsDialog
+        
+        dialog = SettingsDialog(parent=self)
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            self._apply_settings_changes()
+
+    def _apply_settings_changes(self):
+        """
+        应用配置变更到界面
+        """
+        from core.theme_manager import theme_manager
+        
+        stylesheet = theme_manager.generate_stylesheet()
+        
+        app = QtWidgets.QApplication.instance()
+        if app:
+            app.setStyleSheet(stylesheet)
+        else:
+            self.setStyleSheet(stylesheet)
+        
+        utils.logger.info("⚙️ 系统设置已更新", module="main_window")
+
+    def _setup_theme_listener(self):
+        """设置主题变更监听器"""
+        from core.theme_manager import theme_manager
+        theme_manager.subscribe(self._on_theme_changed)
+
+    def _on_theme_changed(self, mode):
+        """主题变更回调"""
+        from core.theme_manager import theme_manager
+        stylesheet = theme_manager.generate_stylesheet()
+        app = QtWidgets.QApplication.instance()
+        if app:
+            app.setStyleSheet(stylesheet)
+        utils.logger.info(f"🎨 主题已变更并应用", module="main_window")
+
+    def _apply_theme_on_startup(self):
+        """
+        启动时应用保存的主题配置
+        """
+        from core.theme_manager import theme_manager
+        
+        stylesheet = theme_manager.generate_stylesheet()
+        
+        app = QtWidgets.QApplication.instance()
+        if app:
+            app.setStyleSheet(stylesheet)
+        
+        saved_theme = theme_manager.get_current_mode()
+        utils.logger.info(f"🎨 启动时应用主题: {saved_theme}", module="main_window")
 
     def show_about(self):
         """
