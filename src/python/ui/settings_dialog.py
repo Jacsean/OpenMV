@@ -534,9 +534,9 @@ class SettingsDialog(QtWidgets.QDialog):
             logger.info("配置已保存", module="settings")
             QtWidgets.QMessageBox.information(self, "成功", "配置已保存！")
             
-            # 通知主题变更
-            from core.theme_manager import ThemeMode
-            theme_manager._notify_listeners(ThemeMode(theme_manager.get_current_mode()))
+            # 通知主题变更（直接调用apply_theme确保颜色被更新）
+            current_mode = theme_manager.get_current_mode()
+            theme_manager.apply_theme(current_mode)
 
             self.accept()
 
