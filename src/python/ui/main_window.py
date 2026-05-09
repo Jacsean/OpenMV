@@ -1224,7 +1224,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _setup_theme_listener(self):
         """设置主题变更监听器"""
         from core.theme_manager import theme_manager
-        theme_manager.add_listener(self._on_theme_changed)
+        theme_manager.subscribe(self._on_theme_changed)
 
     def _on_theme_changed(self, mode):
         """主题变更回调"""
