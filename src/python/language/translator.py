@@ -1,7 +1,9 @@
 import os
-from PySide2.QtCore import QCoreApplication, QTranslator
+from PySide2.QtCore import QCoreApplication, QTranslator, Qt, QObject, Signal
 
-class TranslatorManager:
+class TranslatorManager(QObject):
+    language_changed = Signal(str)
+    
     _instance = None
     
     def __new__(cls):
@@ -13,6 +15,7 @@ class TranslatorManager:
     def __init__(self):
         if self._initialized:
             return
+        super().__init__()
         self._qt_translator = QTranslator()
         self._current_language = "zh_CN"
         self._supported_languages = {
@@ -146,7 +149,12 @@ class TranslatorManager:
             self._qt_translator.load(qm_path)
             QCoreApplication.installTranslator(self._qt_translator)
         
+        old_lang = self._current_language
         self._current_language = lang_code
+        
+        if old_lang != lang_code:
+            self.language_changed.emit(lang_code)
+        
         return True
     
     def get_current_language(self):

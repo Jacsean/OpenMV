@@ -110,11 +110,78 @@ class MainWindow(QtWidgets.QMainWindow):
         # 应用主题配置
         self._apply_theme_on_startup()
         self._setup_theme_listener()
+        self._setup_language_listener()
 
         self._setup_event_subscriptions()
     
     def tr(self, text):
         return self._translator.translate(text)
+    
+    def _setup_language_listener(self):
+        """
+        设置语言变化监听器
+        """
+        self._translator.language_changed.connect(self._on_language_changed)
+    
+    def _on_language_changed(self, lang_code):
+        """
+        语言变化时的回调
+        """
+        utils.logger.info(f"🌐 语言已切换到: {lang_code}", module="main_window")
+        
+        # 更新窗口标题
+        self.setWindowTitle(self.tr("图形化视觉处理系统") + " v5.0")
+        
+        # 更新插件翻译
+        if self.plugin_manager:
+            self.plugin_manager.set_language(lang_code)
+            self.plugin_manager.scan_plugins()
+        
+        # 刷新菜单栏
+        self._recreate_menu_bar()
+        
+        # 刷新工具栏
+        self._recreate_toolbar()
+        
+        # 刷新节点库
+        if self.nodes_palette:
+            self._refresh_node_palette()
+
+    def _recreate_menu_bar(self):
+        """
+        重新创建菜单栏以应用新语言
+        """
+        # 移除旧菜单栏
+        old_menubar = self.menuBar()
+        if old_menubar:
+            old_menubar.clear()
+        
+        # 重新创建菜单栏
+        self._create_menu_bar()
+    
+    def _recreate_toolbar(self):
+        """
+        重新创建工具栏以应用新语言
+        """
+        # 移除所有工具栏
+        for toolbar in self.findChildren(QtWidgets.QToolBar):
+            self.removeToolBar(toolbar)
+        
+        # 重新创建工具栏
+        self._create_toolbar()
+    
+    def _refresh_node_palette(self):
+        """
+        刷新节点库显示
+        """
+        try:
+            if self.nodes_palette and hasattr(self.nodes_palette, 'tab_widget'):
+                tab_widget = self.nodes_palette.tab_widget()
+                if tab_widget:
+                    for i in range(tab_widget.count()):
+                        tab_widget.setTabText(i, self.tr(tab_widget.tabText(i)))
+        except Exception as e:
+            utils.logger.warning(f"刷新节点库失败: {e}", module="main_window")
 
     def _setup_event_subscriptions(self):
         """
@@ -774,55 +841,55 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         创建工具栏（v4.1 - 模块化版本）
         """
-        toolbar = self.addToolBar("主工具栏")
+        toolbar = self.addToolBar(self.tr("主工具栏"))
 
         # === 工程管理 ===
-        new_project_action = QtWidgets.QAction("📄 新建", self)
-        new_project_action.setStatusTip("创建新工程")
+        new_project_action = QtWidgets.QAction("📄 " + self.tr("新建"), self)
+        new_project_action.setStatusTip(self.tr("创建新工程"))
         new_project_action.triggered.connect(self.new_project)
         toolbar.addAction(new_project_action)
 
-        open_project_action = QtWidgets.QAction("📂 打开", self)
-        open_project_action.setStatusTip("打开工程(.proj)")
+        open_project_action = QtWidgets.QAction("📂 " + self.tr("打开"), self)
+        open_project_action.setStatusTip(self.tr("打开工程(.proj)"))
         open_project_action.triggered.connect(self.open_project)
         toolbar.addAction(open_project_action)
 
-        save_project_action = QtWidgets.QAction("💾 保存", self)
-        save_project_action.setStatusTip("保存工程为单文件")
+        save_project_action = QtWidgets.QAction("💾 " + self.tr("保存"), self)
+        save_project_action.setStatusTip(self.tr("保存工程为单文件"))
         save_project_action.triggered.connect(self.save_project)
         toolbar.addAction(save_project_action)
 
         toolbar.addSeparator()
 
         # === 工作流管理 ===
-        add_workflow_action = QtWidgets.QAction("➕ 添加工作流", self)
-        add_workflow_action.setStatusTip("添加新的工作流")
+        add_workflow_action = QtWidgets.QAction("➕ " + self.tr("添加工作流"), self)
+        add_workflow_action.setStatusTip(self.tr("添加新的工作流"))
         add_workflow_action.triggered.connect(self.add_new_workflow)
         toolbar.addAction(add_workflow_action)
 
         toolbar.addSeparator()
 
         # === 执行控制 ===
-        run_action = QtWidgets.QAction("▶ 运行", self)
-        run_action.setStatusTip("执行当前工作流")
+        run_action = QtWidgets.QAction("▶ " + self.tr("运行"), self)
+        run_action.setStatusTip(self.tr("执行当前工作流"))
         run_action.triggered.connect(self.run_graph)
         toolbar.addAction(run_action)
 
-        run_all_action = QtWidgets.QAction("⏩ 运行全部", self)
-        run_all_action.setStatusTip("执行所有工作流")
+        run_all_action = QtWidgets.QAction("⏩ " + self.tr("运行全部"), self)
+        run_all_action.setStatusTip(self.tr("执行所有工作流"))
         run_all_action.triggered.connect(self.run_all_workflows)
         toolbar.addAction(run_all_action)
 
-        clear_action = QtWidgets.QAction("🗑 清空", self)
-        clear_action.setStatusTip("清空当前工作流")
+        clear_action = QtWidgets.QAction("🗑 " + self.tr("清空"), self)
+        clear_action.setStatusTip(self.tr("清空当前工作流"))
         clear_action.triggered.connect(self.clear_graph)
         toolbar.addAction(clear_action)
 
         toolbar.addSeparator()
 
         # === 调试控制 ===
-        self.debug_mode_action = QtWidgets.QAction("🐛 调试模式", self)
-        self.debug_mode_action.setStatusTip("启用/禁用节点调试模式")
+        self.debug_mode_action = QtWidgets.QAction("🐛 " + self.tr("调试模式"), self)
+        self.debug_mode_action.setStatusTip(self.tr("启用/禁用节点调试模式"))
         self.debug_mode_action.setCheckable(True)
         self.debug_mode_action.triggered.connect(self._toggle_debug_mode)
         toolbar.addAction(self.debug_mode_action)
@@ -842,33 +909,33 @@ class MainWindow(QtWidgets.QMainWindow):
         menubar = self.menuBar()
 
         # === 文件菜单 ===
-        file_menu = menubar.addMenu("文件(&F)")
+        file_menu = menubar.addMenu(self.tr("文件") + "(&F)")
 
         # 新建工程
-        new_project_action = QtWidgets.QAction("📄 新建工程", self)
+        new_project_action = QtWidgets.QAction("📄 " + self.tr("新建工程"), self)
         new_project_action.setShortcut("Ctrl+Shift+N")
-        new_project_action.setStatusTip("创建新工程")
+        new_project_action.setStatusTip(self.tr("创建新工程"))
         new_project_action.triggered.connect(self.new_project)
         file_menu.addAction(new_project_action)
 
         # 打开工程
-        open_project_action = QtWidgets.QAction("📂 打开工程", self)
+        open_project_action = QtWidgets.QAction("📂 " + self.tr("打开工程"), self)
         open_project_action.setShortcut("Ctrl+Shift+O")
-        open_project_action.setStatusTip("打开已有工程")
+        open_project_action.setStatusTip(self.tr("打开已有工程"))
         open_project_action.triggered.connect(self.open_project)
         file_menu.addAction(open_project_action)
 
         # 保存工程
-        save_project_action = QtWidgets.QAction("💾 保存工程", self)
+        save_project_action = QtWidgets.QAction("💾 " + self.tr("保存工程"), self)
         save_project_action.setShortcut("Ctrl+Shift+S")
-        save_project_action.setStatusTip("保存当前工程为单文件(.proj)")
+        save_project_action.setStatusTip(self.tr("保存当前工程为单文件(.proj)"))
         save_project_action.triggered.connect(self.save_project)
         file_menu.addAction(save_project_action)
 
         file_menu.addSeparator()
 
         # === 最近工程子菜单 ===
-        recent_menu = file_menu.addMenu("📋 最近工程")
+        recent_menu = file_menu.addMenu("📋 " + self.tr("最近工程"))
         self.recent_projects_menu = recent_menu  # 保存引用以便后续更新
 
         # 连接菜单显示信号以动态更新
@@ -878,107 +945,107 @@ class MainWindow(QtWidgets.QMainWindow):
         file_menu.addSeparator()
 
         # 退出
-        exit_action = QtWidgets.QAction("❌ 退出", self)
+        exit_action = QtWidgets.QAction("❌ " + self.tr("退出"), self)
         exit_action.setShortcut("Alt+F4")
-        exit_action.setStatusTip("退出应用程序")
+        exit_action.setStatusTip(self.tr("退出应用程序"))
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
         # === 工作流菜单 ===
-        workflow_menu = menubar.addMenu("工作流(&W)")
+        workflow_menu = menubar.addMenu(self.tr("工作流") + "(&W)")
 
         # 添加工作流
-        add_workflow_action = QtWidgets.QAction("➕ 添加工作流", self)
+        add_workflow_action = QtWidgets.QAction("➕ " + self.tr("添加工作流"), self)
         add_workflow_action.setShortcut("Ctrl+N")
-        add_workflow_action.setStatusTip("添加新的工作流")
+        add_workflow_action.setStatusTip(self.tr("添加新的工作流"))
         add_workflow_action.triggered.connect(self.add_new_workflow)
         workflow_menu.addAction(add_workflow_action)
 
         # 关闭当前工作流
-        close_workflow_action = QtWidgets.QAction("❌ 关闭当前工作流", self)
+        close_workflow_action = QtWidgets.QAction("❌ " + self.tr("关闭当前工作流"), self)
         close_workflow_action.setShortcut("Ctrl+W")
-        close_workflow_action.setStatusTip("关闭当前工作流标签页")
+        close_workflow_action.setStatusTip(self.tr("关闭当前工作流标签页"))
         close_workflow_action.triggered.connect(self.close_current_workflow)
         workflow_menu.addAction(close_workflow_action)
 
         workflow_menu.addSeparator()
 
         # 重命名当前工作流
-        rename_workflow_action = QtWidgets.QAction("✏️ 重命名", self)
-        rename_workflow_action.setStatusTip("重命名当前工作流")
+        rename_workflow_action = QtWidgets.QAction("✏️ " + self.tr("重命名"), self)
+        rename_workflow_action.setStatusTip(self.tr("重命名当前工作流"))
         rename_workflow_action.triggered.connect(self.rename_current_workflow)
         workflow_menu.addAction(rename_workflow_action)
 
         # === 执行菜单 ===
-        run_menu = menubar.addMenu("执行(&R)")
+        run_menu = menubar.addMenu(self.tr("执行") + "(&R)")
 
         # 运行当前工作流
-        run_action = QtWidgets.QAction("▶ 运行当前工作流", self)
+        run_action = QtWidgets.QAction("▶ " + self.tr("运行当前工作流"), self)
         run_action.setShortcut("F5")
-        run_action.setStatusTip("执行当前工作流")
+        run_action.setStatusTip(self.tr("执行当前工作流"))
         run_action.triggered.connect(self.run_graph)
         run_menu.addAction(run_action)
 
         # 运行所有工作流
-        run_all_action = QtWidgets.QAction("⏩ 运行所有工作流", self)
+        run_all_action = QtWidgets.QAction("⏩ " + self.tr("运行所有工作流"), self)
         run_all_action.setShortcut("Shift+F5")
-        run_all_action.setStatusTip("执行所有工作流")
+        run_all_action.setStatusTip(self.tr("执行所有工作流"))
         run_all_action.triggered.connect(self.run_all_workflows)
         run_menu.addAction(run_all_action)
 
         run_menu.addSeparator()
 
         # 清空当前工作流
-        clear_action = QtWidgets.QAction("🗑 清空当前工作流", self)
-        clear_action.setStatusTip("清空当前工作流的所有节点")
+        clear_action = QtWidgets.QAction("🗑 " + self.tr("清空当前工作流"), self)
+        clear_action.setStatusTip(self.tr("清空当前工作流的所有节点"))
         clear_action.triggered.connect(self.clear_graph)
         run_menu.addAction(clear_action)
 
         # === 插件管理菜单 ===
-        plugin_menu = menubar.addMenu("插件(&P)")
+        plugin_menu = menubar.addMenu(self.tr("插件") + "(&P)")
 
         # 节点编辑器
-        node_editor_action = QtWidgets.QAction("🛠️ 节点编辑器", self)
-        node_editor_action.setStatusTip("创建、编辑和管理节点")
+        node_editor_action = QtWidgets.QAction("🛠️ " + self.tr("节点编辑器"), self)
+        node_editor_action.setStatusTip(self.tr("创建、编辑和管理节点"))
         node_editor_action.triggered.connect(self.open_node_editor)
         plugin_menu.addAction(node_editor_action)
 
         plugin_menu.addSeparator()
 
         # 安装插件
-        install_plugin_action = QtWidgets.QAction("📦 安装插件", self)
-        install_plugin_action.setStatusTip("从ZIP文件安装插件")
+        install_plugin_action = QtWidgets.QAction("📦 " + self.tr("安装插件"), self)
+        install_plugin_action.setStatusTip(self.tr("从ZIP文件安装插件"))
         install_plugin_action.triggered.connect(self.install_plugin)
         plugin_menu.addAction(install_plugin_action)
 
         # 管理插件
-        manage_plugins_action = QtWidgets.QAction("⚙️ 管理插件", self)
-        manage_plugins_action.setStatusTip("查看和管理已安装插件")
+        manage_plugins_action = QtWidgets.QAction("⚙️ " + self.tr("管理插件"), self)
+        manage_plugins_action.setStatusTip(self.tr("查看和管理已安装插件"))
         manage_plugins_action.triggered.connect(self.manage_plugins)
         plugin_menu.addAction(manage_plugins_action)
 
         plugin_menu.addSeparator()
 
         # 刷新插件
-        reload_plugins_action = QtWidgets.QAction("🔄 刷新插件", self)
-        reload_plugins_action.setStatusTip("重新扫描并加载插件")
+        reload_plugins_action = QtWidgets.QAction("🔄 " + self.tr("刷新插件"), self)
+        reload_plugins_action.setStatusTip(self.tr("重新扫描并加载插件"))
         reload_plugins_action.triggered.connect(self.reload_plugins)
         plugin_menu.addAction(reload_plugins_action)
 
         # === 设置菜单 ===
-        settings_menu = menubar.addMenu("设置(&S)")
+        settings_menu = menubar.addMenu(self.tr("设置") + "(&S)")
 
-        system_settings_action = QtWidgets.QAction("⚙️ 系统设置", self)
-        system_settings_action.setStatusTip("配置系统参数")
+        system_settings_action = QtWidgets.QAction("⚙️ " + self.tr("系统设置"), self)
+        system_settings_action.setStatusTip(self.tr("配置系统参数"))
         system_settings_action.setShortcut("Ctrl+,")
         system_settings_action.triggered.connect(self.open_settings)
         settings_menu.addAction(system_settings_action)
 
         # === 帮助菜单 ===
-        help_menu = menubar.addMenu("帮助(&H)")
+        help_menu = menubar.addMenu(self.tr("帮助") + "(&H)")
 
-        about_action = QtWidgets.QAction("ℹ️ 关于", self)
-        about_action.setStatusTip("关于本软件")
+        about_action = QtWidgets.QAction("ℹ️ " + self.tr("关于"), self)
+        about_action.setStatusTip(self.tr("关于本软件"))
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
