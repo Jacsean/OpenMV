@@ -132,18 +132,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # 更新窗口标题
         self.setWindowTitle(self.tr("图形化视觉处理系统") + " v5.0")
         
-        # 更新插件翻译并重新扫描插件（获取翻译后的名称）
+        # 更新插件翻译
         if self.plugin_manager:
             self.plugin_manager.set_language(lang_code)
-            # 扫描并获取带翻译的插件信息
-            translated_plugins = self.plugin_manager.scan_plugins()
-            # 更新_pending_plugins为带翻译的插件信息
-            if hasattr(self, '_pending_plugins'):
-                self._pending_plugins = translated_plugins
-        
-        # 刷新节点库（重新加载节点以应用翻译）
-        if self.nodes_palette and self.current_node_graph:
-            self._reload_node_library()
+            self.plugin_manager.scan_plugins()
         
         # 刷新菜单栏
         self._recreate_menu_bar()
@@ -151,51 +143,15 @@ class MainWindow(QtWidgets.QMainWindow):
         # 刷新工具栏
         self._recreate_toolbar()
         
-        # 刷新节点库标签
-        self._refresh_node_palette()
+        # 刷新节点库
+        if self.nodes_palette:
+            self._refresh_node_palette()
         
         # 刷新停靠窗口标题
         self._refresh_dock_titles()
         
         # 刷新节点说明面板
         self._refresh_node_info_panel()
-    
-    def _reload_node_library(self):
-        """
-        重新加载节点库以应用新的翻译
-        """
-        try:
-            utils.logger.info("🔄 重新加载节点库...", module="main_window")
-            
-            if not hasattr(self, 'current_node_graph') or not self.current_node_graph:
-                return
-            
-            # 1. 清空节点工厂
-            self._clear_node_factory()
-            
-            # 2. 清空节点库Graph的节点工厂
-            if hasattr(self.nodes_palette, '_node_graph') and self.nodes_palette._node_graph:
-                palette_graph = self.nodes_palette._node_graph
-                if hasattr(palette_graph, '_node_factory'):
-                    palette_graph._node_factory.__nodes = {}
-            
-            # 3. 清除标签页
-            tab_widget = self.nodes_palette.tab_widget()
-            if tab_widget:
-                while tab_widget.count() > 0:
-                    tab_widget.removeTab(0)
-            
-            # 4. 重新加载节点
-            self.plugin_ui.load_plugins_to_graph(self.current_node_graph)
-            
-            # 5. 重新自定义节点库
-            self._customize_node_palette()
-            
-            utils.logger.success("✅ 节点库重新加载完成", module="main_window")
-        except Exception as e:
-            utils.logger.error(f"❌ 重新加载节点库失败: {e}", module="main_window")
-            import traceback
-            traceback.print_exc()
 
     def _recreate_menu_bar(self):
         """
@@ -973,8 +929,8 @@ class MainWindow(QtWidgets.QMainWindow):
         toolbar.addSeparator()
 
         # === 视图控制 ===
-        fit_all_action = QtWidgets.QAction("⊞ " + self.tr("适应"), self)
-        fit_all_action.setStatusTip(self.tr("适应所有节点"))
+        fit_all_action = QtWidgets.QAction("⊞ 适应", self)
+        fit_all_action.setStatusTip("适应所有节点")
         fit_all_action.triggered.connect(self.fit_to_selection)
         toolbar.addAction(fit_all_action)
 
