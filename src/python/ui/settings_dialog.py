@@ -542,7 +542,7 @@ class SettingsDialog(QtWidgets.QDialog):
             config_manager.set('project.execution_timeout', self._execution_timeout_spin.value())
 
             logger.info(self.tr("配置已保存"), module="settings")
-            QtWidgets.QMessageBox.information(self, self.tr("成功"), self.tr("配置已保存！"))
+            # QtWidgets.QMessageBox.information(self, self.tr("成功"), self.tr("配置已保存！"))
             
             # 通知主题变更（直接调用apply_theme确保颜色被更新）
             current_mode = theme_manager.get_current_mode()
