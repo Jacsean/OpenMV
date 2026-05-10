@@ -46,10 +46,39 @@ class SettingsDialog(QtWidgets.QDialog):
         self._tab_widget = None
         self._pages = {}
 
+        # 设置语言变化监听器
+        self._setup_language_listener()
+
         # 创建UI
         self._setup_ui()
         
         # 设置窗口标题（必须在_setup_ui之后调用，确保_translator已初始化）
+        self.setWindowTitle(self.tr("系统设置"))
+    
+    def _setup_language_listener(self):
+        """设置语言变化监听器"""
+        self._translator.language_changed.connect(self._on_language_changed)
+    
+    def _on_language_changed(self, lang_code):
+        """语言变化时的回调"""
+        # 重新创建UI以应用新语言
+        self._rebuild_ui()
+    
+    def _rebuild_ui(self):
+        """重新创建UI以应用新语言"""
+        # 清空现有布局
+        if self.layout():
+            # 移除布局中的所有widget
+            while self.layout().count():
+                item = self.layout().takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+        
+        # 重新创建UI
+        self._setup_ui()
+        
+        # 更新窗口标题
         self.setWindowTitle(self.tr("系统设置"))
     
     def tr(self, text):

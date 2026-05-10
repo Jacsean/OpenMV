@@ -146,6 +146,12 @@ class MainWindow(QtWidgets.QMainWindow):
         # 刷新节点库
         if self.nodes_palette:
             self._refresh_node_palette()
+        
+        # 刷新停靠窗口标题
+        self._refresh_dock_titles()
+        
+        # 刷新节点说明面板
+        self._refresh_node_info_panel()
 
     def _recreate_menu_bar(self):
         """
@@ -182,6 +188,32 @@ class MainWindow(QtWidgets.QMainWindow):
                         tab_widget.setTabText(i, self.tr(tab_widget.tabText(i)))
         except Exception as e:
             utils.logger.warning(f"刷新节点库失败: {e}", module="main_window")
+    
+    def _refresh_dock_titles(self):
+        """刷新停靠窗口标题"""
+        for dock in self.findChildren(QtWidgets.QDockWidget):
+            window_title = dock.windowTitle()
+            if window_title:
+                # 移除图标前缀，翻译，然后恢复图标（如果有）
+                prefix = ""
+                content = window_title
+                if " " in window_title and window_title[0:2].encode('utf-8').isalpha() == False:
+                    parts = window_title.split(" ", 1)
+                    if len(parts) == 2:
+                        prefix = parts[0] + " "
+                        content = parts[1]
+                translated = self.tr(content)
+                dock.setWindowTitle(prefix + translated)
+    
+    def _refresh_node_info_panel(self):
+        """刷新节点说明面板"""
+        if hasattr(self, 'node_info_title_label') and self.node_info_title_label:
+            self.node_info_title_label.setText("📋 " + self.tr("节点说明"))
+        if hasattr(self, 'info_name_label') and self.info_name_label:
+            # 如果当前没有选择节点，更新默认文本
+            current_text = self.info_name_label.text()
+            if current_text in ["未选择节点", "No Node Selected"]:
+                self.info_name_label.setText(self.tr("未选择节点"))
 
     def _setup_event_subscriptions(self):
         """
@@ -343,7 +375,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._left_layout.addWidget(self.node_info_panel)
 
         # 将整个左侧容器作为一个DockWidget
-        dock_left = QtWidgets.QDockWidget("节点库", self)
+        dock_left = QtWidgets.QDockWidget(self.tr("节点库"), self)
         dock_left.setWidget(self._left_container)
         dock_left.setFeatures(
             QtWidgets.QDockWidget.NoDockWidgetFeatures)
@@ -413,9 +445,9 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 初始化属性面板
         self.properties_bin = PropertiesBinWidget(node_graph=node_graph)
-        self.properties_bin.setWindowTitle("属性面板")
+        self.properties_bin.setWindowTitle(self.tr("属性面板"))
         
-        dock_properties = QtWidgets.QDockWidget("属性面板", self)
+        dock_properties = QtWidgets.QDockWidget(self.tr("属性面板"), self)
         dock_properties.setWidget(self.properties_bin)
         dock_properties.setProperty("animated", False)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_properties)
@@ -444,9 +476,9 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.setSpacing(8)
 
         # 标题
-        title_label = QtWidgets.QLabel("📋 节点说明")
-        title_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
-        layout.addWidget(title_label)
+        self.node_info_title_label = QtWidgets.QLabel("📋 " + self.tr("节点说明"))
+        self.node_info_title_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
+        layout.addWidget(self.node_info_title_label)
 
         # 分隔线
         line = QtWidgets.QFrame()
@@ -455,7 +487,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(line)
 
         # 节点名称
-        self.info_name_label = QtWidgets.QLabel("未选择节点")
+        self.info_name_label = QtWidgets.QLabel(self.tr("未选择节点"))
         self.info_name_label.setFont(QtGui.QFont("Arial", 9, QtGui.QFont.Bold))
         self.info_name_label.setStyleSheet("color: #2c3e50;")
         layout.addWidget(self.info_name_label)
