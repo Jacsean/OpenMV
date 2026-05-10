@@ -12,6 +12,7 @@ from NodeGraphQt import NodeGraph, NodesPaletteWidget, PropertiesBinWidget
 from PySide2 import QtWidgets, QtCore, QtGui
 import utils
 from utils import logger
+from language.translator import TranslatorManager
 """
 图形化视觉编程系统 - 主窗口
 
@@ -61,9 +62,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
 
         super(MainWindow, self).__init__()
+        
+        # 初始化翻译器
+        self._translator = TranslatorManager()
     
         # 设置窗口属性
-        self.setWindowTitle("图形化视觉处理系统 v5.0")
+        self.setWindowTitle(self.tr("图形化视觉处理系统") + " v5.0")
         self.setGeometry(0, 0, 1600, 1024)
         
         # 禁用所有动画效果
@@ -108,6 +112,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._setup_theme_listener()
 
         self._setup_event_subscriptions()
+    
+    def tr(self, text):
+        return self._translator.translate(text)
 
     def _setup_event_subscriptions(self):
         """

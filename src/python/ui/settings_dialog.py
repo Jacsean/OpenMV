@@ -25,6 +25,7 @@ from PySide2 import QtWidgets, QtCore, QtGui
 from utils.logger import logger
 from core.config_manager import config_manager, ConfigCategory
 from core.theme_manager import theme_manager
+from language.translator import TranslatorManager
 
 
 class SettingsDialog(QtWidgets.QDialog):
@@ -34,7 +35,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("系统设置")
+        self._translator = TranslatorManager()
         self.setFixedSize(700, 700)
 
         # 保存原始配置（用于取消时恢复）
@@ -47,6 +48,12 @@ class SettingsDialog(QtWidgets.QDialog):
 
         # 创建UI
         self._setup_ui()
+        
+        # 设置窗口标题（必须在_setup_ui之后调用，确保_translator已初始化）
+        self.setWindowTitle(self.tr("系统设置"))
+    
+    def tr(self, text):
+        return self._translator.translate(text)
 
     def _save_original_configs(self):
         """保存原始配置"""
@@ -82,15 +89,15 @@ class SettingsDialog(QtWidgets.QDialog):
         button_layout = QtWidgets.QHBoxLayout()
         button_layout.setSpacing(10)
 
-        self.apply_button = QtWidgets.QPushButton("应用")
+        self.apply_button = QtWidgets.QPushButton(self.tr("应用"))
         self.apply_button.clicked.connect(self._apply_configs)
         button_layout.addWidget(self.apply_button)
 
-        self.reset_button = QtWidgets.QPushButton("重置")
+        self.reset_button = QtWidgets.QPushButton(self.tr("重置"))
         self.reset_button.clicked.connect(self._reset_configs)
         button_layout.addWidget(self.reset_button)
 
-        self.cancel_button = QtWidgets.QPushButton("取消")
+        self.cancel_button = QtWidgets.QPushButton(self.tr("取消"))
         self.cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(self.cancel_button)
 
@@ -106,17 +113,17 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.setSpacing(15)
 
         # 主题设置
-        theme_group = QtWidgets.QGroupBox("主题")
+        theme_group = QtWidgets.QGroupBox(self.tr("主题"))
         theme_layout = QtWidgets.QVBoxLayout(theme_group)
 
         # 主题模式选择
         self._theme_mode_group = QtWidgets.QButtonGroup()
 
         themes = [
-            ('system', '跟随系统'),
-            ('light', '亮色'),
-            ('dark', '暗色'),
-            ('custom', '自定义')
+            ('system', self.tr("跟随系统")),
+            ('light', self.tr("亮色")),
+            ('dark', self.tr("暗色")),
+            ('custom', self.tr("自定义"))
         ]
 
         current_theme = config_manager.get('system.theme', 'dark')
@@ -135,7 +142,7 @@ class SettingsDialog(QtWidgets.QDialog):
         self._custom_theme_path.setText(config_manager.get('system.custom_theme_path', ''))
         custom_layout.addWidget(self._custom_theme_path)
 
-        browse_btn = QtWidgets.QPushButton("浏览...")
+        browse_btn = QtWidgets.QPushButton(self.tr("浏览..."))
         browse_btn.clicked.connect(self._browse_theme_file)
         custom_layout.addWidget(browse_btn)
         theme_layout.addLayout(custom_layout)
@@ -143,7 +150,7 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.addWidget(theme_group)
 
         # 自定义颜色编辑
-        color_group = QtWidgets.QGroupBox("自定义颜色")
+        color_group = QtWidgets.QGroupBox(self.tr("自定义颜色"))
         color_layout = QtWidgets.QGridLayout(color_group)
         color_layout.setSpacing(10)
 
@@ -151,16 +158,16 @@ class SettingsDialog(QtWidgets.QDialog):
         self._color_pickers = {}
 
         color_items = [
-            ('primary', '主题色'),
-            ('accent', '强调色'),
-            ('background', '背景色'),
-            ('surface', '表面色'),
-            ('text', '文字色'),
-            ('border', '边框色'),
-            ('success', '成功色'),
-            ('warning', '警告色'),
-            ('error', '错误色'),
-            ('info', '信息色')
+            ('primary', self.tr("主题色")),
+            ('accent', self.tr("强调色")),
+            ('background', self.tr("背景色")),
+            ('surface', self.tr("表面色")),
+            ('text', self.tr("文字色")),
+            ('border', self.tr("边框色")),
+            ('success', self.tr("成功色")),
+            ('warning', self.tr("警告色")),
+            ('error', self.tr("错误色")),
+            ('info', self.tr("信息色"))
         ]
 
         row = 0
@@ -180,11 +187,11 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.addWidget(color_group)
 
         # 语言设置
-        lang_group = QtWidgets.QGroupBox("语言")
+        lang_group = QtWidgets.QGroupBox(self.tr("语言"))
         lang_layout = QtWidgets.QHBoxLayout(lang_group)
 
         self._language_combo = QtWidgets.QComboBox()
-        self._language_combo.addItem("中文", 'zh_CN')
+        self._language_combo.addItem(self.tr("中文"), 'zh_CN')
         self._language_combo.addItem("English", 'en_US')
         
         current_lang = config_manager.get('system.language', 'zh_CN')
@@ -199,7 +206,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
         layout.addStretch()
 
-        self._tab_widget.addTab(page, "🎨 外观")
+        self._tab_widget.addTab(page, self.tr("🎨 外观"))
         self._pages['appearance'] = page
 
     def _add_font_page(self):
@@ -210,7 +217,7 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.setSpacing(15)
 
         # 字体设置
-        font_group = QtWidgets.QGroupBox("字体设置")
+        font_group = QtWidgets.QGroupBox(self.tr("字体设置"))
         font_layout = QtWidgets.QFormLayout(font_group)
 
         # 字体家族
@@ -223,7 +230,7 @@ class SettingsDialog(QtWidgets.QDialog):
         if index >= 0:
             self._font_family_combo.setCurrentIndex(index)
         
-        font_layout.addRow("字体:", self._font_family_combo)
+        font_layout.addRow(self.tr("字体:"), self._font_family_combo)
 
         # 字体大小
         font_size_layout = QtWidgets.QHBoxLayout()
@@ -234,16 +241,16 @@ class SettingsDialog(QtWidgets.QDialog):
         font_size_layout.addWidget(QtWidgets.QLabel("px"))
         font_size_layout.addStretch()
         
-        font_layout.addRow("字体大小:", font_size_layout)
+        font_layout.addRow(self.tr("字体大小:"), font_size_layout)
 
         layout.addWidget(font_group)
 
         # 预览区域
-        preview_group = QtWidgets.QGroupBox("预览")
+        preview_group = QtWidgets.QGroupBox(self.tr("预览"))
         preview_layout = QtWidgets.QVBoxLayout(preview_group)
 
         self._preview_label = QtWidgets.QLabel()
-        self._preview_label.setText("预览文本示例\nPreview Text Example\n测试字体显示效果")
+        self._preview_label.setText(self.tr("预览文本示例") + "\nPreview Text Example\n" + self.tr("测试字体显示效果"))
         self._preview_label.setStyleSheet("padding: 10px;")
         preview_layout.addWidget(self._preview_label)
 
@@ -255,7 +262,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
         layout.addStretch()
 
-        self._tab_widget.addTab(page, "✏️ 字体")
+        self._tab_widget.addTab(page, self.tr("✏️ 字体"))
         self._pages['font'] = page
 
     def _add_window_page(self):
@@ -266,7 +273,7 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.setSpacing(15)
 
         # 窗口大小设置
-        size_group = QtWidgets.QGroupBox("窗口大小")
+        size_group = QtWidgets.QGroupBox(self.tr("窗口大小"))
         size_layout = QtWidgets.QFormLayout(size_group)
 
         # 宽度
@@ -275,8 +282,8 @@ class SettingsDialog(QtWidgets.QDialog):
         self._window_width_spin.setRange(800, 4000)
         self._window_width_spin.setValue(config_manager.get('system.window_width', 1600))
         width_layout.addWidget(self._window_width_spin)
-        width_layout.addWidget(QtWidgets.QLabel("像素"))
-        size_layout.addRow("宽度:", width_layout)
+        width_layout.addWidget(QtWidgets.QLabel(self.tr("像素")))
+        size_layout.addRow(self.tr("宽度:"), width_layout)
 
         # 高度
         height_layout = QtWidgets.QHBoxLayout()
@@ -284,26 +291,26 @@ class SettingsDialog(QtWidgets.QDialog):
         self._window_height_spin.setRange(600, 3000)
         self._window_height_spin.setValue(config_manager.get('system.window_height', 1024))
         height_layout.addWidget(self._window_height_spin)
-        height_layout.addWidget(QtWidgets.QLabel("像素"))
-        size_layout.addRow("高度:", height_layout)
+        height_layout.addWidget(QtWidgets.QLabel(self.tr("像素")))
+        size_layout.addRow(self.tr("高度:"), height_layout)
 
         layout.addWidget(size_group)
 
         # 启动选项
-        startup_group = QtWidgets.QGroupBox("启动选项")
+        startup_group = QtWidgets.QGroupBox(self.tr("启动选项"))
         startup_layout = QtWidgets.QVBoxLayout(startup_group)
 
-        self._maximized_check = QtWidgets.QCheckBox("启动时最大化窗口")
+        self._maximized_check = QtWidgets.QCheckBox(self.tr("启动时最大化窗口"))
         self._maximized_check.setChecked(config_manager.get('system.window_maximized', False))
         startup_layout.addWidget(self._maximized_check)
 
         layout.addWidget(startup_group)
 
         # 自动保存设置
-        save_group = QtWidgets.QGroupBox("自动保存")
+        save_group = QtWidgets.QGroupBox(self.tr("自动保存"))
         save_layout = QtWidgets.QFormLayout(save_group)
 
-        self._auto_save_check = QtWidgets.QCheckBox("启用自动保存")
+        self._auto_save_check = QtWidgets.QCheckBox(self.tr("启用自动保存"))
         self._auto_save_check.setChecked(config_manager.get('system.auto_save', True))
         save_layout.addRow(self._auto_save_check)
 
@@ -312,14 +319,14 @@ class SettingsDialog(QtWidgets.QDialog):
         self._auto_save_interval_spin.setRange(60, 3600)
         self._auto_save_interval_spin.setValue(config_manager.get('system.auto_save_interval', 300))
         interval_layout.addWidget(self._auto_save_interval_spin)
-        interval_layout.addWidget(QtWidgets.QLabel("秒"))
-        save_layout.addRow("自动保存间隔:", interval_layout)
+        interval_layout.addWidget(QtWidgets.QLabel(self.tr("秒")))
+        save_layout.addRow(self.tr("自动保存间隔:"), interval_layout)
 
         layout.addWidget(save_group)
 
         layout.addStretch()
 
-        self._tab_widget.addTab(page, "📐 窗口")
+        self._tab_widget.addTab(page, self.tr("📐 窗口"))
         self._pages['window'] = page
 
     def _add_project_page(self):
@@ -330,25 +337,25 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.setSpacing(15)
 
         # 项目设置
-        project_group = QtWidgets.QGroupBox("项目默认设置")
+        project_group = QtWidgets.QGroupBox(self.tr("项目默认设置"))
         project_layout = QtWidgets.QFormLayout(project_group)
 
         # 默认工作流名称
         self._default_workflow_name_edit = QtWidgets.QLineEdit()
-        self._default_workflow_name_edit.setText(config_manager.get('project.default_workflow_name', '工作流'))
-        project_layout.addRow("默认工作流名称:", self._default_workflow_name_edit)
+        self._default_workflow_name_edit.setText(config_manager.get('project.default_workflow_name', self.tr("工作流")))
+        project_layout.addRow(self.tr("默认工作流名称:"), self._default_workflow_name_edit)
 
         layout.addWidget(project_group)
 
         # 节点设置
-        node_group = QtWidgets.QGroupBox("节点设置")
+        node_group = QtWidgets.QGroupBox(self.tr("节点设置"))
         node_layout = QtWidgets.QVBoxLayout(node_group)
 
-        self._auto_connect_check = QtWidgets.QCheckBox("自动连接节点")
+        self._auto_connect_check = QtWidgets.QCheckBox(self.tr("自动连接节点"))
         self._auto_connect_check.setChecked(config_manager.get('project.auto_connect_nodes', False))
         node_layout.addWidget(self._auto_connect_check)
 
-        self._show_description_check = QtWidgets.QCheckBox("显示节点描述")
+        self._show_description_check = QtWidgets.QCheckBox(self.tr("显示节点描述"))
         self._show_description_check.setChecked(config_manager.get('project.show_node_description', True))
         node_layout.addWidget(self._show_description_check)
 
@@ -359,23 +366,23 @@ class SettingsDialog(QtWidgets.QDialog):
         self._node_width_spin.setRange(100, 400)
         self._node_width_spin.setValue(config_manager.get('project.node_width', 200))
         node_width_layout.addWidget(self._node_width_spin)
-        node_width_layout.addWidget(QtWidgets.QLabel("像素"))
-        node_size_layout.addRow("节点宽度:", node_width_layout)
+        node_width_layout.addWidget(QtWidgets.QLabel(self.tr("像素")))
+        node_size_layout.addRow(self.tr("节点宽度:"), node_width_layout)
 
         node_spacing_layout = QtWidgets.QHBoxLayout()
         self._node_spacing_spin = QtWidgets.QSpinBox()
         self._node_spacing_spin.setRange(10, 200)
         self._node_spacing_spin.setValue(config_manager.get('project.node_spacing', 50))
         node_spacing_layout.addWidget(self._node_spacing_spin)
-        node_spacing_layout.addWidget(QtWidgets.QLabel("像素"))
-        node_size_layout.addRow("节点间距:", node_spacing_layout)
+        node_spacing_layout.addWidget(QtWidgets.QLabel(self.tr("像素")))
+        node_size_layout.addRow(self.tr("节点间距:"), node_spacing_layout)
 
         node_layout.addLayout(node_size_layout)
 
         layout.addWidget(node_group)
 
         # 执行设置
-        exec_group = QtWidgets.QGroupBox("执行设置")
+        exec_group = QtWidgets.QGroupBox(self.tr("执行设置"))
         exec_layout = QtWidgets.QFormLayout(exec_group)
 
         timeout_layout = QtWidgets.QHBoxLayout()
@@ -383,14 +390,14 @@ class SettingsDialog(QtWidgets.QDialog):
         self._execution_timeout_spin.setRange(10, 300)
         self._execution_timeout_spin.setValue(config_manager.get('project.execution_timeout', 30))
         timeout_layout.addWidget(self._execution_timeout_spin)
-        timeout_layout.addWidget(QtWidgets.QLabel("秒"))
-        exec_layout.addRow("执行超时时间:", timeout_layout)
+        timeout_layout.addWidget(QtWidgets.QLabel(self.tr("秒")))
+        exec_layout.addRow(self.tr("执行超时时间:"), timeout_layout)
 
         layout.addWidget(exec_group)
 
         layout.addStretch()
 
-        self._tab_widget.addTab(page, "📁 项目")
+        self._tab_widget.addTab(page, self.tr("📁 项目"))
         self._pages['project'] = page
 
     def _add_shortcuts_page(self):
@@ -401,12 +408,12 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.setSpacing(15)
 
         # 快捷键列表
-        shortcuts_group = QtWidgets.QGroupBox("快捷键")
+        shortcuts_group = QtWidgets.QGroupBox(self.tr("快捷键"))
         shortcuts_layout = QtWidgets.QVBoxLayout(shortcuts_group)
 
         self._shortcuts_table = QtWidgets.QTableWidget()
         self._shortcuts_table.setColumnCount(2)
-        self._shortcuts_table.setHorizontalHeaderLabels(["功能", "快捷键"])
+        self._shortcuts_table.setHorizontalHeaderLabels([self.tr("功能"), self.tr("快捷键")])
         self._shortcuts_table.horizontalHeader().setStretchLastSection(True)
         self._shortcuts_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
 
@@ -423,13 +430,13 @@ class SettingsDialog(QtWidgets.QDialog):
 
         # 提示信息
         hint_label = QtWidgets.QLabel()
-        hint_label.setText("提示：快捷键配置将在下一次启动时生效")
+        hint_label.setText(self.tr("提示：快捷键配置将在下一次启动时生效"))
         hint_label.setStyleSheet("color: #858585; font-size: 12px;")
         layout.addWidget(hint_label)
 
         layout.addStretch()
 
-        self._tab_widget.addTab(page, "🎯 快捷键")
+        self._tab_widget.addTab(page, self.tr("🎯 快捷键"))
         self._pages['shortcuts'] = page
 
     def _get_system_fonts(self):
@@ -445,16 +452,16 @@ class SettingsDialog(QtWidgets.QDialog):
     def _get_default_shortcuts(self):
         """获取默认快捷键列表"""
         return {
-            '新建工程': 'Ctrl+Shift+N',
-            '打开工程': 'Ctrl+Shift+O',
-            '保存工程': 'Ctrl+Shift+S',
-            '添加工作流': 'Ctrl+N',
-            '关闭工作流': 'Ctrl+W',
-            '运行工作流': 'F5',
-            '运行全部工作流': 'Shift+F5',
-            '打开设置': 'Ctrl+,',
-            '适应视图': 'Ctrl+F',
-            '删除节点': 'Delete'
+            self.tr("新建工程"): 'Ctrl+Shift+N',
+            self.tr("打开工程"): 'Ctrl+Shift+O',
+            self.tr("保存工程"): 'Ctrl+Shift+S',
+            self.tr("添加工作流"): 'Ctrl+N',
+            self.tr("关闭工作流"): 'Ctrl+W',
+            self.tr("运行工作流"): 'F5',
+            self.tr("运行全部工作流"): 'Shift+F5',
+            self.tr("打开设置"): 'Ctrl+,',
+            self.tr("适应视图"): 'Ctrl+F',
+            self.tr("删除节点"): 'Delete'
         }
 
     def _browse_theme_file(self):
@@ -509,6 +516,9 @@ class SettingsDialog(QtWidgets.QDialog):
             # 语言配置
             lang = self._language_combo.currentData()
             config_manager.set('system.language', lang)
+            
+            # 切换语言
+            self._translator.set_language(lang)
 
             # 字体配置
             font_family = self._font_family_combo.currentText()
@@ -531,8 +541,8 @@ class SettingsDialog(QtWidgets.QDialog):
             config_manager.set('project.node_spacing', self._node_spacing_spin.value())
             config_manager.set('project.execution_timeout', self._execution_timeout_spin.value())
 
-            logger.info("配置已保存", module="settings")
-            QtWidgets.QMessageBox.information(self, "成功", "配置已保存！")
+            logger.info(self.tr("配置已保存"), module="settings")
+            QtWidgets.QMessageBox.information(self, self.tr("成功"), self.tr("配置已保存！"))
             
             # 通知主题变更（直接调用apply_theme确保颜色被更新）
             current_mode = theme_manager.get_current_mode()
@@ -541,8 +551,8 @@ class SettingsDialog(QtWidgets.QDialog):
             self.accept()
 
         except Exception as e:
-            logger.error(f"保存配置失败: {e}", module="settings")
-            QtWidgets.QMessageBox.error(self, "错误", f"保存配置失败: {e}")
+            logger.error(f"{self.tr('保存配置失败')}: {e}", module="settings")
+            QtWidgets.QMessageBox.error(self, self.tr("错误"), f"{self.tr('保存配置失败')}: {e}")
 
     def _reset_configs(self):
         """重置配置到原始值"""
@@ -551,8 +561,8 @@ class SettingsDialog(QtWidgets.QDialog):
         
         # 重置UI控件
         self._setup_ui()
-        logger.info("配置已重置", module="settings")
-        QtWidgets.QMessageBox.information(self, "提示", "配置已重置为原始值")
+        logger.info(self.tr("配置已重置"), module="settings")
+        QtWidgets.QMessageBox.information(self, self.tr("提示"), self.tr("配置已重置为原始值"))
 
 
 class ColorPickerWidget(QtWidgets.QWidget):

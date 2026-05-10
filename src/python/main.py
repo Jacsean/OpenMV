@@ -16,6 +16,8 @@ from PySide2 import QtWidgets
 # 添加项目根目录到路径
 sys.path.insert(0, '.')
 
+from language.translator import TranslatorManager
+from core.config_manager import config_manager
 from ui.main_window import MainWindow
 
 
@@ -28,6 +30,11 @@ def main():
     
     # 设置应用样式
     app.setStyle('Fusion')
+    
+    # 初始化翻译器
+    translator = TranslatorManager()
+    saved_lang = config_manager.get('system.language', 'zh_CN')
+    translator.set_language(saved_lang)
     
     # 创建并显示主窗口
     window = MainWindow()

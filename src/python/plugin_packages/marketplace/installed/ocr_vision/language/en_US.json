@@ -1,0 +1,26 @@
+{
+  "plugin": {
+    "name": "OCR Recognition",
+    "description": "OCR Text Recognition Plugin - Contains text detection and recognition nodes"
+  },
+  "nodes": {
+    "OCRDetectNode": {
+      "display_name": "Text Detection",
+      "category": "OCR",
+      "description": "Detect text regions in image"
+    },
+    "OCRRecognizeNode": {
+      "display_name": "Text Recognition",
+      "category": "OCR",
+      "description": "Recognize text content in image"
+    },
+    "OCRFullNode": {
+      "display_name": "Full OCR",
+      "category": "OCR",
+      "description": "Detect and recognize text"
+    }
+  },
+  "categories": {
+    "OCR": "OCR"
+  }
+}

@@ -9,8 +9,8 @@
 - 修订号：Bug修复和小改进
 """
 
-__version__ = "5.4.0"
-__version_info__ = (5, 4, 0)
-__release_date__ = "2026-05-09"
+__version__ = "5.5.0"
+__version_info__ = (5, 5, 0)
+__release_date__ = "2026-05-10"
 
 __all__ = ['__version__', '__version_info__', '__release_date__']

@@ -1,0 +1,34 @@
+{
+  "plugin": {
+    "name": "YOLO Vision",
+    "description": "YOLO Object Detection Plugin - Contains detection, segmentation, pose estimation nodes"
+  },
+  "nodes": {
+    "YoloDetectNode": {
+      "display_name": "YOLO Detect",
+      "category": "Detection",
+      "description": "Object detection using YOLO model"
+    },
+    "YoloSegmentNode": {
+      "display_name": "YOLO Segment",
+      "category": "Segmentation",
+      "description": "Instance segmentation using YOLO model"
+    },
+    "YoloPoseNode": {
+      "display_name": "Pose Estimation",
+      "category": "Pose",
+      "description": "Human pose estimation using YOLO"
+    },
+    "YoloTrackNode": {
+      "display_name": "Object Tracking",
+      "category": "Tracking",
+      "description": "Object tracking using YOLO"
+    }
+  },
+  "categories": {
+    "目标检测": "Detection",
+    "图像分割": "Segmentation",
+    "人体姿态": "Pose",
+    "跟踪": "Tracking"
+  }
+}

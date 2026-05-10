@@ -1,0 +1,34 @@
+{
+  "plugin": {
+    "name": "YOLO视觉",
+    "description": "YOLO目标检测插件 - 包含目标检测、分割、姿态估计节点"
+  },
+  "nodes": {
+    "YoloDetectNode": {
+      "display_name": "YOLO检测",
+      "category": "目标检测",
+      "description": "使用YOLO模型进行目标检测"
+    },
+    "YoloSegmentNode": {
+      "display_name": "YOLO分割",
+      "category": "图像分割",
+      "description": "使用YOLO模型进行实例分割"
+    },
+    "YoloPoseNode": {
+      "display_name": "姿态估计",
+      "category": "人体姿态",
+      "description": "使用YOLO进行人体姿态估计"
+    },
+    "YoloTrackNode": {
+      "display_name": "目标跟踪",
+      "category": "跟踪",
+      "description": "使用YOLO进行目标跟踪"
+    }
+  },
+  "categories": {
+    "目标检测": "目标检测",
+    "图像分割": "图像分割",
+    "人体姿态": "人体姿态",
+    "跟踪": "跟踪"
+  }
+}

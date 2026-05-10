@@ -1,0 +1,93 @@
+{
+  "plugin": {
+    "name": "Built-in Nodes",
+    "description": "Built-in node package - Contains basic image processing nodes"
+  },
+  "nodes": {
+    "ImageLoadNode": {
+      "display_name": "Image Load",
+      "category": "Input",
+      "description": "Load image from file"
+    },
+    "ImageSaveNode": {
+      "display_name": "Image Save",
+      "category": "Output",
+      "description": "Save image to file"
+    },
+    "ImageViewNode": {
+      "display_name": "Image View",
+      "category": "Display",
+      "description": "Display image preview"
+    },
+    "ResizeNode": {
+      "display_name": "Resize",
+      "category": "Transform",
+      "description": "Resize image"
+    },
+    "CropNode": {
+      "display_name": "Crop",
+      "category": "Transform",
+      "description": "Crop image region"
+    },
+    "RotateNode": {
+      "display_name": "Rotate",
+      "category": "Transform",
+      "description": "Rotate image"
+    },
+    "FlipNode": {
+      "display_name": "Flip",
+      "category": "Transform",
+      "description": "Flip image horizontally or vertically"
+    },
+    "GrayNode": {
+      "display_name": "Grayscale",
+      "category": "Color",
+      "description": "Convert color to grayscale"
+    },
+    "BGR2RGBNode": {
+      "display_name": "Color Convert",
+      "category": "Color",
+      "description": "Convert BGR to RGB"
+    },
+    "ThresholdNode": {
+      "display_name": "Threshold",
+      "category": "Filter",
+      "description": "Binary thresholding"
+    },
+    "BlurNode": {
+      "display_name": "Blur",
+      "category": "Filter",
+      "description": "Image blur"
+    },
+    "CannyNode": {
+      "display_name": "Edge Detection",
+      "category": "Feature",
+      "description": "Canny edge detection"
+    },
+    "ContourNode": {
+      "display_name": "Contour",
+      "category": "Feature",
+      "description": "Detect image contours"
+    },
+    "DrawNode": {
+      "display_name": "Draw",
+      "category": "Drawing",
+      "description": "Draw shapes on image"
+    },
+    "TextNode": {
+      "display_name": "Text",
+      "category": "Drawing",
+      "description": "Add text to image"
+    }
+  },
+  "categories": {
+    "输入": "Input",
+    "输出": "Output",
+    "显示": "Display",
+    "变换": "Transform",
+    "颜色": "Color",
+    "滤波": "Filter",
+    "特征": "Feature",
+    "绘图": "Drawing"
+  }
+}

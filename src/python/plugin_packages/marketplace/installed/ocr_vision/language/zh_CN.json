@@ -1,0 +1,26 @@
+{
+  "plugin": {
+    "name": "OCR识别",
+    "description": "OCR文字识别插件 - 包含文字检测和识别节点"
+  },
+  "nodes": {
+    "OCRDetectNode": {
+      "display_name": "文字检测",
+      "category": "OCR",
+      "description": "检测图像中的文字区域"
+    },
+    "OCRRecognizeNode": {
+      "display_name": "文字识别",
+      "category": "OCR",
+      "description": "识别图像中的文字内容"
+    },
+    "OCRFullNode": {
+      "display_name": "完整OCR",
+      "category": "OCR",
+      "description": "检测并识别文字"
+    }
+  },
+  "categories": {
+    "OCR": "OCR"
+  }
+}

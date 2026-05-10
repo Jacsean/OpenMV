@@ -19,6 +19,8 @@ from .hot_reloader import HotReloader
 from .dependency_resolver import DependencyResolver
 from .plugin_installer import PluginInstaller
 
+from language.plugin_translator import PluginTranslator
+
 
 class PluginManager:
     """插件管理器（单例）"""
@@ -58,6 +60,9 @@ class PluginManager:
         
         # 初始化安装器
         self.installer = PluginInstaller(self.plugins_dir)
+        
+        # 初始化插件翻译器
+        self.plugin_translator = PluginTranslator()
 
     def scan_plugins(self) -> List[PluginInfo]:
         """
@@ -190,6 +195,9 @@ class PluginManager:
                 min_app_version=data.get('min_app_version', '1.0.0')
             )
             
+            # 应用翻译
+            self._apply_plugin_translation(plugin_info)
+            
             return plugin_info
             
         except Exception as e:
@@ -197,6 +205,56 @@ class PluginManager:
             import traceback
             traceback.print_exc()
             return None
+    
+    def _apply_plugin_translation(self, plugin_info):
+        """
+        应用插件翻译
+        
+        Args:
+            plugin_info: PluginInfo对象
+        """
+        if not plugin_info or not hasattr(self, 'plugin_translator'):
+            return
+        
+        try:
+            # 翻译插件名称和描述
+            translations = self.plugin_translator.load_plugin_translations(plugin_info.path)
+            if translations:
+                plugin_trans = translations.get("plugin", {})
+                if plugin_trans.get("name"):
+                    plugin_info.name = plugin_trans["name"]
+                if plugin_trans.get("description"):
+                    plugin_info.description = plugin_trans["description"]
+                
+                # 翻译节点信息
+                nodes_trans = translations.get("nodes", {})
+                for node_def in plugin_info.nodes:
+                    if node_def.class_name in nodes_trans:
+                        node_trans = nodes_trans[node_def.class_name]
+                        if node_trans.get("display_name"):
+                            node_def.display_name = node_trans["display_name"]
+                        if node_trans.get("category"):
+                            node_def.category = node_trans["category"]
+                        if node_trans.get("description"):
+                            node_def.description = node_trans["description"]
+                
+                # 翻译分类
+                categories_trans = translations.get("categories", {})
+                for node_def in plugin_info.nodes:
+                    if node_def.category in categories_trans:
+                        node_def.category = categories_trans[node_def.category]
+        except Exception as e:
+            utils.logger.info(f"⚠️ 应用插件翻译失败 {plugin_info.name}: {e}", module="plugin_manager")
+    
+    def set_language(self, lang_code):
+        """
+        设置插件翻译语言
+        
+        Args:
+            lang_code: 语言代码（如 zh_CN, en_US）
+        """
+        if hasattr(self, 'plugin_translator'):
+            self.plugin_translator.set_language(lang_code)
 
     def load_plugin_nodes(self, plugin_name: str, node_graph) -> bool:
         """
