@@ -1,0 +1,333 @@
+{
+  "ui": {
+    "main_window": {
+      "title": "图形化视觉处理系统",
+      "menu": {
+        "file": "文件",
+        "edit": "编辑",
+        "view": "视图",
+        "plugins": "插件",
+        "settings": "设置",
+        "help": "帮助",
+        "workflow": "工作流",
+        "execute": "执行",
+        "new_project": "新建工程",
+        "open_project": "打开工程",
+        "save_project": "保存工程",
+        "recent_projects": "最近工程",
+        "exit": "退出",
+        "add_workflow": "添加工作流",
+        "close_workflow": "关闭当前工作流",
+        "rename_workflow": "重命名",
+        "run_workflow": "运行当前工作流",
+        "run_all_workflows": "运行所有工作流",
+        "clear_workflow": "清空当前工作流",
+        "node_editor": "节点编辑器",
+        "install_plugin": "安装插件",
+        "manage_plugins": "管理插件",
+        "refresh_plugins": "刷新插件",
+        "system_settings": "系统设置",
+        "about": "关于",
+        "undo": "撤销",
+        "redo": "重做",
+        "cut": "剪切",
+        "copy": "复制",
+        "paste": "粘贴",
+        "delete": "删除",
+        "select_all": "全选"
+      },
+      "toolbar": {
+        "main": "主工具栏",
+        "new": "新建",
+        "open": "打开",
+        "save": "保存",
+        "add_workflow": "添加工作流",
+        "run": "运行",
+        "run_all": "运行全部",
+        "clear": "清空",
+        "debug_mode": "调试模式",
+        "fit": "适应"
+      },
+      "dock": {
+        "node_palette": "节点库",
+        "properties": "属性面板",
+        "node_info": "节点说明"
+      },
+      "node_info": {
+        "no_node_selected": "未选择节点",
+        "category": "分类"
+      },
+      "log_panel": {
+        "clear": "清空",
+        "collapse": "折叠",
+        "expand": "展开"
+      }
+    },
+    "settings": {
+      "title": "系统设置",
+      "tabs": {
+        "appearance": "外观",
+        "font": "字体",
+        "window": "窗口",
+        "project": "项目",
+        "shortcuts": "快捷键"
+      },
+      "appearance": {
+        "theme": "主题",
+        "system": "跟随系统",
+        "light": "亮色",
+        "dark": "暗色",
+        "custom": "自定义",
+        "custom_colors": "自定义颜色",
+        "primary": "主题色",
+        "accent": "强调色",
+        "background": "背景色",
+        "surface": "表面色",
+        "text": "文字色",
+        "border": "边框色",
+        "success": "成功色",
+        "warning": "警告色",
+        "error": "错误色",
+        "info": "信息色",
+        "language": "语言",
+        "chinese": "中文",
+        "english": "English"
+      },
+      "font": {
+        "settings": "字体设置",
+        "family": "字体",
+        "size": "字体大小",
+        "preview": "预览",
+        "preview_text": "预览文本示例",
+        "test_effect": "测试字体显示效果"
+      },
+      "window": {
+        "size": "窗口大小",
+        "width": "宽度",
+        "height": "高度",
+        "pixel": "像素",
+        "startup": "启动选项",
+        "maximize_on_startup": "启动时最大化窗口",
+        "auto_save": "自动保存",
+        "enable_auto_save": "启用自动保存",
+        "interval": "自动保存间隔",
+        "seconds": "秒"
+      },
+      "project": {
+        "defaults": "项目默认设置",
+        "default_workflow_name": "默认工作流名称",
+        "node_settings": "节点设置",
+        "auto_connect": "自动连接节点",
+        "show_description": "显示节点描述",
+        "node_width": "节点宽度",
+        "node_spacing": "节点间距",
+        "execution": "执行设置",
+        "timeout": "执行超时时间"
+      },
+      "shortcuts": {
+        "action": "功能",
+        "shortcut": "快捷键",
+        "hint": "提示：快捷键配置将在下一次启动时生效"
+      },
+      "buttons": {
+        "apply": "应用",
+        "reset": "重置",
+        "cancel": "取消",
+        "browse": "浏览..."
+      },
+      "messages": {
+        "success": "成功",
+        "info": "提示",
+        "error": "错误",
+        "config_saved": "配置已保存！",
+        "config_restored": "设置已恢复为默认值",
+        "restore_confirm": "是否确定恢复所有设置为默认值？",
+        "save_failed": "保存配置失败"
+      }
+    },
+    "dialogs": {
+      "image_preview": {
+        "title": "图像预览",
+        "zoom_in": "放大",
+        "zoom_out": "缩小",
+        "original_size": "原始大小",
+        "fit_window": "适应窗口",
+        "save": "保存",
+        "close": "关闭"
+      },
+      "node_editor": {
+        "title": "节点编辑器",
+        "basic_info": "基本信息",
+        "inputs": "输入端口",
+        "outputs": "输出端口",
+        "properties": "属性",
+        "save": "保存",
+        "cancel": "取消",
+        "node_name": "节点名称",
+        "display_name": "显示名称",
+        "category": "分类",
+        "description": "描述",
+        "add_input": "添加输入",
+        "add_output": "添加输出",
+        "delete_port": "删除端口",
+        "port_name": "端口名称",
+        "port_type": "端口类型",
+        "add_property": "添加属性",
+        "property_name": "属性名称",
+        "property_type": "属性类型",
+        "default_value": "默认值"
+      },
+      "confirm": {
+        "yes": "是",
+        "no": "否",
+        "ok": "确定",
+        "cancel": "取消"
+      }
+    }
+  },
+  "nodes": {
+    "builtin": {
+      "category_input": "输入",
+      "category_output": "输出",
+      "category_display": "显示",
+      "category_transform": "变换",
+      "category_color": "颜色",
+      "category_filter": "滤波",
+      "category_feature": "特征",
+      "category_drawing": "绘图",
+      "ImageLoadNode": {
+        "display_name": "图像加载",
+        "category": "输入",
+        "description": "从文件加载图像"
+      },
+      "ImageSaveNode": {
+        "display_name": "图像保存",
+        "category": "输出",
+        "description": "保存图像到文件"
+      },
+      "ImageViewNode": {
+        "display_name": "图像显示",
+        "category": "显示",
+        "description": "显示图像预览"
+      },
+      "ResizeNode": {
+        "display_name": "图像缩放",
+        "category": "变换",
+        "description": "调整图像大小"
+      },
+      "CropNode": {
+        "display_name": "图像裁剪",
+        "category": "变换",
+        "description": "裁剪图像区域"
+      },
+      "RotateNode": {
+        "display_name": "图像旋转",
+        "category": "变换",
+        "description": "旋转图像"
+      },
+      "FlipNode": {
+        "display_name": "图像翻转",
+        "category": "变换",
+        "description": "水平或垂直翻转图像"
+      },
+      "GrayNode": {
+        "display_name": "灰度转换",
+        "category": "颜色",
+        "description": "将彩色图像转换为灰度"
+      },
+      "BGR2RGBNode": {
+        "display_name": "颜色空间转换",
+        "category": "颜色",
+        "description": "BGR转RGB颜色空间"
+      },
+      "ThresholdNode": {
+        "display_name": "阈值处理",
+        "category": "滤波",
+        "description": "二值化处理"
+      },
+      "BlurNode": {
+        "display_name": "模糊处理",
+        "category": "滤波",
+        "description": "图像模糊"
+      },
+      "CannyNode": {
+        "display_name": "边缘检测",
+        "category": "特征",
+        "description": "Canny边缘检测"
+      },
+      "ContourNode": {
+        "display_name": "轮廓检测",
+        "category": "特征",
+        "description": "检测图像轮廓"
+      },
+      "DrawNode": {
+        "display_name": "绘制",
+        "category": "绘图",
+        "description": "在图像上绘制图形"
+      },
+      "TextNode": {
+        "display_name": "文字绘制",
+        "category": "绘图",
+        "description": "在图像上添加文字"
+      }
+    },
+    "yolo_vision": {
+      "category_detection": "目标检测",
+      "category_segmentation": "图像分割",
+      "category_pose": "人体姿态",
+      "category_tracking": "跟踪",
+      "YoloDetectNode": {
+        "display_name": "YOLO检测",
+        "category": "目标检测",
+        "description": "使用YOLO模型进行目标检测"
+      },
+      "YoloSegmentNode": {
+        "display_name": "YOLO分割",
+        "category": "图像分割",
+        "description": "使用YOLO模型进行实例分割"
+      },
+      "YoloPoseNode": {
+        "display_name": "姿态估计",
+        "category": "人体姿态",
+        "description": "使用YOLO进行人体姿态估计"
+      },
+      "YoloTrackNode": {
+        "display_name": "目标跟踪",
+        "category": "跟踪",
+        "description": "使用YOLO进行目标跟踪"
+      }
+    },
+    "ocr_vision": {
+      "category_ocr": "OCR",
+      "OCRDetectNode": {
+        "display_name": "文字检测",
+        "category": "OCR",
+        "description": "检测图像中的文字区域"
+      },
+      "OCRRecognizeNode": {
+        "display_name": "文字识别",
+        "category": "OCR",
+        "description": "识别图像中的文字内容"
+      },
+      "OCRFullNode": {
+        "display_name": "完整OCR",
+        "category": "OCR",
+        "description": "检测并识别文字"
+      }
+    }
+  },
+  "logs": {
+    "language_changed": "语言已切换到",
+    "config_saved": "配置已保存",
+    "settings_updated": "系统设置已更新",
+    "theme_changed": "主题已变更并应用",
+    "theme_switched": "主题已切换为",
+    "plugins_loading": "正在加载插件...",
+    "plugins_found": "发现 {count} 个插件",
+    "plugins_loaded": "插件加载完成",
+    "workflow_executed": "工作流执行完成",
+    "workflow_error": "工作流执行出错",
+    "node_debug_enabled": "节点调试模式已启用",
+    "node_debug_disabled": "节点调试模式已禁用"
+  }
+}

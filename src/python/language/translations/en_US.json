@@ -1,0 +1,333 @@
+{
+  "ui": {
+    "main_window": {
+      "title": "Visual Processing System",
+      "menu": {
+        "file": "File",
+        "edit": "Edit",
+        "view": "View",
+        "plugins": "Plugins",
+        "settings": "Settings",
+        "help": "Help",
+        "workflow": "Workflow",
+        "execute": "Execute",
+        "new_project": "New Project",
+        "open_project": "Open Project",
+        "save_project": "Save Project",
+        "recent_projects": "Recent Projects",
+        "exit": "Exit",
+        "add_workflow": "Add Workflow",
+        "close_workflow": "Close Current Workflow",
+        "rename_workflow": "Rename",
+        "run_workflow": "Run Current Workflow",
+        "run_all_workflows": "Run All Workflows",
+        "clear_workflow": "Clear Current Workflow",
+        "node_editor": "Node Editor",
+        "install_plugin": "Install Plugin",
+        "manage_plugins": "Manage Plugins",
+        "refresh_plugins": "Refresh Plugins",
+        "system_settings": "System Settings",
+        "about": "About",
+        "undo": "Undo",
+        "redo": "Redo",
+        "cut": "Cut",
+        "copy": "Copy",
+        "paste": "Paste",
+        "delete": "Delete",
+        "select_all": "Select All"
+      },
+      "toolbar": {
+        "main": "Main Toolbar",
+        "new": "New",
+        "open": "Open",
+        "save": "Save",
+        "add_workflow": "Add Workflow",
+        "run": "Run",
+        "run_all": "Run All",
+        "clear": "Clear",
+        "debug_mode": "Debug Mode",
+        "fit": "Fit"
+      },
+      "dock": {
+        "node_palette": "Node Palette",
+        "properties": "Properties",
+        "node_info": "Node Info"
+      },
+      "node_info": {
+        "no_node_selected": "No Node Selected",
+        "category": "Category"
+      },
+      "log_panel": {
+        "clear": "Clear",
+        "collapse": "Collapse",
+        "expand": "Expand"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "tabs": {
+        "appearance": "Appearance",
+        "font": "Font",
+        "window": "Window",
+        "project": "Project",
+        "shortcuts": "Shortcuts"
+      },
+      "appearance": {
+        "theme": "Theme",
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark",
+        "custom": "Custom",
+        "custom_colors": "Custom Colors",
+        "primary": "Primary",
+        "accent": "Accent",
+        "background": "Background",
+        "surface": "Surface",
+        "text": "Text",
+        "border": "Border",
+        "success": "Success",
+        "warning": "Warning",
+        "error": "Error",
+        "info": "Info",
+        "language": "Language",
+        "chinese": "中文",
+        "english": "English"
+      },
+      "font": {
+        "settings": "Font Settings",
+        "family": "Font",
+        "size": "Font Size",
+        "preview": "Preview",
+        "preview_text": "Preview Text Example",
+        "test_effect": "Test font display effect"
+      },
+      "window": {
+        "size": "Window Size",
+        "width": "Width",
+        "height": "Height",
+        "pixel": "px",
+        "startup": "Startup Options",
+        "maximize_on_startup": "Maximize window on startup",
+        "auto_save": "Auto Save",
+        "enable_auto_save": "Enable auto save",
+        "interval": "Auto save interval",
+        "seconds": "seconds"
+      },
+      "project": {
+        "defaults": "Project Defaults",
+        "default_workflow_name": "Default workflow name",
+        "node_settings": "Node Settings",
+        "auto_connect": "Auto-connect nodes",
+        "show_description": "Show node descriptions",
+        "node_width": "Node width",
+        "node_spacing": "Node spacing",
+        "execution": "Execution Settings",
+        "timeout": "Execution timeout"
+      },
+      "shortcuts": {
+        "action": "Action",
+        "shortcut": "Shortcut",
+        "hint": "Note: Shortcut settings will take effect on next restart"
+      },
+      "buttons": {
+        "apply": "Apply",
+        "reset": "Reset",
+        "cancel": "Cancel",
+        "browse": "Browse..."
+      },
+      "messages": {
+        "success": "Success",
+        "info": "Info",
+        "error": "Error",
+        "config_saved": "Configuration saved!",
+        "config_restored": "Settings have been restored to defaults",
+        "restore_confirm": "Are you sure you want to restore all settings to default?",
+        "save_failed": "Failed to save configuration"
+      }
+    },
+    "dialogs": {
+      "image_preview": {
+        "title": "Image Preview",
+        "zoom_in": "Zoom In",
+        "zoom_out": "Zoom Out",
+        "original_size": "Original Size",
+        "fit_window": "Fit Window",
+        "save": "Save",
+        "close": "Close"
+      },
+      "node_editor": {
+        "title": "Node Editor",
+        "basic_info": "Basic Info",
+        "inputs": "Input Ports",
+        "outputs": "Output Ports",
+        "properties": "Properties",
+        "save": "Save",
+        "cancel": "Cancel",
+        "node_name": "Node Name",
+        "display_name": "Display Name",
+        "category": "Category",
+        "description": "Description",
+        "add_input": "Add Input",
+        "add_output": "Add Output",
+        "delete_port": "Delete Port",
+        "port_name": "Port Name",
+        "port_type": "Port Type",
+        "add_property": "Add Property",
+        "property_name": "Property Name",
+        "property_type": "Property Type",
+        "default_value": "Default Value"
+      },
+      "confirm": {
+        "yes": "Yes",
+        "no": "No",
+        "ok": "OK",
+        "cancel": "Cancel"
+      }
+    }
+  },
+  "nodes": {
+    "builtin": {
+      "category_input": "Input",
+      "category_output": "Output",
+      "category_display": "Display",
+      "category_transform": "Transform",
+      "category_color": "Color",
+      "category_filter": "Filter",
+      "category_feature": "Feature",
+      "category_drawing": "Drawing",
+      "ImageLoadNode": {
+        "display_name": "Image Load",
+        "category": "Input",
+        "description": "Load image from file"
+      },
+      "ImageSaveNode": {
+        "display_name": "Image Save",
+        "category": "Output",
+        "description": "Save image to file"
+      },
+      "ImageViewNode": {
+        "display_name": "Image View",
+        "category": "Display",
+        "description": "Display image preview"
+      },
+      "ResizeNode": {
+        "display_name": "Resize",
+        "category": "Transform",
+        "description": "Resize image"
+      },
+      "CropNode": {
+        "display_name": "Crop",
+        "category": "Transform",
+        "description": "Crop image region"
+      },
+      "RotateNode": {
+        "display_name": "Rotate",
+        "category": "Transform",
+        "description": "Rotate image"
+      },
+      "FlipNode": {
+        "display_name": "Flip",
+        "category": "Transform",
+        "description": "Flip image horizontally or vertically"
+      },
+      "GrayNode": {
+        "display_name": "Grayscale",
+        "category": "Color",
+        "description": "Convert color to grayscale"
+      },
+      "BGR2RGBNode": {
+        "display_name": "Color Convert",
+        "category": "Color",
+        "description": "Convert BGR to RGB"
+      },
+      "ThresholdNode": {
+        "display_name": "Threshold",
+        "category": "Filter",
+        "description": "Binary thresholding"
+      },
+      "BlurNode": {
+        "display_name": "Blur",
+        "category": "Filter",
+        "description": "Image blur"
+      },
+      "CannyNode": {
+        "display_name": "Edge Detection",
+        "category": "Feature",
+        "description": "Canny edge detection"
+      },
+      "ContourNode": {
+        "display_name": "Contour",
+        "category": "Feature",
+        "description": "Detect image contours"
+      },
+      "DrawNode": {
+        "display_name": "Draw",
+        "category": "Drawing",
+        "description": "Draw shapes on image"
+      },
+      "TextNode": {
+        "display_name": "Text",
+        "category": "Drawing",
+        "description": "Add text to image"
+      }
+    },
+    "yolo_vision": {
+      "category_detection": "Detection",
+      "category_segmentation": "Segmentation",
+      "category_pose": "Pose",
+      "category_tracking": "Tracking",
+      "YoloDetectNode": {
+        "display_name": "YOLO Detect",
+        "category": "Detection",
+        "description": "Object detection using YOLO model"
+      },
+      "YoloSegmentNode": {
+        "display_name": "YOLO Segment",
+        "category": "Segmentation",
+        "description": "Instance segmentation using YOLO model"
+      },
+      "YoloPoseNode": {
+        "display_name": "Pose Estimation",
+        "category": "Pose",
+        "description": "Human pose estimation using YOLO"
+      },
+      "YoloTrackNode": {
+        "display_name": "Object Tracking",
+        "category": "Tracking",
+        "description": "Object tracking using YOLO"
+      }
+    },
+    "ocr_vision": {
+      "category_ocr": "OCR",
+      "OCRDetectNode": {
+        "display_name": "Text Detection",
+        "category": "OCR",
+        "description": "Detect text regions in image"
+      },
+      "OCRRecognizeNode": {
+        "display_name": "Text Recognition",
+        "category": "OCR",
+        "description": "Recognize text content in image"
+      },
+      "OCRFullNode": {
+        "display_name": "Full OCR",
+        "category": "OCR",
+        "description": "Detect and recognize text"
+      }
+    }
+  },
+  "logs": {
+    "language_changed": "Language changed to",
+    "config_saved": "Configuration saved",
+    "settings_updated": "System settings updated",
+    "theme_changed": "Theme changed and applied",
+    "theme_switched": "Theme switched to",
+    "plugins_loading": "Loading plugins...",
+    "plugins_found": "{count} plugins found",
+    "plugins_loaded": "Plugins loaded",
+    "workflow_executed": "Workflow executed",
+    "workflow_error": "Workflow execution error",
+    "node_debug_enabled": "Node debug mode enabled",
+    "node_debug_disabled": "Node debug mode disabled"
+  }
+}

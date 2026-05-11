@@ -67,7 +67,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._translator = TranslatorManager()
     
         # 设置窗口属性
-        self.setWindowTitle(self.tr("图形化视觉处理系统") + " v5.0")
+        self.setWindowTitle(self._translator.get_ui("main_window.title", "图形化视觉处理系统") + " v5.0")
         self.setGeometry(0, 0, 1600, 1024)
         
         # 禁用所有动画效果
@@ -114,9 +114,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._setup_event_subscriptions()
     
-    def tr(self, text):
-        return self._translator.translate(text)
-    
     def _setup_language_listener(self):
         """
         设置语言变化监听器
@@ -127,10 +124,10 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         语言变化时的回调
         """
-        utils.logger.info(f"🌐 语言已切换到: {lang_code}", module="main_window")
+        utils.logger.info(f"🌐 {self._translator.get_log('language_changed', 'Language changed to')}: {lang_code}", module="main_window")
         
         # 更新窗口标题
-        self.setWindowTitle(self.tr("图形化视觉处理系统") + " v5.0")
+        self.setWindowTitle(self._translator.get_ui("main_window.title", "图形化视觉处理系统") + " v5.0")
         
         # 更新插件翻译
         if self.plugin_manager:
@@ -207,13 +204,13 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _refresh_node_info_panel(self):
         """刷新节点说明面板"""
+        t = self._translator.get_ui
         if hasattr(self, 'node_info_title_label') and self.node_info_title_label:
-            self.node_info_title_label.setText("📋 " + self.tr("节点说明"))
+            self.node_info_title_label.setText("📋 " + t("main_window.dock.node_info", "节点说明"))
         if hasattr(self, 'info_name_label') and self.info_name_label:
-            # 如果当前没有选择节点，更新默认文本
             current_text = self.info_name_label.text()
             if current_text in ["未选择节点", "No Node Selected"]:
-                self.info_name_label.setText(self.tr("未选择节点"))
+                self.info_name_label.setText(t("main_window.node_info.no_node_selected", "未选择节点"))
 
     def _setup_event_subscriptions(self):
         """
@@ -375,7 +372,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._left_layout.addWidget(self.node_info_panel)
 
         # 将整个左侧容器作为一个DockWidget
-        dock_left = QtWidgets.QDockWidget(self.tr("节点库"), self)
+        dock_left = QtWidgets.QDockWidget(self._translator.get_ui("main_window.dock.node_palette", "节点库"), self)
         dock_left.setWidget(self._left_container)
         dock_left.setFeatures(
             QtWidgets.QDockWidget.NoDockWidgetFeatures)
@@ -445,9 +442,9 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # 初始化属性面板
         self.properties_bin = PropertiesBinWidget(node_graph=node_graph)
-        self.properties_bin.setWindowTitle(self.tr("属性面板"))
+        self.properties_bin.setWindowTitle(self._translator.get_ui("main_window.dock.properties", "属性面板"))
         
-        dock_properties = QtWidgets.QDockWidget(self.tr("属性面板"), self)
+        dock_properties = QtWidgets.QDockWidget(self._translator.get_ui("main_window.dock.properties", "属性面板"), self)
         dock_properties.setWidget(self.properties_bin)
         dock_properties.setProperty("animated", False)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_properties)
@@ -476,7 +473,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.setSpacing(8)
 
         # 标题
-        self.node_info_title_label = QtWidgets.QLabel("📋 " + self.tr("节点说明"))
+        self.node_info_title_label = QtWidgets.QLabel("📋 " + self._translator.get_ui("main_window.dock.node_info", "节点说明"))
         self.node_info_title_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
         layout.addWidget(self.node_info_title_label)
 
@@ -487,7 +484,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(line)
 
         # 节点名称
-        self.info_name_label = QtWidgets.QLabel(self.tr("未选择节点"))
+        self.info_name_label = QtWidgets.QLabel(self._translator.get_ui("main_window.node_info.no_node_selected", "未选择节点"))
         self.info_name_label.setFont(QtGui.QFont("Arial", 9, QtGui.QFont.Bold))
         self.info_name_label.setStyleSheet("color: #2c3e50;")
         layout.addWidget(self.info_name_label)
@@ -873,55 +870,56 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         创建工具栏（v4.1 - 模块化版本）
         """
-        toolbar = self.addToolBar(self.tr("主工具栏"))
+        t = self._translator.get_ui
+        toolbar = self.addToolBar(t("main_window.toolbar.main", "主工具栏"))
 
         # === 工程管理 ===
-        new_project_action = QtWidgets.QAction("📄 " + self.tr("新建"), self)
-        new_project_action.setStatusTip(self.tr("创建新工程"))
+        new_project_action = QtWidgets.QAction("📄 " + t("main_window.toolbar.new", "新建"), self)
+        new_project_action.setStatusTip(t("main_window.toolbar.new", "创建新工程"))
         new_project_action.triggered.connect(self.new_project)
         toolbar.addAction(new_project_action)
 
-        open_project_action = QtWidgets.QAction("📂 " + self.tr("打开"), self)
-        open_project_action.setStatusTip(self.tr("打开工程(.proj)"))
+        open_project_action = QtWidgets.QAction("📂 " + t("main_window.toolbar.open", "打开"), self)
+        open_project_action.setStatusTip(t("main_window.toolbar.open", "打开工程(.proj)"))
         open_project_action.triggered.connect(self.open_project)
         toolbar.addAction(open_project_action)
 
-        save_project_action = QtWidgets.QAction("💾 " + self.tr("保存"), self)
-        save_project_action.setStatusTip(self.tr("保存工程为单文件"))
+        save_project_action = QtWidgets.QAction("💾 " + t("main_window.toolbar.save", "保存"), self)
+        save_project_action.setStatusTip(t("main_window.toolbar.save", "保存工程为单文件"))
         save_project_action.triggered.connect(self.save_project)
         toolbar.addAction(save_project_action)
 
         toolbar.addSeparator()
 
         # === 工作流管理 ===
-        add_workflow_action = QtWidgets.QAction("➕ " + self.tr("添加工作流"), self)
-        add_workflow_action.setStatusTip(self.tr("添加新的工作流"))
+        add_workflow_action = QtWidgets.QAction("➕ " + t("main_window.toolbar.add_workflow", "添加工作流"), self)
+        add_workflow_action.setStatusTip(t("main_window.toolbar.add_workflow", "添加新的工作流"))
         add_workflow_action.triggered.connect(self.add_new_workflow)
         toolbar.addAction(add_workflow_action)
 
         toolbar.addSeparator()
 
         # === 执行控制 ===
-        run_action = QtWidgets.QAction("▶ " + self.tr("运行"), self)
-        run_action.setStatusTip(self.tr("执行当前工作流"))
+        run_action = QtWidgets.QAction("▶ " + t("main_window.toolbar.run", "运行"), self)
+        run_action.setStatusTip(t("main_window.toolbar.run", "执行当前工作流"))
         run_action.triggered.connect(self.run_graph)
         toolbar.addAction(run_action)
 
-        run_all_action = QtWidgets.QAction("⏩ " + self.tr("运行全部"), self)
-        run_all_action.setStatusTip(self.tr("执行所有工作流"))
+        run_all_action = QtWidgets.QAction("⏩ " + t("main_window.toolbar.run_all", "运行全部"), self)
+        run_all_action.setStatusTip(t("main_window.toolbar.run_all", "执行所有工作流"))
         run_all_action.triggered.connect(self.run_all_workflows)
         toolbar.addAction(run_all_action)
 
-        clear_action = QtWidgets.QAction("🗑 " + self.tr("清空"), self)
-        clear_action.setStatusTip(self.tr("清空当前工作流"))
+        clear_action = QtWidgets.QAction("🗑 " + t("main_window.toolbar.clear", "清空"), self)
+        clear_action.setStatusTip(t("main_window.toolbar.clear", "清空当前工作流"))
         clear_action.triggered.connect(self.clear_graph)
         toolbar.addAction(clear_action)
 
         toolbar.addSeparator()
 
         # === 调试控制 ===
-        self.debug_mode_action = QtWidgets.QAction("🐛 " + self.tr("调试模式"), self)
-        self.debug_mode_action.setStatusTip(self.tr("启用/禁用节点调试模式"))
+        self.debug_mode_action = QtWidgets.QAction("🐛 " + t("main_window.toolbar.debug_mode", "调试模式"), self)
+        self.debug_mode_action.setStatusTip(t("main_window.toolbar.debug_mode", "启用/禁用节点调试模式"))
         self.debug_mode_action.setCheckable(True)
         self.debug_mode_action.triggered.connect(self._toggle_debug_mode)
         toolbar.addAction(self.debug_mode_action)
@@ -929,8 +927,8 @@ class MainWindow(QtWidgets.QMainWindow):
         toolbar.addSeparator()
 
         # === 视图控制 ===
-        fit_all_action = QtWidgets.QAction("⊞ 适应", self)
-        fit_all_action.setStatusTip("适应所有节点")
+        fit_all_action = QtWidgets.QAction("⊞ " + t("main_window.toolbar.fit", "适应"), self)
+        fit_all_action.setStatusTip(t("main_window.toolbar.fit", "适应所有节点"))
         fit_all_action.triggered.connect(self.fit_to_selection)
         toolbar.addAction(fit_all_action)
 
@@ -939,35 +937,37 @@ class MainWindow(QtWidgets.QMainWindow):
         创建菜单栏（v4.1 - 模块化版本）
         """
         menubar = self.menuBar()
+        
+        t = self._translator.get_ui
 
         # === 文件菜单 ===
-        file_menu = menubar.addMenu(self.tr("文件") + "(&F)")
+        file_menu = menubar.addMenu(t("main_window.menu.file", "文件") + "(&F)")
 
         # 新建工程
-        new_project_action = QtWidgets.QAction("📄 " + self.tr("新建工程"), self)
+        new_project_action = QtWidgets.QAction("📄 " + t("main_window.menu.new_project", "新建工程"), self)
         new_project_action.setShortcut("Ctrl+Shift+N")
-        new_project_action.setStatusTip(self.tr("创建新工程"))
+        new_project_action.setStatusTip(t("main_window.menu.new_project", "创建新工程"))
         new_project_action.triggered.connect(self.new_project)
         file_menu.addAction(new_project_action)
 
         # 打开工程
-        open_project_action = QtWidgets.QAction("📂 " + self.tr("打开工程"), self)
+        open_project_action = QtWidgets.QAction("📂 " + t("main_window.menu.open_project", "打开工程"), self)
         open_project_action.setShortcut("Ctrl+Shift+O")
-        open_project_action.setStatusTip(self.tr("打开已有工程"))
+        open_project_action.setStatusTip(t("main_window.menu.open_project", "打开已有工程"))
         open_project_action.triggered.connect(self.open_project)
         file_menu.addAction(open_project_action)
 
         # 保存工程
-        save_project_action = QtWidgets.QAction("💾 " + self.tr("保存工程"), self)
+        save_project_action = QtWidgets.QAction("💾 " + t("main_window.menu.save_project", "保存工程"), self)
         save_project_action.setShortcut("Ctrl+Shift+S")
-        save_project_action.setStatusTip(self.tr("保存当前工程为单文件(.proj)"))
+        save_project_action.setStatusTip(t("main_window.menu.save_project", "保存当前工程为单文件(.proj)"))
         save_project_action.triggered.connect(self.save_project)
         file_menu.addAction(save_project_action)
 
         file_menu.addSeparator()
 
         # === 最近工程子菜单 ===
-        recent_menu = file_menu.addMenu("📋 " + self.tr("最近工程"))
+        recent_menu = file_menu.addMenu("📋 " + t("main_window.menu.recent_projects", "最近工程"))
         self.recent_projects_menu = recent_menu  # 保存引用以便后续更新
 
         # 连接菜单显示信号以动态更新
@@ -977,107 +977,107 @@ class MainWindow(QtWidgets.QMainWindow):
         file_menu.addSeparator()
 
         # 退出
-        exit_action = QtWidgets.QAction("❌ " + self.tr("退出"), self)
+        exit_action = QtWidgets.QAction("❌ " + t("main_window.menu.exit", "退出"), self)
         exit_action.setShortcut("Alt+F4")
-        exit_action.setStatusTip(self.tr("退出应用程序"))
+        exit_action.setStatusTip(t("main_window.menu.exit", "退出应用程序"))
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
         # === 工作流菜单 ===
-        workflow_menu = menubar.addMenu(self.tr("工作流") + "(&W)")
+        workflow_menu = menubar.addMenu(t("main_window.menu.workflow", "工作流") + "(&W)")
 
         # 添加工作流
-        add_workflow_action = QtWidgets.QAction("➕ " + self.tr("添加工作流"), self)
+        add_workflow_action = QtWidgets.QAction("➕ " + t("main_window.menu.add_workflow", "添加工作流"), self)
         add_workflow_action.setShortcut("Ctrl+N")
-        add_workflow_action.setStatusTip(self.tr("添加新的工作流"))
+        add_workflow_action.setStatusTip(t("main_window.menu.add_workflow", "添加新的工作流"))
         add_workflow_action.triggered.connect(self.add_new_workflow)
         workflow_menu.addAction(add_workflow_action)
 
         # 关闭当前工作流
-        close_workflow_action = QtWidgets.QAction("❌ " + self.tr("关闭当前工作流"), self)
+        close_workflow_action = QtWidgets.QAction("❌ " + t("main_window.menu.close_workflow", "关闭当前工作流"), self)
         close_workflow_action.setShortcut("Ctrl+W")
-        close_workflow_action.setStatusTip(self.tr("关闭当前工作流标签页"))
+        close_workflow_action.setStatusTip(t("main_window.menu.close_workflow", "关闭当前工作流标签页"))
         close_workflow_action.triggered.connect(self.close_current_workflow)
         workflow_menu.addAction(close_workflow_action)
 
         workflow_menu.addSeparator()
 
         # 重命名当前工作流
-        rename_workflow_action = QtWidgets.QAction("✏️ " + self.tr("重命名"), self)
-        rename_workflow_action.setStatusTip(self.tr("重命名当前工作流"))
+        rename_workflow_action = QtWidgets.QAction("✏️ " + t("main_window.menu.rename_workflow", "重命名"), self)
+        rename_workflow_action.setStatusTip(t("main_window.menu.rename_workflow", "重命名当前工作流"))
         rename_workflow_action.triggered.connect(self.rename_current_workflow)
         workflow_menu.addAction(rename_workflow_action)
 
         # === 执行菜单 ===
-        run_menu = menubar.addMenu(self.tr("执行") + "(&R)")
+        run_menu = menubar.addMenu(t("main_window.menu.execute", "执行") + "(&R)")
 
         # 运行当前工作流
-        run_action = QtWidgets.QAction("▶ " + self.tr("运行当前工作流"), self)
+        run_action = QtWidgets.QAction("▶ " + t("main_window.menu.run_workflow", "运行当前工作流"), self)
         run_action.setShortcut("F5")
-        run_action.setStatusTip(self.tr("执行当前工作流"))
+        run_action.setStatusTip(t("main_window.menu.run_workflow", "执行当前工作流"))
         run_action.triggered.connect(self.run_graph)
         run_menu.addAction(run_action)
 
         # 运行所有工作流
-        run_all_action = QtWidgets.QAction("⏩ " + self.tr("运行所有工作流"), self)
+        run_all_action = QtWidgets.QAction("⏩ " + t("main_window.menu.run_all_workflows", "运行所有工作流"), self)
         run_all_action.setShortcut("Shift+F5")
-        run_all_action.setStatusTip(self.tr("执行所有工作流"))
+        run_all_action.setStatusTip(t("main_window.menu.run_all_workflows", "执行所有工作流"))
         run_all_action.triggered.connect(self.run_all_workflows)
         run_menu.addAction(run_all_action)
 
         run_menu.addSeparator()
 
         # 清空当前工作流
-        clear_action = QtWidgets.QAction("🗑 " + self.tr("清空当前工作流"), self)
-        clear_action.setStatusTip(self.tr("清空当前工作流的所有节点"))
+        clear_action = QtWidgets.QAction("🗑 " + t("main_window.menu.clear_workflow", "清空当前工作流"), self)
+        clear_action.setStatusTip(t("main_window.menu.clear_workflow", "清空当前工作流的所有节点"))
         clear_action.triggered.connect(self.clear_graph)
         run_menu.addAction(clear_action)
 
         # === 插件管理菜单 ===
-        plugin_menu = menubar.addMenu(self.tr("插件") + "(&P)")
+        plugin_menu = menubar.addMenu(t("main_window.menu.plugins", "插件") + "(&P)")
 
         # 节点编辑器
-        node_editor_action = QtWidgets.QAction("🛠️ " + self.tr("节点编辑器"), self)
-        node_editor_action.setStatusTip(self.tr("创建、编辑和管理节点"))
+        node_editor_action = QtWidgets.QAction("🛠️ " + t("main_window.menu.node_editor", "节点编辑器"), self)
+        node_editor_action.setStatusTip(t("main_window.menu.node_editor", "创建、编辑和管理节点"))
         node_editor_action.triggered.connect(self.open_node_editor)
         plugin_menu.addAction(node_editor_action)
 
         plugin_menu.addSeparator()
 
         # 安装插件
-        install_plugin_action = QtWidgets.QAction("📦 " + self.tr("安装插件"), self)
-        install_plugin_action.setStatusTip(self.tr("从ZIP文件安装插件"))
+        install_plugin_action = QtWidgets.QAction("📦 " + t("main_window.menu.install_plugin", "安装插件"), self)
+        install_plugin_action.setStatusTip(t("main_window.menu.install_plugin", "从ZIP文件安装插件"))
         install_plugin_action.triggered.connect(self.install_plugin)
         plugin_menu.addAction(install_plugin_action)
 
         # 管理插件
-        manage_plugins_action = QtWidgets.QAction("⚙️ " + self.tr("管理插件"), self)
-        manage_plugins_action.setStatusTip(self.tr("查看和管理已安装插件"))
+        manage_plugins_action = QtWidgets.QAction("⚙️ " + t("main_window.menu.manage_plugins", "管理插件"), self)
+        manage_plugins_action.setStatusTip(t("main_window.menu.manage_plugins", "查看和管理已安装插件"))
         manage_plugins_action.triggered.connect(self.manage_plugins)
         plugin_menu.addAction(manage_plugins_action)
 
         plugin_menu.addSeparator()
 
         # 刷新插件
-        reload_plugins_action = QtWidgets.QAction("🔄 " + self.tr("刷新插件"), self)
-        reload_plugins_action.setStatusTip(self.tr("重新扫描并加载插件"))
+        reload_plugins_action = QtWidgets.QAction("🔄 " + t("main_window.menu.refresh_plugins", "刷新插件"), self)
+        reload_plugins_action.setStatusTip(t("main_window.menu.refresh_plugins", "重新扫描并加载插件"))
         reload_plugins_action.triggered.connect(self.reload_plugins)
         plugin_menu.addAction(reload_plugins_action)
 
         # === 设置菜单 ===
-        settings_menu = menubar.addMenu(self.tr("设置") + "(&S)")
+        settings_menu = menubar.addMenu(t("main_window.menu.settings", "设置") + "(&S)")
 
-        system_settings_action = QtWidgets.QAction("⚙️ " + self.tr("系统设置"), self)
-        system_settings_action.setStatusTip(self.tr("配置系统参数"))
+        system_settings_action = QtWidgets.QAction("⚙️ " + t("main_window.menu.system_settings", "系统设置"), self)
+        system_settings_action.setStatusTip(t("main_window.menu.system_settings", "配置系统参数"))
         system_settings_action.setShortcut("Ctrl+,")
         system_settings_action.triggered.connect(self.open_settings)
         settings_menu.addAction(system_settings_action)
 
         # === 帮助菜单 ===
-        help_menu = menubar.addMenu(self.tr("帮助") + "(&H)")
+        help_menu = menubar.addMenu(t("main_window.menu.help", "帮助") + "(&H)")
 
-        about_action = QtWidgets.QAction("ℹ️ " + self.tr("关于"), self)
-        about_action.setStatusTip(self.tr("关于本软件"))
+        about_action = QtWidgets.QAction("ℹ️ " + t("main_window.menu.about", "关于"), self)
+        about_action.setStatusTip(t("main_window.menu.about", "关于本软件"))
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
