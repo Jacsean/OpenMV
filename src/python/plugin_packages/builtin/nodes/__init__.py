@@ -16,12 +16,14 @@ from .morphology import MorphologyNode
 from .resize import ResizeNode
 from .rotate import RotateNode
 from .image_evaluation import ImageEvaluationNode
+from .pyramid import PyramidNode
 
 # 特征提取节点
 from .canny_edge import CannyEdgeNode
 from .sobel_edge import SobelEdgeNode
 from .contours_analysis import ContoursAnalysisNode
 from .other_features import LaplacianNode, HarrisCornerNode, HoughLinesNode, HoughCirclesNode
+from .find_circle import FindCircleNode
 
 # 匹配定位节点
 from .template_creator import TemplateCreatorNode
@@ -58,6 +60,7 @@ __all__ = [
     'ResizeNode',
     'RotateNode',
     'ImageEvaluationNode',
+    'PyramidNode',
     # 特征提取
     'CannyEdgeNode',
     'SobelEdgeNode',
@@ -66,6 +69,7 @@ __all__ = [
     'HarrisCornerNode',
     'HoughLinesNode',
     'HoughCirclesNode',
+    'FindCircleNode',
     # 匹配定位
     'TemplateCreatorNode',
     'TemplateMatchNode',
