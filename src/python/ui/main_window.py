@@ -269,17 +269,17 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         self.project_ui.remove_workflow_tab(index)
 
-    # def _on_tab_changed(self, index):
-    #     """
-    #     标签页切换时的回调（委托给ProjectUIManager）
+    def _on_tab_changed(self, index):
+        """
+        标签页切换时的回调（委托给ProjectUIManager）
 
-    #     Args:
-    #         index: 新的标签页索引
-    #     """
-    #     self.project_ui.on_tab_changed(index)
+        Args:
+            index: 新的标签页索引
+        """
+        self.project_ui.on_tab_changed(index)
         
-    #     # 更新共享组件的 NodeGraph 引用
-    #     self._update_shared_components()
+        # 更新共享组件的 NodeGraph 引用
+        self._update_shared_components()
     
     def _update_shared_components(self):
         """
@@ -344,8 +344,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.tab_widget.setTabsClosable(True)  # 允许关闭标签页
         # self.tab_widget.setMovable(True)       # 允许拖动排序
         self.tab_widget.setStyleSheet("QTabWidget::pane { border: 1px solid #3c3c3c; }")
-        # self.tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
-        # self.tab_widget.currentChanged.connect(self._on_tab_changed)
+        self.tab_widget.currentChanged.connect(self._on_tab_changed)
         main_layout.addWidget(self.tab_widget)
 
         # === 共享组件延迟初始化 ===
@@ -917,6 +916,11 @@ class MainWindow(QtWidgets.QMainWindow):
         clear_action.triggered.connect(self.clear_graph)
         toolbar.addAction(clear_action)
 
+        clear_all_action = QtWidgets.QAction("🗑🗑 " + t("main_window.toolbar.clear_all", "清空所有"), self)
+        clear_all_action.setStatusTip(t("main_window.toolbar.clear_all", "清空所有工作流"))
+        clear_all_action.triggered.connect(self.clear_all_graphs)
+        toolbar.addAction(clear_all_action)
+
         toolbar.addSeparator()
 
         # === 调试控制 ===
@@ -1035,6 +1039,12 @@ class MainWindow(QtWidgets.QMainWindow):
         clear_action.triggered.connect(self.clear_graph)
         run_menu.addAction(clear_action)
 
+        # 清空所有工作流
+        clear_all_action = QtWidgets.QAction("🗑🗑 " + t("main_window.menu.clear_all_workflows", "清空所有工作流"), self)
+        clear_all_action.setStatusTip(t("main_window.menu.clear_all_workflows", "清空所有工作流的所有节点"))
+        clear_all_action.triggered.connect(self.clear_all_graphs)
+        run_menu.addAction(clear_all_action)
+
         # === 插件管理菜单 ===
         plugin_menu = menubar.addMenu(t("main_window.menu.plugins", "插件") + "(&P)")
 
@@ -1112,6 +1122,12 @@ class MainWindow(QtWidgets.QMainWindow):
         清空当前激活的节点图（委托给ExecutionUIManager）
         """
         self.execution_ui.clear_graph_with_confirmation()
+
+    def clear_all_graphs(self):
+        """
+        清空所有工作流的节点图
+        """
+        self.execution_ui.clear_all_graphs_with_confirmation()
 
     def save_graph(self):
         """
