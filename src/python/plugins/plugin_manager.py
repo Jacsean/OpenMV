@@ -347,6 +347,10 @@ class PluginManager:
             # 5. 提取节点类并注册
             registered_count = 0
             
+            # 获取插件的原始目录名（用于翻译查找）
+            # 插件名称可能已被翻译，所以需要从路径中获取原始目录名
+            plugin_dir_name = Path(plugin_info.path).name if plugin_info.path else plugin_name
+            
             for node_def in plugin_info.nodes:
                 class_name = node_def.class_name
                 
@@ -361,8 +365,8 @@ class PluginManager:
                     # 获取插件的 category_group（用于节点库标签名称）
                     category_group = plugin_info.category_group
                     
-                    # 翻译节点名称
-                    translated_name = self._translator.get_node(plugin_name, class_name, 'display_name', node_def.display_name)
+                    # 翻译节点名称（使用原始目录名查找翻译）
+                    translated_name = self._translator.get_node(plugin_dir_name, class_name, 'display_name', node_def.display_name)
                     node_class.NODE_NAME = translated_name
                     
                     # 注册到NodeGraph
