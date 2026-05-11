@@ -22,6 +22,7 @@ from .canny_edge import CannyEdgeNode
 from .sobel_edge import SobelEdgeNode
 from .contours_analysis import ContoursAnalysisNode
 from .other_features import LaplacianNode, HarrisCornerNode, HoughLinesNode, HoughCirclesNode
+from .find_circle import FindCircleNode
 
 # 匹配定位节点
 from .template_creator import TemplateCreatorNode
@@ -66,6 +67,7 @@ __all__ = [
     'HarrisCornerNode',
     'HoughLinesNode',
     'HoughCirclesNode',
+    'FindCircleNode',
     # 匹配定位
     'TemplateCreatorNode',
     'TemplateMatchNode',
