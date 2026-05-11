@@ -20,6 +20,7 @@ from .dependency_resolver import DependencyResolver
 from .plugin_installer import PluginInstaller
 
 from language.plugin_translator import PluginTranslator
+from language.translator import TranslatorManager
 
 
 class PluginManager:
@@ -48,6 +49,9 @@ class PluginManager:
         # 确保目录存在
         self.builtin_dir.mkdir(parents=True, exist_ok=True)
         self.marketplace_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 翻译管理器
+        self._translator = TranslatorManager()
         
         # 初始化沙箱环境
         self.sandbox = PluginSandbox()
@@ -357,6 +361,10 @@ class PluginManager:
                     # 获取插件的 category_group（用于节点库标签名称）
                     category_group = plugin_info.category_group
                     
+                    # 翻译节点名称
+                    translated_name = self._translator.get_node(plugin_name, class_name, 'display_name', node_def.display_name)
+                    node_class.NODE_NAME = translated_name
+                    
                     # 注册到NodeGraph
                     node_graph.register_node(node_class)
                     
@@ -368,7 +376,7 @@ class PluginManager:
                     self.loaded_nodes[node_key] = node_class
                     
                     registered_count += 1
-                    utils.logger.info(f"   ✅ 注册节点: {node_def.display_name}", module="plugin_manager")
+                    utils.logger.info(f"   ✅ 注册节点: {translated_name}", module="plugin_manager")
                 else:
                     utils.logger.info(f"   ⚠️ 未找到节点类: {class_name}", module="plugin_manager")
             

@@ -57,10 +57,12 @@
         "no_node_selected": "未选择节点",
         "category": "分类"
       },
-      "log_panel": {
+      "log": {
+        "title": "运行日志",
         "clear": "清空",
         "collapse": "折叠",
-        "expand": "展开"
+        "expand": "展开",
+        "cleared": "日志已清空"
       }
     },
     "settings": {
@@ -157,6 +159,18 @@
       },
       "node_editor": {
         "title": "节点编辑器",
+        "add": "增加",
+        "add_tip": "添加新内置节点到选中的分组",
+        "delete": "删除",
+        "delete_tip": "删除选中的节点或市场插件",
+        "import": "导入",
+        "import_tip": "导入市场节点配置文件",
+        "export": "导出",
+        "export_tip": "导出当前节点配置",
+        "refresh": "刷新节点库",
+        "refresh_tip": "刷新节点库并重新加载所有节点",
+        "help_tip": "打开帮助文档",
+        "node_list": "节点列表",
         "basic_info": "基本信息",
         "inputs": "输入端口",
         "outputs": "输出端口",
@@ -315,6 +329,156 @@
         "display_name": "文字绘制",
         "category": "绘图",
         "description": "在图像上添加文字"
+      },
+      "AdaptiveThreshold": {
+        "display_name": "自适应阈值",
+        "category": "滤波",
+        "description": "自适应阈值处理"
+      },
+      "BilateralFilter": {
+        "display_name": "双边滤波",
+        "category": "滤波",
+        "description": "双边滤波处理"
+      },
+      "BrightnessContrast": {
+        "display_name": "亮度对比度",
+        "category": "颜色",
+        "description": "调整亮度和对比度"
+      },
+      "CameraCapture": {
+        "display_name": "相机采集",
+        "category": "输入",
+        "description": "从相机采集图像"
+      },
+      "CannyEdge": {
+        "display_name": "Canny算子",
+        "category": "特征",
+        "description": "Canny边缘检测"
+      },
+      "ContoursAnalysis": {
+        "display_name": "轮廓分析",
+        "category": "特征",
+        "description": "分析图像轮廓"
+      },
+      "DataOutputNode": {
+        "display_name": "数据输出",
+        "category": "输出",
+        "description": "输出数据到外部系统"
+      },
+      "FastDetection": {
+        "display_name": "快速检测",
+        "category": "特征",
+        "description": "快速目标检测"
+      },
+      "GaussianBlur": {
+        "display_name": "高斯模糊",
+        "category": "滤波",
+        "description": "高斯模糊处理"
+      },
+      "Grayscale": {
+        "display_name": "灰度化",
+        "category": "颜色",
+        "description": "转换为灰度图像"
+      },
+      "HistogramEqualization": {
+        "display_name": "直方图均衡化",
+        "category": "颜色",
+        "description": "直方图均衡化处理"
+      },
+      "ImageEvaluation": {
+        "display_name": "图像评估",
+        "category": "处理",
+        "description": "评估图像质量"
+      },
+      "ImageLoad": {
+        "display_name": "加载图像",
+        "category": "输入",
+        "description": "从文件加载图像"
+      },
+      "ImageOperation": {
+        "display_name": "图像操作",
+        "category": "处理",
+        "description": "图像基本操作"
+      },
+      "ImageSave": {
+        "display_name": "保存图像",
+        "category": "输出",
+        "description": "保存图像到文件"
+      },
+      "ImageView": {
+        "display_name": "图像显示",
+        "category": "显示",
+        "description": "显示图像预览"
+      },
+      "JsonDisplay": {
+        "display_name": "数据显示",
+        "category": "显示",
+        "description": "显示JSON数据"
+      },
+      "MedianBlur": {
+        "display_name": "中值滤波",
+        "category": "滤波",
+        "description": "中值滤波处理"
+      },
+      "Morphology": {
+        "display_name": "形态学操作",
+        "category": "滤波",
+        "description": "形态学图像处理"
+      },
+      "OtherFeatures": {
+        "display_name": "Laplacian算子",
+        "category": "特征",
+        "description": "Laplacian边缘检测"
+      },
+      "PlcNode": {
+        "display_name": "PLC通信",
+        "category": "集成",
+        "description": "与PLC设备通信"
+      },
+      "RealtimePreview": {
+        "display_name": "实时预览",
+        "category": "显示",
+        "description": "实时图像预览"
+      },
+      "Resize": {
+        "display_name": "图像缩放",
+        "category": "变换",
+        "description": "调整图像大小"
+      },
+      "RobotNode": {
+        "display_name": "机器人通信",
+        "category": "集成",
+        "description": "与机器人设备通信"
+      },
+      "Rotate": {
+        "display_name": "图像旋转",
+        "category": "变换",
+        "description": "旋转图像"
+      },
+      "SobelEdge": {
+        "display_name": "Sobel算子",
+        "category": "特征",
+        "description": "Sobel边缘检测"
+      },
+      "TemplateCreator": {
+        "display_name": "模板创建",
+        "category": "处理",
+        "description": "创建匹配模板"
+      },
+      "TemplateMatch": {
+        "display_name": "模板匹配",
+        "category": "特征",
+        "description": "模板匹配检测"
+      },
+      "Threshold": {
+        "display_name": "阈值二值化",
+        "category": "滤波",
+        "description": "阈值二值化处理"
+      },
+      "VideoRecorder": {
+        "display_name": "视频录制",
+        "category": "输出",
+        "description": "录制视频"
       }
     },
     "yolo_vision": {

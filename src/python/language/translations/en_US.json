@@ -57,10 +57,12 @@
         "no_node_selected": "No Node Selected",
         "category": "Category"
       },
-      "log_panel": {
+      "log": {
+        "title": "Log",
         "clear": "Clear",
         "collapse": "Collapse",
-        "expand": "Expand"
+        "expand": "Expand",
+        "cleared": "Log cleared"
       }
     },
     "settings": {
@@ -157,6 +159,18 @@
       },
       "node_editor": {
         "title": "Node Editor",
+        "add": "Add",
+        "add_tip": "Add new built-in node to selected group",
+        "delete": "Delete",
+        "delete_tip": "Delete selected node or marketplace plugin",
+        "import": "Import",
+        "import_tip": "Import marketplace node configuration file",
+        "export": "Export",
+        "export_tip": "Export current node configuration",
+        "refresh": "Refresh",
+        "refresh_tip": "Refresh node library and reload all nodes",
+        "help_tip": "Open help documentation",
+        "node_list": "Node List",
         "basic_info": "Basic Info",
         "inputs": "Input Ports",
         "outputs": "Output Ports",
@@ -315,6 +329,156 @@
         "display_name": "Text",
         "category": "Drawing",
         "description": "Add text to image"
+      },
+      "AdaptiveThreshold": {
+        "display_name": "Adaptive Threshold",
+        "category": "Filter",
+        "description": "Adaptive thresholding"
+      },
+      "BilateralFilter": {
+        "display_name": "Bilateral Filter",
+        "category": "Filter",
+        "description": "Bilateral filtering"
+      },
+      "BrightnessContrast": {
+        "display_name": "Brightness/Contrast",
+        "category": "Color",
+        "description": "Adjust brightness and contrast"
+      },
+      "CameraCapture": {
+        "display_name": "Camera Capture",
+        "category": "Input",
+        "description": "Capture image from camera"
+      },
+      "CannyEdge": {
+        "display_name": "Canny Edge",
+        "category": "Feature",
+        "description": "Canny edge detection"
+      },
+      "ContoursAnalysis": {
+        "display_name": "Contours Analysis",
+        "category": "Feature",
+        "description": "Analyze image contours"
+      },
+      "DataOutputNode": {
+        "display_name": "Data Output",
+        "category": "Output",
+        "description": "Output data to external system"
+      },
+      "FastDetection": {
+        "display_name": "Fast Detection",
+        "category": "Feature",
+        "description": "Fast object detection"
+      },
+      "GaussianBlur": {
+        "display_name": "Gaussian Blur",
+        "category": "Filter",
+        "description": "Gaussian blur"
+      },
+      "Grayscale": {
+        "display_name": "Grayscale",
+        "category": "Color",
+        "description": "Convert to grayscale"
+      },
+      "HistogramEqualization": {
+        "display_name": "Histogram Equalization",
+        "category": "Color",
+        "description": "Histogram equalization"
+      },
+      "ImageEvaluation": {
+        "display_name": "Image Evaluation",
+        "category": "Process",
+        "description": "Evaluate image quality"
+      },
+      "ImageLoad": {
+        "display_name": "Image Load",
+        "category": "Input",
+        "description": "Load image from file"
+      },
+      "ImageOperation": {
+        "display_name": "Image Operation",
+        "category": "Process",
+        "description": "Basic image operations"
+      },
+      "ImageSave": {
+        "display_name": "Image Save",
+        "category": "Output",
+        "description": "Save image to file"
+      },
+      "ImageView": {
+        "display_name": "Image View",
+        "category": "Display",
+        "description": "Display image preview"
+      },
+      "JsonDisplay": {
+        "display_name": "Data Display",
+        "category": "Display",
+        "description": "Display JSON data"
+      },
+      "MedianBlur": {
+        "display_name": "Median Blur",
+        "category": "Filter",
+        "description": "Median filtering"
+      },
+      "Morphology": {
+        "display_name": "Morphology",
+        "category": "Filter",
+        "description": "Morphological operations"
+      },
+      "OtherFeatures": {
+        "display_name": "Laplacian",
+        "category": "Feature",
+        "description": "Laplacian edge detection"
+      },
+      "PlcNode": {
+        "display_name": "PLC Communication",
+        "category": "Integration",
+        "description": "Communicate with PLC"
+      },
+      "RealtimePreview": {
+        "display_name": "Realtime Preview",
+        "category": "Display",
+        "description": "Realtime image preview"
+      },
+      "Resize": {
+        "display_name": "Resize",
+        "category": "Transform",
+        "description": "Resize image"
+      },
+      "RobotNode": {
+        "display_name": "Robot Communication",
+        "category": "Integration",
+        "description": "Communicate with robot"
+      },
+      "Rotate": {
+        "display_name": "Rotate",
+        "category": "Transform",
+        "description": "Rotate image"
+      },
+      "SobelEdge": {
+        "display_name": "Sobel Edge",
+        "category": "Feature",
+        "description": "Sobel edge detection"
+      },
+      "TemplateCreator": {
+        "display_name": "Template Creator",
+        "category": "Process",
+        "description": "Create matching template"
+      },
+      "TemplateMatch": {
+        "display_name": "Template Match",
+        "category": "Feature",
+        "description": "Template matching"
+      },
+      "Threshold": {
+        "display_name": "Threshold",
+        "category": "Filter",
+        "description": "Threshold binarization"
+      },
+      "VideoRecorder": {
+        "display_name": "Video Recorder",
+        "category": "Output",
+        "description": "Record video"
       }
     },
     "yolo_vision": {
