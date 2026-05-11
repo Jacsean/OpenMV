@@ -534,7 +534,7 @@ class MainWindow(QtWidgets.QMainWindow):
         header_layout = QtWidgets.QHBoxLayout()
 
         # 标题
-        title_label = QtWidgets.QLabel("运行日志")
+        title_label = QtWidgets.QLabel(self._translator.get_ui("main_window.log.title", "运行日志"))
         title_label.setFont(QtGui.QFont("Arial", 9, QtGui.QFont.Bold))
         header_layout.addWidget(title_label)
 
@@ -542,13 +542,13 @@ class MainWindow(QtWidgets.QMainWindow):
         header_layout.addStretch()
 
         # 清空按钮
-        clear_btn = QtWidgets.QPushButton("清空")
+        clear_btn = QtWidgets.QPushButton(self._translator.get_ui("main_window.log.clear", "清空"))
         clear_btn.setMaximumWidth(80)
         clear_btn.clicked.connect(self._clear_logs)
         header_layout.addWidget(clear_btn)
 
         # 折叠/展开按钮
-        self.toggle_log_btn = QtWidgets.QPushButton("折叠")
+        self.toggle_log_btn = QtWidgets.QPushButton(self._translator.get_ui("main_window.log.collapse", "折叠"))
         self.toggle_log_btn.setMaximumWidth(80)
         self.toggle_log_btn.clicked.connect(self._toggle_log_panel)
         header_layout.addWidget(self.toggle_log_btn)
@@ -619,15 +619,16 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         切换日志面板的折叠/展开状态
         """
+        t = self._translator.get_ui
         if self.log_panel_expanded:
             # 折叠
             self.log_text_browser.setVisible(False)
-            self.toggle_log_btn.setText("▶ 展开")
+            self.toggle_log_btn.setText("▶ " + t("main_window.log.expand", "展开"))
             self.log_panel_expanded = False
         else:
             # 展开
             self.log_text_browser.setVisible(True)
-            self.toggle_log_btn.setText("▼ 折叠")
+            self.toggle_log_btn.setText("▼ " + t("main_window.log.collapse", "折叠"))
             self.log_panel_expanded = True
 
     def _clear_logs(self):
@@ -636,7 +637,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         if hasattr(self, 'qt_log_handler'):
             self.qt_log_handler.clear()
-            self.status_label.setText("日志已清空")
+            self.status_label.setText(self._translator.get_ui("main_window.log.cleared", "日志已清空"))
 
     def _connect_node_selection_signal(self):
         """
