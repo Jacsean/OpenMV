@@ -22,6 +22,9 @@ from .image_annotation import Annotation, AnnotationLayer
 # 导入图形数据结构
 from core.shapes import BaseShape, AnnotationShape, ROIShape, MaskShape, ShapeContainer
 
+# 导入翻译管理器
+from language.translator import TranslatorManager
+
 
 class ImagePreviewDialog(QtWidgets.QDialog):
     """
@@ -41,7 +44,8 @@ class ImagePreviewDialog(QtWidgets.QDialog):
     
     def __init__(self, image, node=None, title="图像预览", parent=None):
         super(ImagePreviewDialog, self).__init__(parent)
-        self.setWindowTitle(title)
+        self._translator = TranslatorManager()
+        self.setWindowTitle(self._translator.get_ui("dialogs.image_preview.title", "图像预览"))
         self.image = image
         self.node = node  # 关联的ImageViewNode实例
         
@@ -100,18 +104,19 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         工具栏布局：缩放控制
         """
+        t = self._translator.get_ui
 
         # === 工具栏：缩放控制 BEGIN===
         toolbar_layout = QtWidgets.QHBoxLayout()
        
-        save_btn = QtWidgets.QPushButton("💾 保存图像")
+        save_btn = QtWidgets.QPushButton("💾 " + t("dialogs.image_preview.save", "保存图像"))
         save_btn.clicked.connect(self.save_image)
-        save_btn.setToolTip("保存当前图像")
+        save_btn.setToolTip(t("dialogs.image_preview.save_tip", "保存当前图像"))
         toolbar_layout.addWidget(save_btn)
 
-        refresh_btn = QtWidgets.QPushButton("🔄 刷新预览")
+        refresh_btn = QtWidgets.QPushButton("🔄 " + t("dialogs.image_preview.refresh", "刷新预览"))
         refresh_btn.clicked.connect(self.refresh_preview)
-        refresh_btn.setToolTip("从关联节点获取最新图像并刷新显示")
+        refresh_btn.setToolTip(t("dialogs.image_preview.refresh_tip", "从关联节点获取最新图像并刷新显示"))
         toolbar_layout.addWidget(refresh_btn)
      
         # 分隔线
@@ -121,21 +126,21 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         toolbar_layout.addWidget(separator_window)
                   
         # 适应窗口按钮
-        self.fit_btn = QtWidgets.QPushButton("⊞ 适应窗口")
+        self.fit_btn = QtWidgets.QPushButton("⊞ " + t("dialogs.image_preview.fit_window", "适应窗口"))
         self.fit_btn.clicked.connect(self.fit_to_window)
-        self.fit_btn.setToolTip("缩放图像以适应窗口大小")
+        self.fit_btn.setToolTip(t("dialogs.image_preview.fit_window_tip", "缩放图像以适应窗口大小"))
         toolbar_layout.addWidget(self.fit_btn)
         
         # 原始大小按钮
-        self.original_btn = QtWidgets.QPushButton("📏 原始大小")
+        self.original_btn = QtWidgets.QPushButton("📏 " + t("dialogs.image_preview.original_size", "原始大小"))
         self.original_btn.clicked.connect(self.fit_original)
-        self.original_btn.setToolTip("显示图像原始尺寸 (100%)")
+        self.original_btn.setToolTip(t("dialogs.image_preview.original_size_tip", "显示图像原始尺寸 (100%)"))
         toolbar_layout.addWidget(self.original_btn)
         
         # 缩小按钮
-        self.zoom_out_btn = QtWidgets.QPushButton("➖ 缩小")
+        self.zoom_out_btn = QtWidgets.QPushButton("➖ " + t("dialogs.image_preview.zoom_out", "缩小"))
         self.zoom_out_btn.clicked.connect(self.zoom_out)
-        self.zoom_out_btn.setToolTip("缩小视图 (快捷键: -)")
+        self.zoom_out_btn.setToolTip(t("dialogs.image_preview.zoom_out_tip", "缩小视图 (快捷键: -)"))
         toolbar_layout.addWidget(self.zoom_out_btn)
         
         # 缩放比例显示
@@ -146,9 +151,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         toolbar_layout.addWidget(self.zoom_label)
         
         # 放大按钮
-        self.zoom_in_btn = QtWidgets.QPushButton("➕ 放大")
+        self.zoom_in_btn = QtWidgets.QPushButton("➕ " + t("dialogs.image_preview.zoom_in", "放大"))
         self.zoom_in_btn.clicked.connect(self.zoom_in)
-        self.zoom_in_btn.setToolTip("放大视图 (快捷键: +)")
+        self.zoom_in_btn.setToolTip(t("dialogs.image_preview.zoom_in_tip", "放大视图 (快捷键: +)"))
         toolbar_layout.addWidget(self.zoom_in_btn)
      
         # 分隔线
@@ -161,9 +166,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         toolbar_layout.addStretch()
         
         # 最大化按钮
-        self.maximize_btn = QtWidgets.QPushButton("⬜ 最大化")
+        self.maximize_btn = QtWidgets.QPushButton("⬜ " + t("dialogs.image_preview.maximize", "最大化"))
         self.maximize_btn.clicked.connect(self.toggle_maximize)
-        self.maximize_btn.setToolTip("切换窗口最大化/恢复")
+        self.maximize_btn.setToolTip(t("dialogs.image_preview.maximize_tip", "切换窗口最大化/恢复"))
         toolbar_layout.addWidget(self.maximize_btn)
      
         # 主布局中加入工具栏：缩放控制
@@ -175,14 +180,14 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         mode_toolbar = QtWidgets.QHBoxLayout()
         
         # 显示控制下拉菜单（唯一的模式选择方式）
-        self.visibility_btn = QtWidgets.QPushButton("✏️ 标注")
+        self.visibility_btn = QtWidgets.QPushButton("✏️ " + t("dialogs.image_preview.annotations", "标注"))
         self.visibility_menu = QtWidgets.QMenu()
         
         # 使用 QActionGroup 实现单选互斥
         self.mode_action_group = QtWidgets.QActionGroup(self)
         self.mode_action_group.setExclusive(True)
         
-        self.show_annotations_action = self.visibility_menu.addAction("✏️ 标注")
+        self.show_annotations_action = self.visibility_menu.addAction("✏️ " + t("dialogs.image_preview.annotations", "标注"))
         self.show_annotations_action.setCheckable(True)
         self.show_annotations_action.setChecked(True)
         self.show_annotations_action.setActionGroup(self.mode_action_group)
@@ -199,7 +204,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.show_masks_action.triggered.connect(lambda: self.switch_mode('masks'))
         
         self.visibility_btn.setMenu(self.visibility_menu)
-        self.visibility_btn.setToolTip("选择绘图模式（标注/ROI/Mask）")
+        self.visibility_btn.setToolTip(t("dialogs.image_preview.mode_tip", "选择绘图模式（标注/ROI/Mask）"))
         mode_toolbar.addWidget(self.visibility_btn)
 
         # 分隔线
@@ -209,36 +214,36 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         mode_toolbar.addWidget(separator_mode)
         
         # 形状工具按钮
-        self.rect_tool_btn = QtWidgets.QPushButton("▭ 矩形")
+        self.rect_tool_btn = QtWidgets.QPushButton("▭ " + t("dialogs.image_preview.rect", "矩形"))
         self.rect_tool_btn.setCheckable(True)
         self.rect_tool_btn.clicked.connect(lambda: self.activate_tool('rect'))
-        self.rect_tool_btn.setToolTip("绘制矩形")
+        self.rect_tool_btn.setToolTip(t("dialogs.image_preview.rect_tip", "绘制矩形"))
         mode_toolbar.addWidget(self.rect_tool_btn)
         
-        self.circle_tool_btn = QtWidgets.QPushButton("○ 圆形")
+        self.circle_tool_btn = QtWidgets.QPushButton("○ " + t("dialogs.image_preview.circle", "圆形"))
         self.circle_tool_btn.setCheckable(True)
         self.circle_tool_btn.clicked.connect(lambda: self.activate_tool('circle'))
-        self.circle_tool_btn.setToolTip("绘制圆形")
+        self.circle_tool_btn.setToolTip(t("dialogs.image_preview.circle_tip", "绘制圆形"))
         mode_toolbar.addWidget(self.circle_tool_btn)
         
-        self.polygon_tool_btn = QtWidgets.QPushButton("◇ 多边形")
+        self.polygon_tool_btn = QtWidgets.QPushButton("◇ " + t("dialogs.image_preview.polygon", "多边形"))
         self.polygon_tool_btn.setCheckable(True)
         self.polygon_tool_btn.clicked.connect(lambda: self.activate_tool('polygon'))
-        self.polygon_tool_btn.setToolTip("绘制多边形（逐点点击，双击闭合）")
+        self.polygon_tool_btn.setToolTip(t("dialogs.image_preview.polygon_tip", "绘制多边形（逐点点击，双击闭合）"))
         mode_toolbar.addWidget(self.polygon_tool_btn)
         
-        self.text_tool_btn = QtWidgets.QPushButton("T 文字")
+        self.text_tool_btn = QtWidgets.QPushButton("T " + t("dialogs.image_preview.text", "文字"))
         self.text_tool_btn.setCheckable(True)
         self.text_tool_btn.clicked.connect(lambda: self.activate_tool('text'))
-        self.text_tool_btn.setToolTip("添加文字标注")
+        self.text_tool_btn.setToolTip(t("dialogs.image_preview.text_tip", "添加文字标注"))
         mode_toolbar.addWidget(self.text_tool_btn)
         
         mode_toolbar.addStretch()
         
         # 颜色选择器
-        self.color_btn = QtWidgets.QPushButton("🎨 颜色")
+        self.color_btn = QtWidgets.QPushButton("🎨 " + t("dialogs.image_preview.color", "颜色"))
         self.color_btn.clicked.connect(self.show_color_picker)
-        self.color_btn.setToolTip("选择画笔颜色")
+        self.color_btn.setToolTip(t("dialogs.image_preview.color_tip", "选择画笔颜色"))
         self.color_btn.setStyleSheet("""
             QPushButton {
                 background-color: rgb(0, 255, 0);
@@ -256,9 +261,9 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         mode_toolbar.addWidget(self.current_color_label)
 
         # 清除所有图形按钮
-        self.clear_all_btn = QtWidgets.QPushButton("🗑 清除")
+        self.clear_all_btn = QtWidgets.QPushButton("🗑 " + t("dialogs.image_preview.clear", "清除"))
         self.clear_all_btn.clicked.connect(self.clear_all_shapes)
-        self.clear_all_btn.setToolTip("清除所有图形（标注/ROI/Mask）")
+        self.clear_all_btn.setToolTip(t("dialogs.image_preview.clear_tip", "清除所有图形（标注/ROI/Mask）"))
         self.clear_all_btn.setStyleSheet("color: #f44336;")
         mode_toolbar.addWidget(self.clear_all_btn)
         
@@ -361,6 +366,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.main_layout.addWidget(self.graphics_view)
         
     def _Create_info_bar(self):
+        t = self._translator.get_ui
         
         # === 信息栏 ===
         info_layout = QtWidgets.QHBoxLayout()
@@ -373,7 +379,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         info_layout.addStretch()
         
         # 提示标签
-        self.hint_label = QtWidgets.QLabel("💡 提示: 滚轮缩放 | 空格+拖拽平移 | 修改参数后点击'▶ 运行'再刷新")
+        self.hint_label = QtWidgets.QLabel("💡 " + t("dialogs.image_preview.hint", "提示: 滚轮缩放 | 空格+拖拽平移 | 修改参数后点击'▶ 运行'再刷新"))
         self.hint_label.setAlignment(QtCore.Qt.AlignRight)
         self.hint_label.setStyleSheet("color: #888; font-size: 10px;")
         info_layout.addWidget(self.hint_label)
@@ -575,6 +581,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         刷新预览：从关联节点获取最新图像
         """
+        t = self._translator.get_ui
         if self.node is not None:
             # 从节点获取最新的缓存图像
             new_image = self.node.get_cached_image()
@@ -585,14 +592,14 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             else:
                 QtWidgets.QMessageBox.warning(
                     self,
-                    "警告",
-                    "节点中没有可显示的图像\n请先运行节点图"
+                    t("dialogs.image_preview.warning", "警告"),
+                    t("dialogs.image_preview.no_image", "节点中没有可显示的图像\n请先运行节点图")
                 )
         else:
             QtWidgets.QMessageBox.information(
                 self,
-                "提示",
-                "此预览窗口未关联节点\n无法自动刷新"
+                t("dialogs.image_preview.info", "提示"),
+                t("dialogs.image_preview.no_node", "此预览窗口未关联节点\n无法自动刷新")
             )
     
     def display_image(self):
@@ -649,20 +656,21 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         保存当前显示的图像到文件
         """
+        t = self._translator.get_ui
         if self.image is None:
             QtWidgets.QMessageBox.warning(
                 self,
-                "警告",
-                "没有可保存的图像"
+                t("dialogs.image_preview.warning", "警告"),
+                t("dialogs.image_preview.no_save_image", "没有可保存的图像")
             )
             return
         
         # 打开文件保存对话框
         file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
-            "保存图像",
+            t("dialogs.image_preview.save", "保存图像"),
             "",
-            "图像文件 (*.png *.jpg *.bmp *.tif);;PNG文件 (*.png);;JPEG文件 (*.jpg);;BMP文件 (*.bmp);;TIFF文件 (*.tif)"
+            t("dialogs.image_preview.image_filter", "图像文件 (*.png *.jpg *.bmp *.tif);;PNG文件 (*.png);;JPEG文件 (*.jpg);;BMP文件 (*.bmp);;TIFF文件 (*.tif)")
         )
         
         if file_path:
@@ -673,21 +681,21 @@ class ImagePreviewDialog(QtWidgets.QDialog):
                 if success:
                     QtWidgets.QMessageBox.information(
                         self,
-                        "保存成功",
-                        f"图像已保存到：\n{file_path}"
+                        t("dialogs.image_preview.save_success", "保存成功"),
+                        t("dialogs.image_preview.saved_to", "图像已保存到：") + f"\n{file_path}"
                     )
                     print(f"✅ 图像已保存: {file_path}")
                 else:
                     QtWidgets.QMessageBox.critical(
                         self,
-                        "保存失败",
-                        "图像保存失败，请检查文件格式和路径"
+                        t("dialogs.image_preview.save_failed", "保存失败"),
+                        t("dialogs.image_preview.save_failed_msg", "图像保存失败，请检查文件格式和路径")
                     )
             except Exception as e:
                 QtWidgets.QMessageBox.critical(
                     self,
-                    "保存错误",
-                    f"保存图像时发生错误：\n{str(e)}"
+                    t("dialogs.image_preview.save_error", "保存错误"),
+                    t("dialogs.image_preview.save_error_msg", "保存图像时发生错误：") + f"\n{str(e)}"
                 )
                 print(f"❌ 保存图像失败: {e}")
     
@@ -695,14 +703,15 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         切换窗口最大化/恢复
         """
+        t = self._translator.get_ui
         if self.isMaximized():
             self.showNormal()
-            self.maximize_btn.setText("⬜ 最大化")
-            self.maximize_btn.setToolTip("切换窗口最大化")
+            self.maximize_btn.setText("⬜ " + t("dialogs.image_preview.maximize", "最大化"))
+            self.maximize_btn.setToolTip(t("dialogs.image_preview.maximize_tip", "切换窗口最大化"))
         else:
             self.showMaximized()
-            self.maximize_btn.setText("🔲 恢复")
-            self.maximize_btn.setToolTip("恢复窗口大小")
+            self.maximize_btn.setText("🔲 " + t("dialogs.image_preview.restore", "恢复"))
+            self.maximize_btn.setToolTip(t("dialogs.image_preview.restore_tip", "恢复窗口大小"))
     
     def switch_mode(self, mode: str):
         """
@@ -732,13 +741,14 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             self.show_masks_action.setChecked(normalized_mode == 'masks')
         
         # 更新按钮文本显示当前模式
+        t = self._translator.get_ui
         if hasattr(self, 'visibility_btn'):
             mode_labels = {
-                'annotations': '✏️ 标注',
+                'annotations': '✏️ ' + t("dialogs.image_preview.annotations", "标注"),
                 'rois': '📐 ROI',
                 'masks': '🎭 Mask'
             }
-            self.visibility_btn.setText(mode_labels.get(normalized_mode, '✏️ 标注'))
+            self.visibility_btn.setText(mode_labels.get(normalized_mode, '✏️ ' + t("dialogs.image_preview.annotations", "标注")))
         
         # 清除当前选中的对象
         self.container.clear_selection()
@@ -822,11 +832,12 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         导出ROI和Mask数据到节点（Phase 4实现）
         """
+        t = self._translator.get_ui
         if not self.node:
             QtWidgets.QMessageBox.warning(
                 self,
-                "警告",
-                "此预览窗口未关联节点\n无法导出数据"
+                t("dialogs.image_preview.warning", "警告"),
+                t("dialogs.image_preview.no_node_export", "此预览窗口未关联节点\n无法导出数据")
             )
             return
         
@@ -846,34 +857,34 @@ class ImagePreviewDialog(QtWidgets.QDialog):
             roi_count = len(self.container.rois)
             mask_count = len(self.container.masks)
             
-            message = f"✅ 导出成功！\n\n"
-            message += f"• ROI数量: {roi_count}\n"
+            message = f"✅ " + t("dialogs.image_preview.export_success", "导出成功！") + "\n\n"
+            message += t("dialogs.image_preview.roi_count", "• ROI数量:") + f" {roi_count}\n"
             if roi_count > 0:
                 roi_names = [r.name for r in self.container.rois]
                 message += f"  - {', '.join(roi_names)}\n"
             
-            message += f"• Mask数量: {mask_count}\n"
+            message += t("dialogs.image_preview.mask_count", "• Mask数量:") + f" {mask_count}\n"
             if mask_count > 0:
                 mask_types = [f"{m.type}({m.name})" for m in self.container.masks]
                 message += f"  - {', '.join(mask_types)}\n"
             
-            message += f"\n数据已输出到节点端口：\n"
-            message += f"• 'ROI数据' → JSON字符串\n"
-            message += f"• 'Mask图像' → 8位灰度图"
+            message += "\n" + t("dialogs.image_preview.exported_to", "数据已输出到节点端口：") + "\n"
+            message += t("dialogs.image_preview.roi_port", "• 'ROI数据' → JSON字符串") + "\n"
+            message += t("dialogs.image_preview.mask_port", "• 'Mask图像' → 8位灰度图")
             
             QtWidgets.QMessageBox.information(
                 self,
-                "导出完成",
+                t("dialogs.image_preview.export_complete", "导出完成"),
                 message
             )
             
             print(f"✅ 导出完成: {roi_count}个ROI, {mask_count}个Mask")
             
         except Exception as e:
-            error_msg = f"导出失败: {str(e)}"
+            error_msg = t("dialogs.image_preview.export_failed", "导出失败:") + f" {str(e)}"
             QtWidgets.QMessageBox.critical(
                 self,
-                "导出错误",
+                t("dialogs.image_preview.export_error", "导出错误"),
                 error_msg
             )
             print(f"❌ {error_msg}")
@@ -954,10 +965,11 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         """
         清除所有图形
         """
+        t = self._translator.get_ui
         reply = QtWidgets.QMessageBox.question(
             self,
-            "确认清除",
-            "确定要清除所有标注、ROI和Mask吗？\n此操作不可撤销。",
+            t("dialogs.image_preview.confirm_clear", "确认清除"),
+            t("dialogs.image_preview.clear_confirm_msg", "确定要清除所有标注、ROI和Mask吗？\n此操作不可撤销。"),
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
         )
         
@@ -1233,7 +1245,8 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         )
         
         # 打开颜色对话框
-        color = QtWidgets.QColorDialog.getColor(current_color, self, "选择画笔颜色")
+        t = self._translator.get_ui
+        color = QtWidgets.QColorDialog.getColor(current_color, self, t("dialogs.image_preview.select_color", "选择画笔颜色"))
         
         if color.isValid():
             # 更新当前颜色（转换为BGR格式）
@@ -1263,18 +1276,19 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # 检查当前模式是否允许使用该工具
         mode = self.current_mode
         
+        t = self._translator.get_ui
         if mode == 'rois' and tool_name != 'rect':
             QtWidgets.QMessageBox.warning(
                 self,
-                "提示",
-                "ROI模式下仅支持矩形工具"
+                t("dialogs.image_preview.info", "提示"),
+                t("dialogs.image_preview.roi_only_rect", "ROI模式下仅支持矩形工具")
             )
             return
         elif mode == 'masks' and tool_name not in ['rect', 'circle', 'polygon']:
             QtWidgets.QMessageBox.warning(
                 self,
-                "提示",
-                "Mask模式下仅支持矩形、圆形、多边形工具"
+                t("dialogs.image_preview.info", "提示"),
+                t("dialogs.image_preview.mask_only_shapes", "Mask模式下仅支持矩形、圆形、多边形工具")
             )
             return
         
