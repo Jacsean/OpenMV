@@ -65,6 +65,7 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # 绘图与交互状态
         self.current_pen_color = (255, 0, 0)  # BGR格式：red
         self.current_drawing_rect = None  # 当前正在绘制的形状（用于实时预览）
+        self.drawing_start_pos = None  # 绘制起始位置（用于矩形/圆形绘制）
         self.HANDLE_SIZE = 8  # 手柄大小（像素）
         self.is_drawing_polygon = False  # 是否正在绘制多边形
         self.polygon_points = []  # 多边形顶点列表（场景坐标）
