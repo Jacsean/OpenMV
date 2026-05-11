@@ -1,0 +1,180 @@
+======================================================================
+          未国际化文本扫描报告
+======================================================================
+
+扫描文件数量: 72
+发现中文文本: 1527
+
+en_US 缺失翻译: 1525
+
+zh_CN 缺失翻译: 1212
+
+======================================================================
+          缺失翻译详情
+======================================================================
+
+【en_US】
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:43
+    原文: 配置分类枚举
+    上下文: """配置分类枚举"""...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:66
+    原文: 配置变更事件
+    上下文: """配置变更事件"""...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:133
+    原文: 设置系统级配置项默认值
+    上下文: """设置系统级配置项默认值"""...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:170
+    原文: 最近打开的项目列表
+    上下文: description='最近打开的项目列表'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:176
+    原文: 标签页排序
+    上下文: description='标签页排序'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:182
+    原文: 窗口状态
+    上下文: description='窗口状态'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:188
+    原文: 默认窗口宽度
+    上下文: description='默认窗口宽度',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:195
+    原文: 默认窗口高度
+    上下文: description='默认窗口高度',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:202
+    原文: 启动时是否最大化
+    上下文: description='启动时是否最大化'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:208
+    原文: 界面主题
+    上下文: description='界面主题',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:215
+    原文: 主题模式
+    上下文: description='主题模式',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:222
+    原文: 自定义主题文件路径
+    上下文: description='自定义主题文件路径'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:228
+    原文: 界面语言
+    上下文: description='界面语言',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:235
+    原文: 界面字体
+    上下文: description='界面字体'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:248
+    原文: 自动保存
+    上下文: description='自动保存'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:261
+    原文: 日志级别
+    上下文: description='日志级别',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:269
+    原文: 主题色
+    上下文: description='主题色'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:275
+    原文: 强调色
+    上下文: description='强调色'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:281
+    原文: 背景色
+    上下文: description='背景色'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:287
+    原文: 表面色
+    上下文: description='表面色'...
+
+    ... 还有 1505 条
+
+【zh_CN】
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:43
+    原文: 配置分类枚举
+    上下文: """配置分类枚举"""...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:66
+    原文: 配置变更事件
+    上下文: """配置变更事件"""...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:133
+    原文: 设置系统级配置项默认值
+    上下文: """设置系统级配置项默认值"""...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:170
+    原文: 最近打开的项目列表
+    上下文: description='最近打开的项目列表'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:176
+    原文: 标签页排序
+    上下文: description='标签页排序'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:182
+    原文: 窗口状态
+    上下文: description='窗口状态'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:188
+    原文: 默认窗口宽度
+    上下文: description='默认窗口宽度',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:195
+    原文: 默认窗口高度
+    上下文: description='默认窗口高度',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:202
+    原文: 启动时是否最大化
+    上下文: description='启动时是否最大化'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:208
+    原文: 界面主题
+    上下文: description='界面主题',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:215
+    原文: 主题模式
+    上下文: description='主题模式',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:222
+    原文: 自定义主题文件路径
+    上下文: description='自定义主题文件路径'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:228
+    原文: 界面语言
+    上下文: description='界面语言',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:235
+    原文: 界面字体
+    上下文: description='界面字体'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:261
+    原文: 日志级别
+    上下文: description='日志级别',...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:299
+    原文: 禁用文字色
+    上下文: description='禁用文字色'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:311
+    原文: 成功状态色
+    上下文: description='成功状态色'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:317
+    原文: 警告状态色
+    上下文: description='警告状态色'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:323
+    原文: 错误状态色
+    上下文: description='错误状态色'...
+
+  - D:\example\projects\StduyOpenCV\src\python\core\config_manager.py:329
+    原文: 信息状态色
+    上下文: description='信息状态色'...
+
+    ... 还有 1192 条
