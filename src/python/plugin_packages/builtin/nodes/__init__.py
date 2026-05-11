@@ -16,6 +16,7 @@ from .morphology import MorphologyNode
 from .resize import ResizeNode
 from .rotate import RotateNode
 from .image_evaluation import ImageEvaluationNode
+from .pyramid import PyramidNode
 
 # 特征提取节点
 from .canny_edge import CannyEdgeNode
@@ -59,6 +60,7 @@ __all__ = [
     'ResizeNode',
     'RotateNode',
     'ImageEvaluationNode',
+    'PyramidNode',
     # 特征提取
     'CannyEdgeNode',
     'SobelEdgeNode',
