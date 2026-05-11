@@ -330,32 +330,32 @@
         "category": "Drawing",
         "description": "Add text to image"
       },
-      "AdaptiveThreshold": {
+      "AdaptiveThresholdNode": {
         "display_name": "Adaptive Threshold",
         "category": "Filter",
         "description": "Adaptive thresholding"
       },
-      "BilateralFilter": {
+      "BilateralFilterNode": {
         "display_name": "Bilateral Filter",
         "category": "Filter",
         "description": "Bilateral filtering"
       },
-      "BrightnessContrast": {
+      "BrightnessContrastNode": {
         "display_name": "Brightness/Contrast",
         "category": "Color",
         "description": "Adjust brightness and contrast"
       },
-      "CameraCapture": {
+      "CameraCaptureNode": {
         "display_name": "Camera Capture",
         "category": "Input",
         "description": "Capture image from camera"
       },
-      "CannyEdge": {
+      "CannyEdgeNode": {
         "display_name": "Canny Edge",
         "category": "Feature",
         "description": "Canny edge detection"
       },
-      "ContoursAnalysis": {
+      "ContoursAnalysisNode": {
         "display_name": "Contours Analysis",
         "category": "Feature",
         "description": "Analyze image contours"
@@ -365,82 +365,82 @@
         "category": "Output",
         "description": "Output data to external system"
       },
-      "FastDetection": {
+      "FastDetectionNode": {
         "display_name": "Fast Detection",
         "category": "Feature",
         "description": "Fast object detection"
       },
-      "GaussianBlur": {
+      "GaussianBlurNode": {
         "display_name": "Gaussian Blur",
         "category": "Filter",
         "description": "Gaussian blur"
       },
-      "Grayscale": {
+      "GrayscaleNode": {
         "display_name": "Grayscale",
         "category": "Color",
         "description": "Convert to grayscale"
       },
-      "HistogramEqualization": {
+      "HistogramEqualizationNode": {
         "display_name": "Histogram Equalization",
         "category": "Color",
         "description": "Histogram equalization"
       },
-      "ImageEvaluation": {
+      "ImageEvaluationNode": {
         "display_name": "Image Evaluation",
         "category": "Process",
         "description": "Evaluate image quality"
       },
-      "ImageLoad": {
+      "ImageLoadNode": {
         "display_name": "Image Load",
         "category": "Input",
         "description": "Load image from file"
       },
-      "ImageOperation": {
+      "ImageOperationNode": {
         "display_name": "Image Operation",
         "category": "Process",
         "description": "Basic image operations"
       },
-      "ImageSave": {
+      "ImageSaveNode": {
         "display_name": "Image Save",
         "category": "Output",
         "description": "Save image to file"
       },
-      "ImageView": {
+      "ImageViewNode": {
         "display_name": "Image View",
         "category": "Display",
         "description": "Display image preview"
       },
-      "JsonDisplay": {
+      "JsonDisplayNode": {
         "display_name": "Data Display",
         "category": "Display",
         "description": "Display JSON data"
       },
-      "MedianBlur": {
+      "MedianBlurNode": {
         "display_name": "Median Blur",
         "category": "Filter",
         "description": "Median filtering"
       },
-      "Morphology": {
+      "MorphologyNode": {
         "display_name": "Morphology",
         "category": "Filter",
         "description": "Morphological operations"
       },
-      "OtherFeatures": {
+      "LaplacianNode": {
         "display_name": "Laplacian",
         "category": "Feature",
         "description": "Laplacian edge detection"
       },
-      "PlcNode": {
+      "PLCNode": {
         "display_name": "PLC Communication",
         "category": "Integration",
         "description": "Communicate with PLC"
       },
-      "RealtimePreview": {
+      "RealTimePreviewNode": {
         "display_name": "Realtime Preview",
         "category": "Display",
         "description": "Realtime image preview"
       },
-      "Resize": {
+      "ResizeNode": {
         "display_name": "Resize",
         "category": "Transform",
         "description": "Resize image"
@@ -450,32 +450,32 @@
         "category": "Integration",
         "description": "Communicate with robot"
       },
-      "Rotate": {
+      "RotateNode": {
         "display_name": "Rotate",
         "category": "Transform",
         "description": "Rotate image"
       },
-      "SobelEdge": {
+      "SobelEdgeNode": {
         "display_name": "Sobel Edge",
         "category": "Feature",
         "description": "Sobel edge detection"
       },
-      "TemplateCreator": {
+      "TemplateCreatorNode": {
         "display_name": "Template Creator",
         "category": "Process",
         "description": "Create matching template"
       },
-      "TemplateMatch": {
+      "TemplateMatchNode": {
         "display_name": "Template Match",
         "category": "Feature",
         "description": "Template matching"
       },
-      "Threshold": {
+      "ThresholdNode": {
         "display_name": "Threshold",
         "category": "Filter",
         "description": "Threshold binarization"
       },
-      "VideoRecorder": {
+      "VideoRecorderNode": {
         "display_name": "Video Recorder",
         "category": "Output",
         "description": "Record video"

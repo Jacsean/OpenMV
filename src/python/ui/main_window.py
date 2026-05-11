@@ -140,9 +140,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # 刷新工具栏
         self._recreate_toolbar()
         
-        # 刷新节点库
-        if self.nodes_palette:
-            self._refresh_node_palette()
+        # 刷新节点库（重建节点库面板以更新节点名称）
+        if self.nodes_palette and self.current_node_graph:
+            self._refresh_node_palette_display()
+            self._customize_node_palette()
         
         # 刷新停靠窗口标题
         self._refresh_dock_titles()
