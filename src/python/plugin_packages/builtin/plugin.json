@@ -702,6 +702,18 @@
         "gpu_memory_gb": 0
       },
       "dependencies": []
+    },
+    {
+      "class": "FindCircleNode",
+      "display_name": "圆检测",
+      "__identifier__": "Image_Process",
+      "enabled": true
+    },
+    {
+      "class": "PyramidNode",
+      "display_name": "金字塔",
+      "__identifier__": "Image_Analysis",
+      "enabled": true
     }
   ],
   "dependencies": [
