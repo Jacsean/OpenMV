@@ -330,32 +330,32 @@
         "category": "绘图",
         "description": "在图像上添加文字"
       },
-      "AdaptiveThreshold": {
+      "AdaptiveThresholdNode": {
         "display_name": "自适应阈值",
         "category": "滤波",
         "description": "自适应阈值处理"
       },
-      "BilateralFilter": {
+      "BilateralFilterNode": {
         "display_name": "双边滤波",
         "category": "滤波",
         "description": "双边滤波处理"
       },
-      "BrightnessContrast": {
+      "BrightnessContrastNode": {
         "display_name": "亮度对比度",
         "category": "颜色",
         "description": "调整亮度和对比度"
       },
-      "CameraCapture": {
+      "CameraCaptureNode": {
         "display_name": "相机采集",
         "category": "输入",
         "description": "从相机采集图像"
       },
-      "CannyEdge": {
+      "CannyEdgeNode": {
         "display_name": "Canny算子",
         "category": "特征",
         "description": "Canny边缘检测"
       },
-      "ContoursAnalysis": {
+      "ContoursAnalysisNode": {
         "display_name": "轮廓分析",
         "category": "特征",
         "description": "分析图像轮廓"
@@ -365,82 +365,82 @@
         "category": "输出",
         "description": "输出数据到外部系统"
       },
-      "FastDetection": {
+      "FastDetectionNode": {
         "display_name": "快速检测",
         "category": "特征",
         "description": "快速目标检测"
       },
-      "GaussianBlur": {
+      "GaussianBlurNode": {
         "display_name": "高斯模糊",
         "category": "滤波",
         "description": "高斯模糊处理"
       },
-      "Grayscale": {
+      "GrayscaleNode": {
         "display_name": "灰度化",
         "category": "颜色",
         "description": "转换为灰度图像"
       },
-      "HistogramEqualization": {
+      "HistogramEqualizationNode": {
         "display_name": "直方图均衡化",
         "category": "颜色",
         "description": "直方图均衡化处理"
       },
-      "ImageEvaluation": {
+      "ImageEvaluationNode": {
         "display_name": "图像评估",
         "category": "处理",
         "description": "评估图像质量"
       },
-      "ImageLoad": {
+      "ImageLoadNode": {
         "display_name": "加载图像",
         "category": "输入",
         "description": "从文件加载图像"
       },
-      "ImageOperation": {
+      "ImageOperationNode": {
         "display_name": "图像操作",
         "category": "处理",
         "description": "图像基本操作"
       },
-      "ImageSave": {
+      "ImageSaveNode": {
         "display_name": "保存图像",
         "category": "输出",
         "description": "保存图像到文件"
       },
-      "ImageView": {
+      "ImageViewNode": {
         "display_name": "图像显示",
         "category": "显示",
         "description": "显示图像预览"
       },
-      "JsonDisplay": {
+      "JsonDisplayNode": {
         "display_name": "数据显示",
         "category": "显示",
         "description": "显示JSON数据"
       },
-      "MedianBlur": {
+      "MedianBlurNode": {
         "display_name": "中值滤波",
         "category": "滤波",
         "description": "中值滤波处理"
       },
-      "Morphology": {
+      "MorphologyNode": {
         "display_name": "形态学操作",
         "category": "滤波",
         "description": "形态学图像处理"
       },
-      "OtherFeatures": {
+      "LaplacianNode": {
         "display_name": "Laplacian算子",
         "category": "特征",
         "description": "Laplacian边缘检测"
       },
-      "PlcNode": {
+      "PLCNode": {
         "display_name": "PLC通信",
         "category": "集成",
         "description": "与PLC设备通信"
       },
-      "RealtimePreview": {
+      "RealTimePreviewNode": {
         "display_name": "实时预览",
         "category": "显示",
         "description": "实时图像预览"
       },
-      "Resize": {
+      "ResizeNode": {
         "display_name": "图像缩放",
         "category": "变换",
         "description": "调整图像大小"
@@ -450,32 +450,32 @@
         "category": "集成",
         "description": "与机器人设备通信"
       },
-      "Rotate": {
+      "RotateNode": {
         "display_name": "图像旋转",
         "category": "变换",
         "description": "旋转图像"
       },
-      "SobelEdge": {
+      "SobelEdgeNode": {
         "display_name": "Sobel算子",
         "category": "特征",
         "description": "Sobel边缘检测"
       },
-      "TemplateCreator": {
+      "TemplateCreatorNode": {
         "display_name": "模板创建",
         "category": "处理",
         "description": "创建匹配模板"
       },
-      "TemplateMatch": {
+      "TemplateMatchNode": {
         "display_name": "模板匹配",
         "category": "特征",
         "description": "模板匹配检测"
       },
-      "Threshold": {
+      "ThresholdNode": {
         "display_name": "阈值二值化",
         "category": "滤波",
         "description": "阈值二值化处理"
       },
-      "VideoRecorder": {
+      "VideoRecorderNode": {
         "display_name": "视频录制",
         "category": "输出",
         "description": "录制视频"
