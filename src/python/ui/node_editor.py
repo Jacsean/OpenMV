@@ -18,6 +18,8 @@ import shutil
 from pathlib import Path
 from PySide2 import QtWidgets, QtCore, QtGui
 
+from language.translator import TranslatorManager
+
 
 class TreeBranchDelegate(QtWidgets.QStyledItemDelegate):
     """自定义树形视图委托，绘制分支连线，实现文件系统风格的树形结构"""
@@ -105,9 +107,10 @@ class NodeEditorDialog(QtWidgets.QDialog):
 
     def __init__(self, parent=None, plugin_manager=None, plugins_dir=None):
         super(NodeEditorDialog, self).__init__(parent)
+        self._translator = TranslatorManager()
         self.plugin_manager = plugin_manager
         self.plugins_dir = plugins_dir
-        self.setWindowTitle("节点编辑器")
+        self.setWindowTitle(self._translator.get_ui("dialogs.node_editor.title", "节点编辑器"))
         self.resize(600, 400)
 
         self.builtin_plugin_info = None
@@ -150,36 +153,37 @@ class NodeEditorDialog(QtWidgets.QDialog):
         main_layout.addWidget(splitter)
 
     def _create_toolbar(self):
+        t = self._translator.get_ui
         toolbar = QtWidgets.QToolBar()
         toolbar.setIconSize(QtCore.QSize(24, 24))
 
-        add_action = toolbar.addAction("➕ 增加")
+        add_action = toolbar.addAction("➕ " + t("dialogs.node_editor.add", "增加"))
         add_action.triggered.connect(self._on_add_node)
-        add_action.setToolTip("添加新内置节点到选中的分组")
+        add_action.setToolTip(t("dialogs.node_editor.add_tip", "添加新内置节点到选中的分组"))
 
-        delete_action = toolbar.addAction("➖ 删除")
+        delete_action = toolbar.addAction("➖ " + t("dialogs.node_editor.delete", "删除"))
         delete_action.triggered.connect(self._on_delete)
-        delete_action.setToolTip("删除选中的节点或市场插件")
+        delete_action.setToolTip(t("dialogs.node_editor.delete_tip", "删除选中的节点或市场插件"))
 
         toolbar.addSeparator()
 
-        import_action = toolbar.addAction("📥 导入")
+        import_action = toolbar.addAction("📥 " + t("dialogs.node_editor.import", "导入"))
         import_action.triggered.connect(self._on_import)
-        import_action.setToolTip("导入市场节点配置文件")
+        import_action.setToolTip(t("dialogs.node_editor.import_tip", "导入市场节点配置文件"))
 
-        export_action = toolbar.addAction("📤 导出")
+        export_action = toolbar.addAction("📤 " + t("dialogs.node_editor.export", "导出"))
         export_action.triggered.connect(self._on_export)
-        export_action.setToolTip("导出当前节点配置")
+        export_action.setToolTip(t("dialogs.node_editor.export_tip", "导出当前节点配置"))
 
         toolbar.addSeparator()
 
-        refresh_action = toolbar.addAction("🔄 刷新节点库")
+        refresh_action = toolbar.addAction("🔄 " + t("dialogs.node_editor.refresh", "刷新节点库"))
         refresh_action.triggered.connect(self._on_refresh_node_library)
-        refresh_action.setToolTip("刷新节点库并重新加载所有节点")
+        refresh_action.setToolTip(t("dialogs.node_editor.refresh_tip", "刷新节点库并重新加载所有节点"))
 
-        help_action = toolbar.addAction("❓ 帮助")
+        help_action = toolbar.addAction("❓ " + t("dialogs.node_editor.help", "帮助"))
         help_action.triggered.connect(self._on_help)
-        help_action.setToolTip("打开帮助文档")
+        help_action.setToolTip(t("dialogs.node_editor.help_tip", "打开帮助文档"))
 
         return toolbar
 
@@ -188,7 +192,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(panel)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        title_label = QtWidgets.QLabel("节点列表")
+        title_label = QtWidgets.QLabel(self._translator.get_ui("dialogs.node_editor.node_list", "节点列表"))
         title_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
         layout.addWidget(title_label)
 
@@ -218,7 +222,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(panel)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        title_label = QtWidgets.QLabel("详情")
+        title_label = QtWidgets.QLabel(self._translator.get_ui("dialogs.node_editor.details", "详情"))
         title_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
         layout.addWidget(title_label)
 
@@ -264,7 +268,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
     def _refresh_tree(self):
         self.node_tree.clear()
 
-        builtin_root = QtWidgets.QTreeWidgetItem(["内置节点"])
+        builtin_root = QtWidgets.QTreeWidgetItem([self._translator.get_ui("dialogs.node_editor.builtin_nodes", "内置节点")])
         builtin_root.setIcon(0, QtGui.QIcon.fromTheme("package"))
         builtin_root.setData(0, QtCore.Qt.UserRole, {
             'type': 'builtin_root',
@@ -322,14 +326,14 @@ class NodeEditorDialog(QtWidgets.QDialog):
 
         self.node_tree.addTopLevelItem(builtin_root)
 
-        market_root = QtWidgets.QTreeWidgetItem(["市场节点"])
+        market_root = QtWidgets.QTreeWidgetItem([self._translator.get_ui("dialogs.node_editor.market_nodes", "市场节点")])
         market_root.setIcon(0, QtGui.QIcon.fromTheme("cloud"))
         market_root.setData(0, QtCore.Qt.UserRole, {
             'type': 'market_root',
             'name': 'marketplace'
         })
 
-        local_item = QtWidgets.QTreeWidgetItem(["本地"])
+        local_item = QtWidgets.QTreeWidgetItem([self._translator.get_ui("dialogs.node_editor.local", "本地")])
         local_item.setData(0, QtCore.Qt.UserRole, {
             'type': 'market_local_root',
             'name': 'local'
@@ -351,7 +355,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         
         market_root.addChild(local_item)
 
-        remote_item = QtWidgets.QTreeWidgetItem(["网站分享"])
+        remote_item = QtWidgets.QTreeWidgetItem([self._translator.get_ui("dialogs.node_editor.remote", "网站分享")])
         remote_item.setData(0, QtCore.Qt.UserRole, {
             'type': 'market_remote',
             'name': 'remote'
@@ -485,7 +489,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
 
         self.node_name_edit = QtWidgets.QLineEdit(node_data.get('display_name', ''))
         self.node_name_edit.setMinimumWidth(200)
-        container_layout.addRow("显示名称:", self.node_name_edit)
+        container_layout.addRow(self._translator.get_ui("dialogs.node_editor.display_name", "显示名称:"), self.node_name_edit)
 
         self.group_combo = QtWidgets.QComboBox()
         self.group_combo.setMinimumWidth(200)
@@ -510,15 +514,15 @@ class NodeEditorDialog(QtWidgets.QDialog):
         if index >= 0:
             self.group_combo.setCurrentIndex(index)
         
-        container_layout.addRow("所属分组:", self.group_combo)
+        container_layout.addRow(self._translator.get_ui("dialogs.node_editor.group", "所属分组:"), self.group_combo)
 
         self.enabled_check = QtWidgets.QCheckBox()
         self.enabled_check.setChecked(node_data.get('enabled', True))
-        container_layout.addRow("是否启用:", self.enabled_check)
+        container_layout.addRow(self._translator.get_ui("dialogs.node_editor.enabled", "是否启用:"), self.enabled_check)
 
         class_value = QtWidgets.QLabel(f"<b>{node_data.get('class', '')}</b>")
         class_value.setStyleSheet("color: #666;")
-        container_layout.addRow("类名:", class_value)
+        container_layout.addRow(self._translator.get_ui("dialogs.node_editor.class_name", "类名:"), class_value)
 
         separator = QtWidgets.QFrame()
         separator.setFrameShape(QtWidgets.QFrame.HLine)
@@ -531,7 +535,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         btn_layout = QtWidgets.QHBoxLayout(btn_widget)
         btn_layout.setSpacing(10)
         
-        self.save_node_btn = QtWidgets.QPushButton("💾 保存")
+        self.save_node_btn = QtWidgets.QPushButton("💾 " + self._translator.get_ui("dialogs.node_editor.save", "保存"))
         self.save_node_btn.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
@@ -546,7 +550,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         """)
         self.save_node_btn.clicked.connect(self._on_save_node)
         
-        self.cancel_node_btn = QtWidgets.QPushButton("取消")
+        self.cancel_node_btn = QtWidgets.QPushButton(self._translator.get_ui("dialogs.node_editor.cancel", "取消"))
         self.cancel_node_btn.setStyleSheet("""
             QPushButton {
                 background-color: #f0f0f0;
@@ -587,7 +591,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         author_label = QtWidgets.QLabel(f"<b>作者:</b> {pkg_data.get('author', '')}")
         layout.addWidget(author_label)
 
-        delete_btn = QtWidgets.QPushButton("🗑️ 删除插件")
+        delete_btn = QtWidgets.QPushButton("🗑️ " + self._translator.get_ui("dialogs.node_editor.delete_plugin", "删除插件"))
         delete_btn.clicked.connect(lambda: self._on_delete_market_plugin(data))
         layout.addWidget(delete_btn)
 
@@ -614,30 +618,31 @@ class NodeEditorDialog(QtWidgets.QDialog):
     def _show_market_remote_url_info(self, data):
         layout = self.detail_layout
 
+        t = self._translator.get_ui
         url_layout = QtWidgets.QHBoxLayout()
-        url_label = QtWidgets.QLabel("网址:")
+        url_label = QtWidgets.QLabel(t("dialogs.node_editor.url", "网址:"))
         self.remote_url_edit = QtWidgets.QLineEdit(data.get('url', ''))
         url_layout.addWidget(url_label)
         url_layout.addWidget(self.remote_url_edit)
         layout.addLayout(url_layout)
 
-        refresh_btn = QtWidgets.QPushButton("🔄 刷新插件列表")
+        refresh_btn = QtWidgets.QPushButton("🔄 " + t("dialogs.node_editor.refresh_plugins", "刷新插件列表"))
         refresh_btn.clicked.connect(self._on_refresh_remote_plugins)
         layout.addWidget(refresh_btn)
 
-        list_label = QtWidgets.QLabel("<b>可下载节点:</b>")
+        list_label = QtWidgets.QLabel("<b>" + t("dialogs.node_editor.downloadable_nodes", "可下载节点:") + "</b>")
         layout.addWidget(list_label)
 
         plugins_list = [
-            {'name': 'Advanced Filter', 'version': '1.0.0', 'description': '高级图像滤镜节点'},
-            {'name': '3D Reconstruction', 'version': '2.0.1', 'description': '3D重建节点'},
-            {'name': 'Video Analytics', 'version': '1.5.0', 'description': '视频分析节点'}
+            {'name': 'Advanced Filter', 'version': '1.0.0', 'description': t("dialogs.node_editor.advanced_filter_desc", "高级图像滤镜节点")},
+            {'name': '3D Reconstruction', 'version': '2.0.1', 'description': t("dialogs.node_editor.reconstruction_desc", "3D重建节点")},
+            {'name': 'Video Analytics', 'version': '1.5.0', 'description': t("dialogs.node_editor.video_analytics_desc", "视频分析节点")}
         ]
 
         for plugin in plugins_list:
             plugin_layout = QtWidgets.QHBoxLayout()
             plugin_info = QtWidgets.QLabel(f"<b>{plugin['name']}</b> v{plugin['version']}")
-            download_btn = QtWidgets.QPushButton("⬇️ 下载")
+            download_btn = QtWidgets.QPushButton("⬇️ " + t("dialogs.node_editor.download", "下载"))
             download_btn.clicked.connect(lambda p=plugin: self._on_download_plugin(p))
             plugin_layout.addWidget(plugin_info)
             plugin_layout.addWidget(download_btn)
@@ -652,9 +657,10 @@ class NodeEditorDialog(QtWidgets.QDialog):
         layout.addWidget(label)
 
     def _on_add_node(self):
+        t = self._translator.get_ui
         selection = self.current_selection
         if selection.get('type') not in ['group', 'node']:
-            QtWidgets.QMessageBox.warning(self, "提示", "请先选中一个节点分组或节点")
+            QtWidgets.QMessageBox.warning(self, t("dialogs.node_editor.info", "提示"), t("dialogs.node_editor.select_group_or_node", "请先选中一个节点分组或节点"))
             return
 
         target_group = selection.get('name')
@@ -674,9 +680,10 @@ class NodeEditorDialog(QtWidgets.QDialog):
                 self.builtin_plugin_info['nodes'].append(new_node)
                 self._save_builtin_config()
                 self._refresh_tree()
-                QtWidgets.QMessageBox.information(self, "成功", "节点已添加，请刷新节点库生效")
+                QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.success", "成功"), t("dialogs.node_editor.node_added", "节点已添加，请刷新节点库生效"))
 
     def _on_delete(self):
+        t = self._translator.get_ui
         selection = self.current_selection
         selection_type = selection.get('type')
 
@@ -685,16 +692,17 @@ class NodeEditorDialog(QtWidgets.QDialog):
         elif selection_type == 'market_local':
             self._on_delete_market_plugin(selection)
         else:
-            QtWidgets.QMessageBox.warning(self, "提示", "只能删除节点或本地市场插件")
+            QtWidgets.QMessageBox.warning(self, t("dialogs.node_editor.info", "提示"), t("dialogs.node_editor.can_only_delete", "只能删除节点或本地市场插件"))
 
     def _on_delete_node(self):
+        t = self._translator.get_ui
         selection = self.current_selection
         node_class = selection.get('name', '')
         display_name = selection.get('data', {}).get('display_name', node_class)
 
         reply = QtWidgets.QMessageBox.question(
-            self, "确认删除",
-            f"确定要删除节点 '{display_name}' 吗？\n\n删除后将从节点库中移除，需要刷新节点库才能生效。",
+            self, t("dialogs.node_editor.confirm_delete", "确认删除"),
+            t("dialogs.node_editor.confirm_delete_node", "确定要删除节点 '{display_name}' 吗？\n\n删除后将从节点库中移除，需要刷新节点库才能生效。").format(display_name=display_name),
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
         )
 
@@ -707,15 +715,16 @@ class NodeEditorDialog(QtWidgets.QDialog):
                 self._save_builtin_config()
                 self._refresh_tree()
                 self._clear_detail_layout()
-                QtWidgets.QMessageBox.information(self, "成功", "节点已删除")
+                QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.success", "成功"), t("dialogs.node_editor.node_deleted", "节点已删除"))
 
     def _on_delete_market_plugin(self, data):
+        t = self._translator.get_ui
         pkg_name = data.get('name', '')
         pkg_path = Path(data.get('path', ''))
 
         reply = QtWidgets.QMessageBox.question(
-            self, "确认删除",
-            f"确定要删除插件 '{pkg_name}' 吗？\n\n此操作将删除所有相关文件，且无法恢复。",
+            self, t("dialogs.node_editor.confirm_delete", "确认删除"),
+            t("dialogs.node_editor.confirm_delete_plugin", "确定要删除插件 '{pkg_name}' 吗？\n\n此操作将删除所有相关文件，且无法恢复。").format(pkg_name=pkg_name),
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
         )
 
@@ -726,11 +735,12 @@ class NodeEditorDialog(QtWidgets.QDialog):
                 del self.marketplace_plugins[pkg_name]
                 self._refresh_tree()
                 self._clear_detail_layout()
-                QtWidgets.QMessageBox.information(self, "成功", "插件已删除")
+                QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.success", "成功"), t("dialogs.node_editor.plugin_deleted", "插件已删除"))
             except Exception as e:
-                QtWidgets.QMessageBox.error(self, "错误", f"删除失败: {str(e)}")
+                QtWidgets.QMessageBox.error(self, t("dialogs.node_editor.error", "错误"), t("dialogs.node_editor.delete_failed", "删除失败:") + f" {str(e)}")
 
     def _on_save_node(self):
+        t = self._translator.get_ui
         selection = self.current_selection
         node_class = selection.get('name', '')
 
@@ -744,7 +754,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
 
             self._save_builtin_config()
             self._refresh_tree()
-            QtWidgets.QMessageBox.information(self, "成功", "节点信息已保存，请刷新节点库生效")
+            QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.success", "成功"), t("dialogs.node_editor.node_saved", "节点信息已保存，请刷新节点库生效"))
 
     def _on_cancel_node_edit(self):
         self._update_detail_panel(self.current_selection)
@@ -757,13 +767,14 @@ class NodeEditorDialog(QtWidgets.QDialog):
                 json.dump(self.builtin_plugin_info, f, indent=2, ensure_ascii=False)
 
     def _on_import(self):
+        t = self._translator.get_ui
         selection = self.current_selection
         if selection.get('type') != 'market_root' and selection.get('type') != 'market_local_root':
-            QtWidgets.QMessageBox.warning(self, "提示", "请先选中市场节点")
+            QtWidgets.QMessageBox.warning(self, t("dialogs.node_editor.info", "提示"), t("dialogs.node_editor.select_market", "请先选中市场节点"))
             return
 
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "选择节点配置文件", "", "JSON文件 (*.json)"
+            self, t("dialogs.node_editor.select_config", "选择节点配置文件"), "", t("dialogs.node_editor.json_filter", "JSON文件 (*.json)")
         )
 
         if file_path:
@@ -772,7 +783,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
                     config = json.load(f)
                 
                 if 'name' not in config or 'nodes' not in config:
-                    QtWidgets.QMessageBox.error(self, "错误", "无效的节点配置文件")
+                    QtWidgets.QMessageBox.error(self, t("dialogs.node_editor.error", "错误"), t("dialogs.node_editor.invalid_config", "无效的节点配置文件"))
                     return
 
                 pkg_name = config['name']
@@ -781,8 +792,8 @@ class NodeEditorDialog(QtWidgets.QDialog):
                 
                 if pkg_path.exists():
                     reply = QtWidgets.QMessageBox.question(
-                        self, "覆盖确认",
-                        f"插件 '{pkg_name}' 已存在，是否覆盖？",
+                        self, t("dialogs.node_editor.confirm_overwrite", "覆盖确认"),
+                        t("dialogs.node_editor.confirm_overwrite_plugin", "插件 '{pkg_name}' 已存在，是否覆盖？").format(pkg_name=pkg_name),
                         QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
                     )
                     if reply != QtWidgets.QMessageBox.Yes:
@@ -795,11 +806,12 @@ class NodeEditorDialog(QtWidgets.QDialog):
                     json.dump(config, f, indent=2, ensure_ascii=False)
 
                 self._load_plugin_data()
-                QtWidgets.QMessageBox.information(self, "成功", "插件已导入")
+                QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.success", "成功"), t("dialogs.node_editor.plugin_imported", "插件已导入"))
             except Exception as e:
-                QtWidgets.QMessageBox.error(self, "错误", f"导入失败: {str(e)}")
+                QtWidgets.QMessageBox.error(self, t("dialogs.node_editor.error", "错误"), t("dialogs.node_editor.import_failed", "导入失败:") + f" {str(e)}")
 
     def _on_export(self):
+        t = self._translator.get_ui
         selection = self.current_selection
         export_data = None
         export_name = ""
@@ -817,23 +829,24 @@ class NodeEditorDialog(QtWidgets.QDialog):
             export_data = selection.get('data', {})
             export_name = selection.get('name', 'plugin')
         else:
-            QtWidgets.QMessageBox.warning(self, "提示", "请选择要导出的内容")
+            QtWidgets.QMessageBox.warning(self, t("dialogs.node_editor.info", "提示"), t("dialogs.node_editor.select_export", "请选择要导出的内容"))
             return
 
         if export_data:
             file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
-                self, "保存配置文件", f"{export_name}.json", "JSON文件 (*.json)"
+                self, t("dialogs.node_editor.save_config", "保存配置文件"), f"{export_name}.json", t("dialogs.node_editor.json_filter", "JSON文件 (*.json)")
             )
 
             if file_path:
                 try:
                     with open(file_path, 'w', encoding='utf-8') as f:
                         json.dump(export_data, f, indent=2, ensure_ascii=False)
-                    QtWidgets.QMessageBox.information(self, "成功", "配置已导出")
+                    QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.success", "成功"), t("dialogs.node_editor.config_exported", "配置已导出"))
                 except Exception as e:
-                    QtWidgets.QMessageBox.error(self, "错误", f"导出失败: {str(e)}")
+                    QtWidgets.QMessageBox.error(self, t("dialogs.node_editor.error", "错误"), t("dialogs.node_editor.export_failed", "导出失败:") + f" {str(e)}")
 
     def _on_refresh_node_library(self):
+        t = self._translator.get_ui
         if self.plugin_manager and hasattr(self.plugin_manager, 'reload_all_plugins'):
             try:
                 from core.node_registry import NodeRegistry
@@ -843,16 +856,17 @@ class NodeEditorDialog(QtWidgets.QDialog):
                 if self.parent() and hasattr(self.parent(), '_refresh_node_palette_display'):
                     self.parent()._refresh_node_palette_display()
                 
-                QtWidgets.QMessageBox.information(self, "成功", "节点库已刷新")
+                QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.success", "成功"), t("dialogs.node_editor.library_refreshed", "节点库已刷新"))
             except Exception as e:
-                QtWidgets.QMessageBox.error(self, "错误", f"刷新失败: {str(e)}")
+                QtWidgets.QMessageBox.error(self, t("dialogs.node_editor.error", "错误"), t("dialogs.node_editor.refresh_failed", "刷新失败:") + f" {str(e)}")
         else:
-            QtWidgets.QMessageBox.information(self, "提示", "节点库已刷新（需要重启应用才能完全生效）")
+            QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.info", "提示"), t("dialogs.node_editor.requires_restart", "节点库已刷新（需要重启应用才能完全生效）"))
 
     def _on_refresh_remote_plugins(self):
+        t = self._translator.get_ui
         url = self.remote_url_edit.text().strip()
         if not url:
-            QtWidgets.QMessageBox.warning(self, "提示", "请输入有效的网址")
+            QtWidgets.QMessageBox.warning(self, t("dialogs.node_editor.info", "提示"), t("dialogs.node_editor.enter_url", "请输入有效的网址"))
             return
 
         config_path = Path(__file__).parent.parent / "config" / "plugins.json"
@@ -869,26 +883,28 @@ class NodeEditorDialog(QtWidgets.QDialog):
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
             
-            QtWidgets.QMessageBox.information(self, "成功", "插件列表已刷新")
+            QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.success", "成功"), t("dialogs.node_editor.plugins_refreshed", "插件列表已刷新"))
         except Exception as e:
-            QtWidgets.QMessageBox.error(self, "错误", f"刷新失败: {str(e)}")
+            QtWidgets.QMessageBox.error(self, t("dialogs.node_editor.error", "错误"), t("dialogs.node_editor.refresh_failed", "刷新失败:") + f" {str(e)}")
 
     def _on_download_plugin(self, plugin_info):
+        t = self._translator.get_ui
         reply = QtWidgets.QMessageBox.question(
-            self, "确认下载",
-            f"确定要下载 '{plugin_info['name']}' 吗？",
+            self, t("dialogs.node_editor.confirm_download", "确认下载"),
+            t("dialogs.node_editor.confirm_download_plugin", "确定要下载 '{plugin_name}' 吗？").format(plugin_name=plugin_info['name']),
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
         )
 
         if reply == QtWidgets.QMessageBox.Yes:
             QtWidgets.QMessageBox.information(
-                self, "成功",
-                f"插件 '{plugin_info['name']}' 已下载并安装\n\n描述: {plugin_info['description']}"
+                self, t("dialogs.node_editor.success", "成功"),
+                t("dialogs.node_editor.plugin_downloaded", "插件 '{plugin_name}' 已下载并安装\n\n描述: {description}").format(plugin_name=plugin_info['name'], description=plugin_info['description'])
             )
             self._refresh_tree()
 
     def _on_help(self):
-        help_text = """
+        t = self._translator.get_ui
+        help_text = t("dialogs.node_editor.help_text", """
 节点编辑器使用说明：
 
 【工具栏】
@@ -914,8 +930,8 @@ class NodeEditorDialog(QtWidgets.QDialog):
 • 修改节点信息后需要点击"保存"按钮
 • 删除操作不可恢复，请谨慎操作
 • 修改后需要刷新节点库才能生效
-        """
-        QtWidgets.QMessageBox.information(self, "帮助", help_text)
+        """)
+        QtWidgets.QMessageBox.information(self, t("dialogs.node_editor.help", "帮助"), help_text)
 
 
 class AddNodeDialog(QtWidgets.QDialog):
@@ -923,7 +939,9 @@ class AddNodeDialog(QtWidgets.QDialog):
 
     def __init__(self, parent=None, default_group=None):
         super(AddNodeDialog, self).__init__(parent)
-        self.setWindowTitle("添加新节点")
+        self._translator = TranslatorManager()
+        t = self._translator.get_ui
+        self.setWindowTitle(t("dialogs.node_editor.add_node_title", "添加新节点"))
         self.resize(400, 250)
 
         layout = QtWidgets.QVBoxLayout(self)
@@ -931,9 +949,9 @@ class AddNodeDialog(QtWidgets.QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
 
         file_layout = QtWidgets.QHBoxLayout()
-        file_label = QtWidgets.QLabel("文件路径:")
+        file_label = QtWidgets.QLabel(t("dialogs.node_editor.file_path", "文件路径:"))
         self.file_edit = QtWidgets.QLineEdit()
-        browse_btn = QtWidgets.QPushButton("浏览...")
+        browse_btn = QtWidgets.QPushButton(t("dialogs.node_editor.browse", "浏览..."))
         browse_btn.clicked.connect(self._on_browse_file)
         file_layout.addWidget(file_label)
         file_layout.addWidget(self.file_edit)
@@ -941,29 +959,29 @@ class AddNodeDialog(QtWidgets.QDialog):
         layout.addLayout(file_layout)
 
         class_layout = QtWidgets.QHBoxLayout()
-        class_label = QtWidgets.QLabel("类名:")
+        class_label = QtWidgets.QLabel(t("dialogs.node_editor.class_name", "类名:"))
         self.class_name_edit = QtWidgets.QLineEdit()
         class_layout.addWidget(class_label)
         class_layout.addWidget(self.class_name_edit)
         layout.addLayout(class_layout)
 
         name_layout = QtWidgets.QHBoxLayout()
-        name_label = QtWidgets.QLabel("显示名称:")
+        name_label = QtWidgets.QLabel(t("dialogs.node_editor.display_name", "显示名称:"))
         self.display_name_edit = QtWidgets.QLineEdit()
         name_layout.addWidget(name_label)
         name_layout.addWidget(self.display_name_edit)
         layout.addLayout(name_layout)
 
         group_layout = QtWidgets.QHBoxLayout()
-        group_label = QtWidgets.QLabel("所属分组:")
+        group_label = QtWidgets.QLabel(t("dialogs.node_editor.group", "所属分组:"))
         self.group_combo = QtWidgets.QComboBox()
         
         groups = [
-            ('Image_Source', '图像源'),
-            ('Image_Analysis', '图像分析'),
-            ('Image_Transform', '图像变换'),
-            ('Image_Process', '图像处理'),
-            ('Integration', '系统集成')
+            ('Image_Source', t("dialogs.node_editor.image_source", "图像源")),
+            ('Image_Analysis', t("dialogs.node_editor.image_analysis", "图像分析")),
+            ('Image_Transform', t("dialogs.node_editor.image_transform", "图像变换")),
+            ('Image_Process', t("dialogs.node_editor.image_process", "图像处理")),
+            ('Integration', t("dialogs.node_editor.integration", "系统集成"))
         ]
         
         for group_id, display_name in groups:
@@ -978,14 +996,14 @@ class AddNodeDialog(QtWidgets.QDialog):
         group_layout.addWidget(self.group_combo)
         layout.addLayout(group_layout)
 
-        self.enabled_check = QtWidgets.QCheckBox("是否启用")
+        self.enabled_check = QtWidgets.QCheckBox(t("dialogs.node_editor.enabled", "是否启用"))
         self.enabled_check.setChecked(True)
         layout.addWidget(self.enabled_check)
 
         btn_layout = QtWidgets.QHBoxLayout()
-        ok_btn = QtWidgets.QPushButton("确定")
+        ok_btn = QtWidgets.QPushButton(t("dialogs.node_editor.ok", "确定"))
         ok_btn.clicked.connect(self._on_ok)
-        cancel_btn = QtWidgets.QPushButton("取消")
+        cancel_btn = QtWidgets.QPushButton(t("dialogs.node_editor.cancel", "取消"))
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(ok_btn)
         btn_layout.addWidget(cancel_btn)
@@ -1022,12 +1040,13 @@ class AddNodeDialog(QtWidgets.QDialog):
             print(f"提取类名失败: {e}")
 
     def _on_ok(self):
+        t = self._translator.get_ui
         if not self.class_name_edit.text().strip():
-            QtWidgets.QMessageBox.warning(self, "提示", "请输入类名")
+            QtWidgets.QMessageBox.warning(self, t("dialogs.node_editor.info", "提示"), t("dialogs.node_editor.enter_class_name", "请输入类名"))
             return
         
         if not self.display_name_edit.text().strip():
-            QtWidgets.QMessageBox.warning(self, "提示", "请输入显示名称")
+            QtWidgets.QMessageBox.warning(self, t("dialogs.node_editor.info", "提示"), t("dialogs.node_editor.enter_display_name", "请输入显示名称"))
             return
         
         self.accept()
