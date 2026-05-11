@@ -162,6 +162,40 @@ class ExecutionUIManager:
             utils.logger.info("节点图已清空", module="execution_ui_manager")
             event_bus.publish(Events.WORKFLOW_CLEARED, workflow=workflow)
 
+    def clear_all_graphs_with_confirmation(self):
+        """
+        清空所有工作流的节点图（带确认对话框）
+        """
+        project = self.main_window.project_manager.current_project
+        if not project or not project.workflows:
+            QtWidgets.QMessageBox.warning(self.main_window, "警告", "没有可清空的工作流")
+            return
+
+        workflow_count = len(project.workflows)
+        
+        reply = QtWidgets.QMessageBox.question(
+            self.main_window,
+            "确认清空所有",
+            f"确定要清空所有 {workflow_count} 个工作流吗？\n此操作不可撤销！",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No
+        )
+
+        if reply == QtWidgets.QMessageBox.Yes:
+            for workflow in project.workflows:
+                if workflow.node_graph:
+                    workflow.node_graph.clear_session()
+                    workflow.mark_modified()
+            
+            utils.logger.info("所有节点图已清空", module="execution_ui_manager")
+            event_bus.publish(Events.WORKFLOW_CLEARED, workflow=None)
+            
+            QtWidgets.QMessageBox.information(
+                self.main_window,
+                "清空成功",
+                f"已清空所有 {workflow_count} 个工作流"
+            )
+
     def save_graph_to_file(self):
         """
         保存当前节点图到JSON文件（UI触发）
