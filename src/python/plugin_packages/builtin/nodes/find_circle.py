@@ -36,7 +36,10 @@ class FindCircleNode(BaseNode):
         super(FindCircleNode, self).__init__()
 
         self.add_input('输入图像', color=(100, 255, 100))
-        self.add_output('输出图像', color=(100, 255, 100))
+        
+        self.add_output('标注图像', color=(100, 255, 100))
+        self.add_output('检测数量', color=(100, 100, 255))
+        self.add_output('统计数据', color=(255, 255, 100))
 
         self.add_text_input('gaussian_size', '高斯模糊核大小', tab='properties')
         self.set_property('gaussian_size', '3')
@@ -102,7 +105,8 @@ class FindCircleNode(BaseNode):
             "time_ms": 0.0,
             "valid": False,
             "contour_count": 0,
-            "selected_contour_area": 0.0
+            "selected_contour_area": 0.0,
+            "circles": []
         }
 
         adaptive_win = int(self.get_property('adaptive_win'))
@@ -118,9 +122,6 @@ class FindCircleNode(BaseNode):
 
         area_min = float(self.get_property('area_min'))
         area_max = float(self.get_property('area_max'))
-        best_contour = None
-        best_circle = None
-        min_circle_error = float('inf')
 
         for cnt in contours:
             area = cv2.contourArea(cnt)
@@ -140,15 +141,20 @@ class FindCircleNode(BaseNode):
             distances = np.sqrt((cnt_sub_abs[:, 0] - (cx + roi_x))**2 + (cnt_sub_abs[:, 1] - (cy + roi_y))**2)
             circle_error = np.var(distances)
 
-            if circle_error < min_circle_error:
-                min_circle_error = circle_error
-                best_contour = cnt
-                best_circle = (cx + roi_x, cy + roi_y, radius, area)
+            circle_data = {
+                "center": {"x": round(cx + roi_x, 2), "y": round(cy + roi_y, 2)},
+                "radius": round(radius, 2),
+                "area": round(area, 2),
+                "fit_error": round(circle_error, 4),
+                "circularity": round(min(area / (np.pi * radius**2), 1.0) if radius > 0 else 0, 4)
+            }
+            result["circles"].append(circle_data)
 
-        if best_circle is not None:
-            result["center"] = (best_circle[0], best_circle[1])
-            result["radius"] = best_circle[2]
-            result["selected_contour_area"] = best_circle[3]
+        if result["circles"]:
+            best_circle = min(result["circles"], key=lambda c: c["fit_error"])
+            result["center"] = (best_circle["center"]["x"], best_circle["center"]["y"])
+            result["radius"] = best_circle["radius"]
+            result["selected_contour_area"] = best_circle["area"]
             result["valid"] = True
 
         result["time_ms"] = round((time.time() - start) * 1000, 2)
@@ -196,18 +202,30 @@ class FindCircleNode(BaseNode):
             inputs: 输入图像
 
         Returns:
-            dict: 包含输出图像的字典
+            dict: 包含标注图像、检测数量和统计数据的字典
         """
         try:
             if not inputs or len(inputs) == 0 or inputs[0] is None:
-                self.log_warning("未接收到输入图像")
-                return {'输出图像': None}
+                self.log_error("未接收到输入图像")
+                return {
+                    '标注图像': None,
+                    '检测数量': 0,
+                    '统计数据': {}
+                }
 
             image = inputs[0][0] if isinstance(inputs[0], list) else inputs[0]
 
             if image is None or not isinstance(image, np.ndarray):
                 self.log_error("输入图像格式错误")
-                return {'输出图像': None}
+                return {
+                    '标注图像': None,
+                    '检测数量': 0,
+                    '统计数据': {}
+                }
+
+            result_image = image.copy()
+            if len(result_image.shape) == 2:
+                result_image = cv2.cvtColor(result_image, cv2.COLOR_GRAY2BGR)
 
             if self._current_template is None or self._current_template not in self._templates:
                 roi_x = int(image.shape[1] * 0.25)
@@ -215,35 +233,76 @@ class FindCircleNode(BaseNode):
                 roi_w = int(image.shape[1] * 0.5)
                 roi_h = int(image.shape[0] * 0.5)
                 roi = (roi_x, roi_y, roi_w, roi_h)
-
                 self._learn_template("default_template", image, roi)
+
+            circles_data = []
+            detect_count = 0
 
             if self._current_template is not None:
                 template = self._templates[self._current_template]
                 hole = self._detect_hole(image, template["roi"])
 
-                if hole["valid"]:
-                    deviation = self._calc_deviation(
-                        hole["center"], hole["radius"],
-                        template["std_center"], template["std_radius"]
-                    )
-                    hole.update(deviation)
-                    hole["valid"] = deviation["within_threshold"]
+                for idx, circle in enumerate(hole["circles"]):
+                    center = (int(circle["center"]["x"]), int(circle["center"]["y"]))
+                    radius = int(circle["radius"])
+                    
+                    cv2.circle(result_image, center, radius, (0, 255, 0), 2)
+                    cv2.circle(result_image, center, 3, (0, 0, 255), -1)
 
-                    result = image.copy()
-                    cv2.circle(result, (int(hole["center"][0]), int(hole["center"][1])),
-                                       int(hole["radius"]), (0, 255, 0), 2)
-                    cv2.circle(result, (int(hole["center"][0]), int(hole["center"][1])),
-                                       3, (0, 0, 255), -1)
+                    if hole["valid"] and template.get("std_center"):
+                        deviation = self._calc_deviation(
+                            (circle["center"]["x"], circle["center"]["y"]),
+                            circle["radius"],
+                            template["std_center"],
+                            template["std_radius"]
+                        )
+                        circle["deviation"] = deviation
+                        circle["within_threshold"] = deviation["within_threshold"]
+                    else:
+                        circle["deviation"] = None
+                        circle["within_threshold"] = True
 
-                    self.log_success(f"圆检测完成 (中心: {hole['center']}, 半径: {hole['radius']:.2f})")
-                    return {'输出图像': result}
+                    circle["index"] = idx
+                    circles_data.append(circle)
+
+                detect_count = len(circles_data)
+
+                self._detect_stats["total_detect"] += 1
+                if detect_count > 0:
+                    self._detect_stats["valid_detect"] += 1
+                self._detect_stats["avg_time_ms"] = round(
+                    (self._detect_stats["avg_time_ms"] * (self._detect_stats["total_detect"] - 1) + hole["time_ms"])
+                    / self._detect_stats["total_detect"], 2
+                )
+
+                if detect_count > 0:
+                    self.log_success(f"圆检测完成 (检测到 {detect_count} 个圆)")
                 else:
                     self.log_warning("未检测到有效圆")
-                    return {'输出图像': image}
             else:
-                return {'输出图像': image}
+                self.log_warning("无有效模板")
+
+            stats_data = {
+                'total_count': detect_count,
+                'filtered_count': detect_count,
+                'circles': circles_data,
+                'detection_stats': self._detect_stats,
+                'current_template': self._current_template,
+                'algorithm_version': '1.0.0'
+            }
+
+            return {
+                '标注图像': result_image,
+                '检测数量': detect_count,
+                '统计数据': stats_data
+            }
 
         except Exception as e:
             self.log_error(f"圆检测处理错误: {e}")
-            return {'输出图像': None}
+            import traceback
+            traceback.print_exc()
+            return {
+                '标注图像': None,
+                '检测数量': 0,
+                '统计数据': {}
+            }
