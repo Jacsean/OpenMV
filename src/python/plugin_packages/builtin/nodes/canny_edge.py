@@ -2,9 +2,11 @@
 Canny边缘检测节点 - 使用Canny算法检测图像边缘
 """
 
+from Qt.QtWidgets import QWidget
 from shared_libs.node_base import BaseNode
 import cv2
 import numpy as np
+from PySide2.QtWidgets import QDial, QVBoxLayout     # 导入 QDial 和 QVBoxLayout 控件
 
 
 class CannyEdgeNode(BaseNode):
@@ -19,11 +21,35 @@ class CannyEdgeNode(BaseNode):
         super(CannyEdgeNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
+
+        dial = QDial()
+        dial.setRange(0, 255)
+        dial.setSingleStep(50)
+        dial.valueChanged.connect(self.value_changed)
+        # dial.sliderMoved.connect(self.dial_position)
+        # dial.sliderPressed.connect(self.dial_pressed)
+        # dial.sliderReleased.connect(self.dial_released)
+        container=QWidget()
+        layout=QVBoxLayout(container)
+        layout.addWidget(dial)
+        self.set_custom_widget(container)
+
         self.add_text_input('threshold1', '低阈值(0-255)', tab='properties')
         self.set_property('threshold1', '50')
         self.add_text_input('threshold2', '高阈值(0-255)', tab='properties')
         self.set_property('threshold2', '150')
-    
+
+    def value_changed(self, value):
+        self.set_property('threshold1', str(value))
+
+    # def dial_position(self, position):
+    #     self.set_property('threshold1', str(value))
+
+    # def dial_pressed(self):
+    #     self.set_property('threshold1', str(value))
+
+    # def dial_released(self):
+    #     self.set_property('threshold1', str(value))
     def process(self, inputs=None):
         try:
             if not inputs or len(inputs) == 0 or inputs[0] is None:
