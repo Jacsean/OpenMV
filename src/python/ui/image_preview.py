@@ -247,19 +247,19 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.color_btn.setToolTip(t("dialogs.image_preview.color_tip", "选择画笔颜色"))
         self.color_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgb(0, 255, 0);
+                background-color: rgb(255, 0, 0);
                 color: white;
                 font-weight: bold;
             }
         """)
         mode_toolbar.addWidget(self.color_btn)
         
-        # 当前颜色显示标签
-        self.current_color_label = QtWidgets.QLabel("RGB(0,255,0)")
-        self.current_color_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.current_color_label.setMinimumWidth(100)
-        self.current_color_label.setStyleSheet("font-size: 10px; color: #888;")
-        mode_toolbar.addWidget(self.current_color_label)
+        # # 当前颜色显示标签
+        # self.current_color_label = QtWidgets.QLabel("RGB(255,0,0)")
+        # self.current_color_label.setAlignment(QtCore.Qt.AlignCenter)
+        # self.current_color_label.setMinimumWidth(100)
+        # self.current_color_label.setStyleSheet("font-size: 10px; color: #888;")
+        # mode_toolbar.addWidget(self.current_color_label)
 
         # 清除所有图形按钮
         self.clear_all_btn = QtWidgets.QPushButton("🗑 " + t("dialogs.image_preview.clear", "清除"))
