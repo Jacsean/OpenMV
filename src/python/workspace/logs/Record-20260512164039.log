@@ -1,0 +1,10 @@
+{"timestamp": "2026-05-12 16:40:39.090", "level": "INFO", "message": "测试日志 1", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
+{"timestamp": "2026-05-12 16:40:39.201", "level": "INFO", "message": "测试日志 2", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
+{"timestamp": "2026-05-12 16:40:39.307", "level": "INFO", "message": "测试日志 3", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
+{"timestamp": "2026-05-12 16:40:39.416", "level": "INFO", "message": "测试日志 4", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
+{"timestamp": "2026-05-12 16:40:39.529", "level": "INFO", "message": "测试日志 5", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
+{"timestamp": "2026-05-12 16:40:39.637", "level": "INFO", "message": "测试日志 6", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
+{"timestamp": "2026-05-12 16:40:39.745", "level": "INFO", "message": "测试日志 7", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
+{"timestamp": "2026-05-12 16:40:39.852", "level": "INFO", "message": "测试日志 8", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
+{"timestamp": "2026-05-12 16:40:39.962", "level": "INFO", "message": "测试日志 9", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
+{"timestamp": "2026-05-12 16:40:40.071", "level": "INFO", "message": "测试日志 10", "module": "test", "func_name": "test_log_file_creation", "line_number": 37, "context": {}}
