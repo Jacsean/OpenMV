@@ -241,15 +241,17 @@ class FileHandler(LogHandler):
     """
     文件日志处理器
 
-    支持日志轮转和异步写入
+    特性：
+    - 每次启动时创建新的日志文件（格式：Record-yyyymmddhhmmss.log）
+    - 文件大小限制为 5MB
+    - 超过限制后自动创建带序号的新文件（如 Record-yyyymmddhhmmss-1.log）
+    - 支持异步写入
     """
 
     def __init__(
         self,
         log_dir: str = None,
-        filename: str = "app.log",
-        max_bytes: int = 10 * 1024 * 1024,  # 10MB
-        backup_count: int = 5,
+        max_bytes: int = 5 * 1024 * 1024,  # 5MB
         encoding: str = 'utf-8'
     ):
         if log_dir is None:
@@ -260,15 +262,52 @@ class FileHandler(LogHandler):
         log_dir.mkdir(parents=True, exist_ok=True)
 
         self.log_dir = log_dir
-        self.filename = filename
         self.max_bytes = max_bytes
-        self.backup_count = backup_count
         self.encoding = encoding
         self.file_lock = threading.Lock()
 
-        self._current_file = log_dir / filename
-        self._write_buffer = []
+        self._current_file = self._create_new_log_file()
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='log_file_writer')
+
+        print(f"[OK] Log file enabled, saved to: {self._current_file}", flush=True)
+
+    def _create_new_log_file(self) -> Path:
+        """创建新的日志文件，文件名格式：Record-yyyymmddhhmmss.log"""
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        base_name = f"Record-{timestamp}"
+        filename = f"{base_name}.log"
+        file_path = self.log_dir / filename
+        
+        return file_path
+
+    def _get_next_log_file(self) -> Path:
+        """获取下一个带序号的日志文件"""
+        current_name = self._current_file.stem
+        base_name = current_name
+        
+        # 检查是否已有序号
+        if '-' in current_name:
+            parts = current_name.rsplit('-', 1)
+            if parts[-1].isdigit():
+                base_name = '-'.join(parts[:-1])
+                current_num = int(parts[-1])
+            else:
+                current_num = 0
+        else:
+            current_num = 0
+
+        # 查找下一个可用的序号
+        next_num = current_num + 1
+        while True:
+            if next_num == 1:
+                filename = f"{base_name}-1.log"
+            else:
+                filename = f"{base_name}-{next_num}.log"
+            
+            file_path = self.log_dir / filename
+            if not file_path.exists():
+                return file_path
+            next_num += 1
 
     def emit(self, record: LogRecord):
         """异步写入文件"""
@@ -299,23 +338,9 @@ class FileHandler(LogHandler):
             self._rotate()
 
     def _rotate(self):
-        """执行日志轮转"""
-        # 删除最旧的备份
-        oldest_backup = self.log_dir / f"{self.filename}.{self.backup_count}"
-        if oldest_backup.exists():
-            oldest_backup.unlink()
-
-        # 轮转现有备份
-        for i in range(self.backup_count - 1, 0, -1):
-            src = self.log_dir / f"{self.filename}.{i}"
-            dst = self.log_dir / f"{self.filename}.{i + 1}"
-            if src.exists():
-                src.rename(dst)
-
-        # 重命名当前文件为.1
-        backup = self.log_dir / f"{self.filename}.1"
-        if self._current_file.exists():
-            self._current_file.rename(backup)
+        """执行日志轮转，创建新的带序号文件"""
+        self._current_file = self._get_next_log_file()
+        print(f"[INFO] Log file rotated to: {self._current_file}", flush=True)
 
     def flush(self):
         """刷新缓冲区"""
@@ -511,7 +536,7 @@ class Logger:
         try:
             file_handler = FileHandler()
             self.add_handler(file_handler)
-            print(f"[OK] Log file enabled, saved to: {file_handler.log_dir / file_handler.filename}")
+            # FileHandler 已经在初始化时打印了日志文件路径，这里不需要重复打印
         except Exception as e:
             print(f"[WARN] File log init failed: {e}")
 
