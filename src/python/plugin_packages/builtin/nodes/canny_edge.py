@@ -2,11 +2,22 @@
 Canny边缘检测节点 - 使用Canny算法检测图像边缘
 """
 
+# from Qt.QtWidgets import QWidget
 from shared_libs.node_base import BaseNode
-from NodeGraphQt.constants import NodePropWidgetEnum
+from PySide2.QtWidgets import QDial, QVBoxLayout, QWidget    # 导入 QDial 和 QVBoxLayout 控件
 import cv2
 import numpy as np
 
+# class CannyDialWidget(BaseNode):
+#     def __init__(self, parent=None):
+#         super().__init__(parent, name="canny_threshold", label="阈值")
+#         dial = QDial()
+#         dial.setRange(0, 255)
+#         dial.valueChanged.connect(self.value_changed)  # 直接连内置信号
+        
+#         container = QWidget()
+#         QVBoxLayout(container).addWidget(dial)
+#         self.set_widget(container)  # 塞进包装器
 
 class CannyEdgeNode(BaseNode):
     """Canny边缘检测节点"""
@@ -20,25 +31,33 @@ class CannyEdgeNode(BaseNode):
         super(CannyEdgeNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
+        self.add_text_input('threshold1', '低阈值(0-255)', tab='properties')
+        self.set_property('threshold1', '50')
+        self.add_text_input('threshold2', '高阈值(0-255)', tab='properties')
+        self.set_property('threshold2', '150')
 
-        # 使用滑块控件代替文本输入
-        self.create_property(
-            'threshold1', 
-            '50', 
-            range=(0, 255),
-            widget_type=NodePropWidgetEnum.SLIDER.value,
-            widget_tooltip='低阈值(0-255)',
-            tab='properties'
-        )
-        self.create_property(
-            'threshold2', 
-            '150', 
-            range=(0, 255),
-            widget_type=NodePropWidgetEnum.SLIDER.value,
-            widget_tooltip='高阈值(0-255)',
-            tab='properties'
-        )
+        
+        dial = QDial()
+        dial.setRange(0, 255)
+        dial.valueChanged.connect(self.value_changed)  # 直接连内置信号
 
+        widget = QWidget()
+        layout=QVBoxLayout(widget)
+        layout.addWidget(dial)
+        
+        self.set_custom_widget(widget)  # 塞进包装器
+
+    def value_changed(self, value):
+        self.set_property('threshold1', str(value))
+
+    # def dial_position(self, position):
+    #     self.set_property('threshold1', str(value))
+
+    # def dial_pressed(self):
+    #     self.set_property('threshold1', str(value))
+
+    # def dial_released(self):
+    #     self.set_property('threshold1', str(value))
     def process(self, inputs=None):
         try:
             if not inputs or len(inputs) == 0 or inputs[0] is None:
