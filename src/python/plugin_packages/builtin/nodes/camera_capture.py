@@ -87,12 +87,7 @@ class CameraCaptureNode(BaseNode):
             tab='基本配置'
         )
         
-        self.add_text_input(
-            'magnification', 
-            '镜头倍率', 
-            text='1.0',
-            tab='基本配置'
-        )
+        self.add_spinbox('magnification', '镜头倍率', value=1.0, min_value=0.1, max_value=10.0, double=True, tab='基本配置')
         
         self.add_combo_menu(
             'acquisition_mode', 
@@ -102,19 +97,8 @@ class CameraCaptureNode(BaseNode):
         )
         
         # === 图像参数标签页 ===
-        self.add_text_input(
-            'exposure_us', 
-            '曝光时间(μs)', 
-            text='10000',
-            tab='图像参数'
-        )
-        
-        self.add_text_input(
-            'gain', 
-            '增益', 
-            text='0',
-            tab='图像参数'
-        )
+        self.add_spinbox('exposure_us', '曝光时间(μs)', value=10000, min_value=10, max_value=1000000, tab='图像参数')
+        self.add_spinbox('gain', '增益', value=0, min_value=0, max_value=100, tab='图像参数')
         
         self.add_combo_menu(
             'white_balance_mode', 

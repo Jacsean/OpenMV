@@ -16,5 +16,6 @@
 
 from .base_node import BaseNode
 from .performance_monitor import PerformanceMonitor
+from .parameter_container import ParameterContainerWidget
 
-__all__ = ['BaseNode', 'PerformanceMonitor']
+__all__ = ['BaseNode', 'PerformanceMonitor', 'ParameterContainerWidget']

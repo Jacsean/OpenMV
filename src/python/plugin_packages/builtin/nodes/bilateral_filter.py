@@ -2,7 +2,7 @@
 双边滤波节点 - 保边去噪滤波器
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -34,12 +34,22 @@ class BilateralFilterNode(BaseNode):
         super(BilateralFilterNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_text_input('d', '邻域直径(5-15)', tab='properties')
-        self.set_property('d', '9')
-        self.add_text_input('sigma_color', '颜色标准差(50-150)', tab='properties')
-        self.set_property('sigma_color', '75')
-        self.add_text_input('sigma_space', '空间标准差(50-150)', tab='properties')
-        self.set_property('sigma_space', '75')
+        
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'bilateral_params', '')
+        self._param_container.add_spinbox('d', '邻域直径', value=9, min_value=5, max_value=15)
+        self._param_container.add_spinbox('sigma_color', '颜色标准差', value=75.0, min_value=50.0, max_value=150.0, double=True)
+        self._param_container.add_spinbox('sigma_space', '空间标准差', value=75.0, min_value=50.0, max_value=150.0, double=True)
+        
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         try:
@@ -53,9 +63,10 @@ class BilateralFilterNode(BaseNode):
                 self.log_error("输入图像格式错误")
                 return {'输出图像': None}
             
-            d = int(self.get_property('d'))
-            sigma_color = float(self.get_property('sigma_color'))
-            sigma_space = float(self.get_property('sigma_space'))
+            params = self._param_container.get_values_dict()
+            d = int(params.get('d', 9))
+            sigma_color = float(params.get('sigma_color', 75.0))
+            sigma_space = float(params.get('sigma_space', 75.0))
             
             filtered = cv2.bilateralFilter(image, d, sigma_color, sigma_space)
             self.log_success(f"双边滤波完成 (直径: {d})")

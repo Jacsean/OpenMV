@@ -2,7 +2,7 @@
 中值滤波节点 - 使用中值滤波器去除噪声
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -34,8 +34,20 @@ class MedianBlurNode(BaseNode):
         super(MedianBlurNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_text_input('ksize', '核大小(3-9,奇数)', tab='properties')
-        self.set_property('ksize', '5')
+        
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'median_params', '')
+        self._param_container.add_spinbox('ksize', '核大小', value=5, min_value=3, max_value=9)
+        
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         try:
@@ -49,7 +61,8 @@ class MedianBlurNode(BaseNode):
                 self.log_error("输入图像格式错误")
                 return {'输出图像': None}
             
-            ksize = int(self.get_property('ksize'))
+            params = self._param_container.get_values_dict()
+            ksize = int(params.get('ksize', 5))
             
             if ksize < 3:
                 ksize = 3

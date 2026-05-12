@@ -59,54 +59,42 @@ class TemplateCreatorNode(BaseNode):
         self.add_output('模板预览图像', color=(100, 255, 100))
         
         # 算法选择参数
-        self.add_text_input('algorithm', '特征算法', tab='properties')
-        self.set_property('algorithm', 'hu_moments')  # hu_moments / shape_context / hausdorff
+        self.add_combo_menu('algorithm', '特征算法',
+                           items=['hu_moments', 'shape_context', 'hausdorff'],
+                           tab='properties')
         
         # 目标选择参数
-        self.add_text_input('selection_mode', '选择模式', tab='properties')
-        self.set_property('selection_mode', 'by_index')  # by_index / by_shape / by_area / advanced
+        self.add_combo_menu('selection_mode', '选择模式',
+                           items=['by_index', 'by_shape', 'by_area', 'advanced'],
+                           tab='properties')
         
-        self.add_text_input('target_index', '目标索引', tab='properties')
-        self.set_property('target_index', '0')
+        self.add_spinbox('target_index', '目标索引', value=0, min_value=0, max_value=100, tab='properties')
         
-        self.add_text_input('shape_filter', '形状类型', tab='properties')
-        self.set_property('shape_filter', 'circle')  # circle / rectangle / line
+        self.add_combo_menu('shape_filter', '形状类型',
+                           items=['circle', 'rectangle', 'line'],
+                           tab='properties')
         
-        self.add_text_input('confidence_min', '最小置信度(0-1)', tab='properties')
-        self.set_property('confidence_min', '0.9')
+        self.add_spinbox('confidence_min', '最小置信度', value=0.9, min_value=0.0, max_value=1.0, double=True, tab='properties')
         
-        self.add_text_input('area_min', '最小面积', tab='properties')
-        self.set_property('area_min', '100')
+        self.add_spinbox('area_min', '最小面积', value=100, min_value=1, max_value=999999, tab='properties')
         
-        self.add_text_input('area_max', '最大面积', tab='properties')
-        self.set_property('area_max', '1000')
+        self.add_spinbox('area_max', '最大面积', value=1000, min_value=1, max_value=999999, tab='properties')
         
         # Shape Context高级参数
-        self.add_text_input('n_sample_points', '轮廓点采样数', tab='properties')
-        self.set_property('n_sample_points', '100')
-        
-        self.add_text_input('n_radial_bins', '径向bins数量', tab='properties')
-        self.set_property('n_radial_bins', '4')
-        
-        self.add_text_input('n_angular_bins', '角度bins数量', tab='properties')
-        self.set_property('n_angular_bins', '12')
-        
-        self.add_text_input('inner_radius_ratio', '内半径比例', tab='properties')
-        self.set_property('inner_radius_ratio', '0.1')
+        self.add_spinbox('n_sample_points', '轮廓点采样数', value=100, min_value=50, max_value=500, tab='properties')
+        self.add_spinbox('n_radial_bins', '径向bins数量', value=4, min_value=2, max_value=10, tab='properties')
+        self.add_spinbox('n_angular_bins', '角度bins数量', value=12, min_value=6, max_value=36, tab='properties')
+        self.add_spinbox('inner_radius_ratio', '内半径比例', value=0.1, min_value=0.01, max_value=1.0, double=True, tab='properties')
         
         # 采样策略参数
-        self.add_text_input('sampling_strategy', '采样策略', tab='properties')
-        self.set_property('sampling_strategy', 'arc_length')  # uniform / arc_length / douglas_peucker
+        self.add_combo_menu('sampling_strategy', '采样策略',
+                           items=['uniform', 'arc_length', 'douglas_peucker'],
+                           tab='properties')
         
         # 鲁棒性增强参数
-        self.add_text_input('enable_smoothing', '启用轮廓平滑', tab='properties')
-        self.set_property('enable_smoothing', 'False')  # True / False
-        
-        self.add_text_input('smoothing_kernel_size', '平滑核大小', tab='properties')
-        self.set_property('smoothing_kernel_size', '5')  # 3, 5, 7, 9...
-        
-        self.add_text_input('enable_scale_normalization', '启用尺度归一化', tab='properties')
-        self.set_property('enable_scale_normalization', 'False')  # True / False
+        self.add_checkbox('enable_smoothing', '启用轮廓平滑', text='', state=False, tab='properties')
+        self.add_spinbox('smoothing_kernel_size', '平滑核大小', value=5, min_value=3, max_value=15, tab='properties')
+        self.add_checkbox('enable_scale_normalization', '启用尺度归一化', text='', state=False, tab='properties')
     
     def _check_shape_context_availability(self):
         """
@@ -428,9 +416,9 @@ class TemplateCreatorNode(BaseNode):
                 sampling_strategy = 'arc_length'
             
             # 鲁棒性增强参数
-            enable_smoothing = params.get('enable_smoothing', 'False').lower() == 'true'
+            enable_smoothing = params.get('enable_smoothing', False)
             smoothing_kernel_size = int(params.get('smoothing_kernel_size', '5'))
-            enable_scale_normalization = params.get('enable_scale_normalization', 'False').lower() == 'true'
+            enable_scale_normalization = params.get('enable_scale_normalization', False)
             
             # 验证轮廓有效性
             if not self._validate_contour(contour):

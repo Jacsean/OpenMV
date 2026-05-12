@@ -20,8 +20,7 @@ class SobelEdgeNode(BaseNode):
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
         self.add_combo_menu('direction', '方向', items=['X方向', 'Y方向', 'XY方向'], tab='properties')
-        self.add_text_input('ksize', '核大小(1-7,奇数)', tab='properties')
-        self.set_property('ksize', '3')
+        self.add_spinbox('ksize', '核大小', value=3, min_value=1, max_value=7, tab='properties')
     
     def process(self, inputs=None):
         try:

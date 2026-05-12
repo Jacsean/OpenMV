@@ -10,7 +10,7 @@
 - 标注图像绘制
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 import os
@@ -62,65 +62,54 @@ class ContoursAnalysisNode(BaseNode):
         self.add_output('轮廓数量', color=(100, 100, 255))
         self.add_output('统计数据', color=(255, 255, 100))
         
-        # 轮廓查找参数
-        self.add_text_input('retrieval_mode', '查找模式', tab='properties')
-        self.set_property('retrieval_mode', 'RETR_EXTERNAL')                # RETR_EXTERNAL / RETR_LIST / RETR_CCOMP / RETR_TREE
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'contour_params', '')
         
-        self.add_text_input('approximation_method', '近似方法', tab='properties')
-        self.set_property('approximation_method', 'CHAIN_APPROX_SIMPLE')    # CHAIN_APPROX_NONE / CHAIN_APPROX_SIMPLE / CHAIN_APPROX_TC89_L1 / CHAIN_APPROX_TC89_KCOS
+        # 轮廓查找参数
+        self._param_container.add_combobox('retrieval_mode', '查找模式',
+                                           items=['RETR_EXTERNAL', 'RETR_LIST', 'RETR_CCOMP', 'RETR_TREE'])
+        
+        self._param_container.add_combobox('approximation_method', '近似方法',
+                                           items=['CHAIN_APPROX_NONE', 'CHAIN_APPROX_SIMPLE', 'CHAIN_APPROX_TC89_L1', 'CHAIN_APPROX_TC89_KCOS'])
         
         # 筛选参数
-        self.add_text_input('min_area', '最小面积(像素²)', tab='properties')
-        self.set_property('min_area', '10')
-        
-        self.add_text_input('max_area', '最大面积(像素²)', tab='properties')
-        self.set_property('max_area', '999999')
+        self._param_container.add_spinbox('min_area', '最小面积', value=100, min_value=1, max_value=999999)
+        self._param_container.add_spinbox('max_area', '最大面积', value=100000, min_value=1, max_value=999999)
         
         # 形状检测开关
-        self.add_text_input('enable_circle_detection', '启用圆形检测', tab='properties')
-        self.set_property('enable_circle_detection', 'True')            # True / False
+        self._param_container.add_checkbox('enable_circle_detection', '启用圆形检测', state=True)
+        self._param_container.add_spinbox('circle_circularity_threshold', '圆度阈值', value=0.85, min_value=0.0, max_value=1.0, double=True)
         
-        self.add_text_input('circle_circularity_threshold', '圆度阈值(0-1)', tab='properties')
-        self.set_property('circle_circularity_threshold', '0.85')
+        self._param_container.add_checkbox('enable_rectangle_detection', '启用矩形检测', state=True)
+        self._param_container.add_spinbox('rectangle_fill_ratio_threshold', '填充率阈值', value=0.80, min_value=0.0, max_value=1.0, double=True)
         
-        self.add_text_input('enable_rectangle_detection', '启用矩形检测', tab='properties')
-        self.set_property('enable_rectangle_detection', 'True')            # True / False
-        
-        self.add_text_input('rectangle_fill_ratio_threshold', '填充率阈值(0-1)', tab='properties')
-        self.set_property('rectangle_fill_ratio_threshold', '0.80')
-        
-        self.add_text_input('enable_line_detection', '启用直线检测', tab='properties')
-        self.set_property('enable_line_detection', 'True')            # True / False
-        
-        self.add_text_input('line_straightness_threshold', '直线度阈值(0-1)', tab='properties')
-        self.set_property('line_straightness_threshold', '0.90')
+        self._param_container.add_checkbox('enable_line_detection', '启用直线检测', state=True)
+        self._param_container.add_spinbox('line_straightness_threshold', '直线度阈值', value=0.90, min_value=0.0, max_value=1.0, double=True)
         
         # 显示选项
-        self.add_text_input('draw_contours', '绘制轮廓', tab='properties')
-        self.set_property('draw_contours', 'True')            # True / False
-        
-        self.add_text_input('contour_color_r', '轮廓颜色-R', tab='properties')
-        self.set_property('contour_color_r', '0')
-        
-        self.add_text_input('contour_color_g', '轮廓颜色-G', tab='properties')
-        self.set_property('contour_color_g', '255')
-        
-        self.add_text_input('contour_color_b', '轮廓颜色-B', tab='properties')
-        self.set_property('contour_color_b', '0')
-        
-        self.add_text_input('thickness', '线宽(1-5)', tab='properties')
-        self.set_property('thickness', '2')
+        self._param_container.add_checkbox('draw_contours', '绘制轮廓', state=True)
+        self._param_container.add_spinbox('contour_color_r', 'R', value=0, min_value=0, max_value=255)
+        self._param_container.add_spinbox('contour_color_g', 'G', value=255, min_value=0, max_value=255)
+        self._param_container.add_spinbox('contour_color_b', 'B', value=0, min_value=0, max_value=255)
+        self._param_container.add_spinbox('thickness', '线宽', value=2, min_value=1, max_value=5)
         
         # 数据导出参数
-        self.add_text_input('export_mode', '导出模式', tab='properties')
-        self.set_property('export_mode', 'memory_only')  # memory_only / csv / excel / json / all
+        self._param_container.add_combobox('export_mode', '导出模式',
+                                           items=['memory_only', 'csv', 'excel', 'json', 'all'])
         
-        self.add_text_input('export_path', '导出路径(可选)', tab='properties')
-        self.set_property('export_path', '')        # 导出路径，默认为空
+        self._param_container.add_text_input('export_path', '导出路径')
+        self._param_container.add_text_input('filename_prefix', '文件名前缀')
         
-        self.add_text_input('filename_prefix', '文件名前缀', tab='properties')
-        self.set_property('filename_prefix', 'contours_')       # 导出文件名前缀，默认值为'contours_'
-
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
+    
     def _get_retrieval_mode(self, mode_str):
         """获取轮廓检索模式"""
         modes = {
@@ -174,7 +163,7 @@ class ContoursAnalysisNode(BaseNode):
             str: 文件名
         """
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        prefix = self.get_property('filename_prefix')
+        prefix = self._param_container.get_values_dict().get('filename_prefix', '')
         return f"{prefix}{timestamp}_{count}{ext}"
     
     def _get_default_export_path(self, ext, count):
@@ -487,12 +476,13 @@ class ContoursAnalysisNode(BaseNode):
         Args:
             stats_data: 统计数据字典
         """
-        export_mode = self.get_property('export_mode').lower()
+        params = self._param_container.get_values_dict()
+        export_mode = params.get('export_mode', 'memory_only').lower()
         
         if export_mode == 'memory_only':
             return
         
-        custom_path = self.get_property('export_path')
+        custom_path = params.get('export_path', '')
         filtered_count = stats_data.get('filtered_count', 0)
         
         # 定义导出任务列表
@@ -781,28 +771,30 @@ class ContoursAnalysisNode(BaseNode):
             binary, was_converted = self._auto_binarize(image)
             
             # Step 3: 读取参数
-            retrieval_mode = self._get_retrieval_mode(self.get_property('retrieval_mode'))
-            approximation_method = self._get_approximation_method(self.get_property('approximation_method'))
+            params = self._param_container.get_values_dict()
             
-            min_area = float(self.get_property('min_area'))
-            max_area = float(self.get_property('max_area'))
+            retrieval_mode = self._get_retrieval_mode(params.get('retrieval_mode', 'RETR_EXTERNAL'))
+            approximation_method = self._get_approximation_method(params.get('approximation_method', 'CHAIN_APPROX_SIMPLE'))
             
-            draw_contours = self.get_property('draw_contours').lower() == 'true'
+            min_area = float(params.get('min_area', 100))
+            max_area = float(params.get('max_area', 100000))
+            
+            draw_contours = params.get('draw_contours', True)
             contour_color = (
-                int(self.get_property('contour_color_b')),
-                int(self.get_property('contour_color_g')),
-                int(self.get_property('contour_color_r'))
+                int(params.get('contour_color_b', 0)),
+                int(params.get('contour_color_g', 255)),
+                int(params.get('contour_color_r', 0))
             )
-            thickness = int(self.get_property('thickness'))
+            thickness = int(params.get('thickness', 2))
             thickness = max(1, min(5, thickness))  # 限制范围1-5
             
             # 形状检测参数
-            enable_circle = self.get_property('enable_circle_detection').lower() == 'true'
-            circle_threshold = float(self.get_property('circle_circularity_threshold'))
-            enable_rectangle = self.get_property('enable_rectangle_detection').lower() == 'true'
-            rect_threshold = float(self.get_property('rectangle_fill_ratio_threshold'))
-            enable_line = self.get_property('enable_line_detection').lower() == 'true'
-            line_threshold = float(self.get_property('line_straightness_threshold'))
+            enable_circle = params.get('enable_circle_detection', True)
+            circle_threshold = float(params.get('circle_circularity_threshold', 0.85))
+            enable_rectangle = params.get('enable_rectangle_detection', True)
+            rect_threshold = float(params.get('rectangle_fill_ratio_threshold', 0.80))
+            enable_line = params.get('enable_line_detection', True)
+            line_threshold = float(params.get('line_straightness_threshold', 0.90))
             
             shape_params = {
                 'enable_circle': enable_circle,
@@ -955,7 +947,7 @@ class ContoursAnalysisNode(BaseNode):
             }
             
             # Step 8: 数据导出（若配置）
-            export_mode = self.get_property('export_mode').lower()
+            export_mode = params.get('export_mode', 'memory_only').lower()
             if export_mode != 'memory_only':
                 self._export_data(stats_data)
             

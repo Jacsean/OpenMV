@@ -8,7 +8,7 @@
 - 标注图像绘制（不同排名不同颜色）
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -55,52 +55,43 @@ class TemplateMatchNode(BaseNode):
         self.add_output('匹配数量', color=(100, 100, 255))
         self.add_output('匹配结果', color=(255, 255, 100))
         
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'template_params', '')
+        
         # 匹配算法参数
-        self.add_text_input('algorithm', '匹配算法', tab='properties')
-        self.set_property('algorithm', 'hu_moments')  # hu_moments / hausdorff / shape_context
+        self._param_container.add_combobox('algorithm', '匹配算法',
+                                          items=['hu_moments', 'hausdorff', 'shape_context'])
         
         # 筛选条件参数
-        self.add_text_input('similarity_threshold', '相似度阈值(0-1)', tab='properties')
-        self.set_property('similarity_threshold', '0.8')
-        
-        self.add_text_input('min_area', '最小面积', tab='properties')
-        self.set_property('min_area', '0')
-        
-        self.add_text_input('max_area', '最大面积', tab='properties')
-        self.set_property('max_area', '999999')
-        
-        self.add_text_input('max_results', '最大匹配数', tab='properties')
-        self.set_property('max_results', '10')
+        self._param_container.add_spinbox('similarity_threshold', '相似度阈值', value=0.8, min_value=0.0, max_value=1.0, double=True)
+        self._param_container.add_spinbox('min_area', '最小面积', value=0, min_value=0, max_value=999999)
+        self._param_container.add_spinbox('max_area', '最大面积', value=999999, min_value=1, max_value=999999)
+        self._param_container.add_spinbox('max_results', '最大匹配数', value=10, min_value=1, max_value=100)
         
         # 显示选项参数
-        self.add_text_input('draw_contours', '绘制轮廓', tab='properties')
-        self.set_property('draw_contours', 'True')
-        
-        self.add_text_input('draw_centroids', '绘制质心', tab='properties')
-        self.set_property('draw_centroids', 'True')
-        
-        self.add_text_input('annotate_similarity', '标注相似度', tab='properties')
-        self.set_property('annotate_similarity', 'True')
+        self._param_container.add_checkbox('draw_contours', '绘制轮廓', state=True)
+        self._param_container.add_checkbox('draw_centroids', '绘制质心', state=True)
+        self._param_container.add_checkbox('annotate_similarity', '标注相似度', state=True)
         
         # 颜色配置（第1名）
-        self.add_text_input('rank1_color_r', '第1名颜色-R', tab='properties')
-        self.set_property('rank1_color_r', '0')
-        
-        self.add_text_input('rank1_color_g', '第1名颜色-G', tab='properties')
-        self.set_property('rank1_color_g', '255')
-        
-        self.add_text_input('rank1_color_b', '第1名颜色-B', tab='properties')
-        self.set_property('rank1_color_b', '0')
+        self._param_container.add_spinbox('rank1_color_r', '第1名R', value=0, min_value=0, max_value=255)
+        self._param_container.add_spinbox('rank1_color_g', '第1名G', value=255, min_value=0, max_value=255)
+        self._param_container.add_spinbox('rank1_color_b', '第1名B', value=0, min_value=0, max_value=255)
         
         # 颜色配置（第2名）
-        self.add_text_input('rank2_color_r', '第2名颜色-R', tab='properties')
-        self.set_property('rank2_color_r', '255')
+        self._param_container.add_spinbox('rank2_color_r', '第2名R', value=255, min_value=0, max_value=255)
+        self._param_container.add_spinbox('rank2_color_g', '第2名G', value=255, min_value=0, max_value=255)
+        self._param_container.add_spinbox('rank2_color_b', '第2名B', value=0, min_value=0, max_value=255)
         
-        self.add_text_input('rank2_color_g', '第2名颜色-G', tab='properties')
-        self.set_property('rank2_color_g', '255')
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
         
-        self.add_text_input('rank2_color_b', '第2名颜色-B', tab='properties')
-        self.set_property('rank2_color_b', '0')
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
     
     def _check_shape_context_availability(self):
         """
@@ -269,15 +260,17 @@ class TemplateMatchNode(BaseNode):
         Returns:
             tuple: BGR颜色元组
         """
+        params = self._param_container.get_values_dict()
+        
         if rank == 1:
-            r = int(self.get_property('rank1_color_r'))
-            g = int(self.get_property('rank1_color_g'))
-            b = int(self.get_property('rank1_color_b'))
+            r = int(params.get('rank1_color_r', 0))
+            g = int(params.get('rank1_color_g', 255))
+            b = int(params.get('rank1_color_b', 0))
             return (b, g, r)  # OpenCV使用BGR顺序
         elif rank == 2:
-            r = int(self.get_property('rank2_color_r'))
-            g = int(self.get_property('rank2_color_g'))
-            b = int(self.get_property('rank2_color_b'))
+            r = int(params.get('rank2_color_r', 255))
+            g = int(params.get('rank2_color_g', 255))
+            b = int(params.get('rank2_color_b', 0))
             return (b, g, r)
         else:
             # 第3名及以后使用橙色
@@ -332,7 +325,8 @@ class TemplateMatchNode(BaseNode):
                 }
             
             # Step 3: 获取算法配置
-            selected_algorithm = self.get_property('algorithm').lower()
+            params = self._param_container.get_values_dict()
+            selected_algorithm = params.get('algorithm', 'hu_moments').lower()
             template_algorithm = template_data['metadata'].get('algorithm', '')
             
             # 检查算法一致性
@@ -371,10 +365,10 @@ class TemplateMatchNode(BaseNode):
                 }
             
             # Step 5: 获取筛选参数
-            similarity_threshold = float(self.get_property('similarity_threshold'))
-            min_area = float(self.get_property('min_area'))
-            max_area = float(self.get_property('max_area'))
-            max_results = int(self.get_property('max_results'))
+            similarity_threshold = float(params.get('similarity_threshold', 0.8))
+            min_area = float(params.get('min_area', 0))
+            max_area = float(params.get('max_area', 999999))
+            max_results = int(params.get('max_results', 10))
             
             # Step 6: 逐个匹配
             match_results = []
@@ -438,9 +432,9 @@ class TemplateMatchNode(BaseNode):
             # Step 9: 绘制标注图像
             annotated_image = input_image.copy()
             
-            draw_contours = self.get_property('draw_contours').lower() == 'true'
-            draw_centroids = self.get_property('draw_centroids').lower() == 'true'
-            annotate_similarity = self.get_property('annotate_similarity').lower() == 'true'
+            draw_contours = params.get('draw_contours', True)
+            draw_centroids = params.get('draw_centroids', True)
+            annotate_similarity = params.get('annotate_similarity', True)
             
             for i, result in enumerate(match_results):
                 rank = i + 1

@@ -2,7 +2,7 @@
 阈值二值化节点 - 将图像转换为二值图像
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -34,13 +34,22 @@ class ThresholdNode(BaseNode):
         super(ThresholdNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_text_input('threshold', '阈值(0-255)', tab='properties')
-        self.set_property('threshold', '127')
-        self.add_text_input('maxval', '最大值(0-255)', tab='properties')
-        self.set_property('maxval', '255')
-        self.add_combo_menu('type', '阈值类型',
-                           items=['THRESH_BINARY', 'THRESH_BINARY_INV', 'THRESH_TRUNC', 'THRESH_TOZERO'],
-                           tab='properties')
+        
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'threshold_params', '')
+        self._param_container.add_spinbox('threshold', '阈值', value=127, min_value=0, max_value=255)
+        self._param_container.add_spinbox('maxval', '最大值', value=255, min_value=0, max_value=255)
+        self._param_container.add_combobox('type', '阈值类型', items=['THRESH_BINARY', 'THRESH_BINARY_INV', 'THRESH_TRUNC', 'THRESH_TOZERO'])
+        
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         try:
@@ -54,9 +63,10 @@ class ThresholdNode(BaseNode):
                 self.log_error("输入图像格式错误")
                 return {'输出图像': None}
             
-            threshold = float(self.get_property('threshold'))
-            maxval = float(self.get_property('maxval'))
-            thresh_type = self.get_property('type')
+            params = self._param_container.get_values_dict()
+            threshold = float(params.get('threshold', 127))
+            maxval = float(params.get('maxval', 255))
+            thresh_type = params.get('type', 'THRESH_BINARY')
             
             # 如果是彩色图像，先转换为灰度
             if len(image.shape) == 3:

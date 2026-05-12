@@ -2,7 +2,7 @@
 图像缩放节点 - 调整图像尺寸
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -34,13 +34,22 @@ class ResizeNode(BaseNode):
         super(ResizeNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_text_input('width', '目标宽度', tab='properties')
-        self.set_property('width', '640')
-        self.add_text_input('height', '目标高度', tab='properties')
-        self.set_property('height', '480')
-        self.add_combo_menu('interpolation', '插值方法', 
-                           items=['INTER_NEAREST', 'INTER_LINEAR', 'INTER_CUBIC', 'INTER_AREA'],
-                           tab='properties')
+        
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'resize_params', '')
+        self._param_container.add_spinbox('width', '目标宽度', value=640, min_value=1, max_value=4096)
+        self._param_container.add_spinbox('height', '目标高度', value=480, min_value=1, max_value=4096)
+        self._param_container.add_combobox('interpolation', '插值方法', items=['INTER_NEAREST', 'INTER_LINEAR', 'INTER_CUBIC', 'INTER_AREA'])
+        
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         try:
@@ -54,9 +63,10 @@ class ResizeNode(BaseNode):
                 self.log_error("输入图像格式错误")
                 return {'输出图像': None}
             
-            width = int(self.get_property('width'))
-            height = int(self.get_property('height'))
-            interp_method = self.get_property('interpolation')
+            params = self._param_container.get_values_dict()
+            width = int(params.get('width', 640))
+            height = int(params.get('height', 480))
+            interp_method = params.get('interpolation', 'INTER_LINEAR')
             
             interp_map = {
                 'INTER_NEAREST': cv2.INTER_NEAREST,

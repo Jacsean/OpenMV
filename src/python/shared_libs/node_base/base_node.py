@@ -79,6 +79,10 @@ class BaseNode(BaseNode):
     def __init__(self):
         super(BaseNode, self).__init__()
         
+        # 设置统一的节点大小
+        self.view.width = 300  # 固定宽度为300px
+        self.view.height = 120  # 设置最小高度
+        
         # 资源等级（子类应覆盖）
         self.resource_level = "light"  # light / medium / heavy
         
