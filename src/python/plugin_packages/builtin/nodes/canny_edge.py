@@ -2,11 +2,11 @@
 Canny边缘检测节点 - 使用Canny算法检测图像边缘
 """
 
-from Qt.QtWidgets import QWidget
+# from Qt.QtWidgets import QWidget
 from shared_libs.node_base import BaseNode
+from PySide2.QtWidgets import QDial, QVBoxLayout, QWidget    # 导入 QDial 和 QVBoxLayout 控件
 import cv2
 import numpy as np
-from PySide2.QtWidgets import QDial, QVBoxLayout     # 导入 QDial 和 QVBoxLayout 控件
 
 
 class CannyEdgeNode(BaseNode):
@@ -32,7 +32,7 @@ class CannyEdgeNode(BaseNode):
         container=QWidget()
         layout=QVBoxLayout(container)
         layout.addWidget(dial)
-        self.set_custom_widget(container)
+        self.add_custom_widget(container)
 
         self.add_text_input('threshold1', '低阈值(0-255)', tab='properties')
         self.set_property('threshold1', '50')
