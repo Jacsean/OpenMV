@@ -41,23 +41,12 @@ class FindCircleNode(BaseNode):
         self.add_output('检测数量', color=(100, 100, 255))
         self.add_output('统计数据', color=(255, 255, 100))
 
-        self.add_text_input('gaussian_size', '高斯模糊核大小', tab='properties')
-        self.set_property('gaussian_size', '3')
-
-        self.add_text_input('adaptive_win', '自适应窗口大小', tab='properties')
-        self.set_property('adaptive_win', '15')
-
-        self.add_text_input('area_min', '最小面积', tab='properties')
-        self.set_property('area_min', '10')
-
-        self.add_text_input('area_max', '最大面积', tab='properties')
-        self.set_property('area_max', '100000')
-
-        self.add_text_input('center_dev_thresh', '中心偏差阈值', tab='properties')
-        self.set_property('center_dev_thresh', '5.0')
-
-        self.add_text_input('radius_dev_thresh', '半径偏差阈值(0-1)', tab='properties')
-        self.set_property('radius_dev_thresh', '0.1')
+        self.add_spinbox('gaussian_size', '高斯模糊核大小', value=3, min_value=1, max_value=15, tab='properties')
+        self.add_spinbox('adaptive_win', '自适应窗口大小', value=15, min_value=3, max_value=31, tab='properties')
+        self.add_spinbox('area_min', '最小面积', value=10, min_value=1, max_value=999999, tab='properties')
+        self.add_spinbox('area_max', '最大面积', value=100000, min_value=1, max_value=999999, tab='properties')
+        self.add_spinbox('center_dev_thresh', '中心偏差阈值', value=5.0, min_value=0.0, max_value=100.0, double=True, tab='properties')
+        self.add_spinbox('radius_dev_thresh', '半径偏差阈值', value=0.1, min_value=0.0, max_value=1.0, double=True, tab='properties')
 
         self._templates: Dict[str, Dict] = {}
         self._current_template: Optional[str] = None

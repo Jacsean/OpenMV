@@ -112,7 +112,8 @@ class ImagePreviewDialog(QtWidgets.QDialog):
        
         save_btn = QtWidgets.QPushButton("💾 " + t("dialogs.image_preview.save", "保存图像"))
         save_btn.clicked.connect(self.save_image)
-        save_btn.setToolTip(t("dialogs.image_preview.save_tip", "保存当前图像"))
+        save_btn.setToolTip(t("dialogs.image_preview.save_tip", "保存当前图像"))        
+        save_btn.setStyleSheet("width: 100px;")
         toolbar_layout.addWidget(save_btn)
 
         refresh_btn = QtWidgets.QPushButton("🔄 " + t("dialogs.image_preview.refresh", "刷新预览"))
@@ -239,7 +240,15 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         self.text_tool_btn.setToolTip(t("dialogs.image_preview.text_tip", "添加文字标注"))
         mode_toolbar.addWidget(self.text_tool_btn)
         
+        # 添加一个可伸缩的空白空间，通常用来将其他控件推向布局的一端
         mode_toolbar.addStretch()
+
+        # 清除所有图形按钮
+        self.clear_all_btn = QtWidgets.QPushButton("🗑 " + t("dialogs.image_preview.clear", "清除"))
+        self.clear_all_btn.clicked.connect(self.clear_all_shapes)
+        self.clear_all_btn.setToolTip(t("dialogs.image_preview.clear_tip", "清除所有图形（标注/ROI/Mask）"))
+        # self.clear_all_btn.setStyleSheet("color: #f44336;")
+        mode_toolbar.addWidget(self.clear_all_btn)
         
         # 颜色选择器
         self.color_btn = QtWidgets.QPushButton("🎨 " + t("dialogs.image_preview.color", "颜色"))
@@ -260,13 +269,6 @@ class ImagePreviewDialog(QtWidgets.QDialog):
         # self.current_color_label.setMinimumWidth(100)
         # self.current_color_label.setStyleSheet("font-size: 10px; color: #888;")
         # mode_toolbar.addWidget(self.current_color_label)
-
-        # 清除所有图形按钮
-        self.clear_all_btn = QtWidgets.QPushButton("🗑 " + t("dialogs.image_preview.clear", "清除"))
-        self.clear_all_btn.clicked.connect(self.clear_all_shapes)
-        self.clear_all_btn.setToolTip(t("dialogs.image_preview.clear_tip", "清除所有图形（标注/ROI/Mask）"))
-        self.clear_all_btn.setStyleSheet("color: #f44336;")
-        mode_toolbar.addWidget(self.clear_all_btn)
         
         self.main_layout.addLayout(mode_toolbar)
 

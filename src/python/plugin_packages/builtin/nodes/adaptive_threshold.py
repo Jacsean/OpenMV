@@ -34,10 +34,8 @@ class AdaptiveThresholdNode(BaseNode):
         super(AdaptiveThresholdNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_text_input('block_size', '块大小(3-15)', tab='properties')
-        self.set_property('block_size', '11')
-        self.add_text_input('C', '常数C(-10~10)', tab='properties')
-        self.set_property('C', '2')
+        self.add_spinbox('block_size', '块大小', value=11, min_value=3, max_value=15, tab='properties')
+        self.add_spinbox('C', '常数C', value=2, min_value=-10, max_value=10, tab='properties')
     
     def process(self, inputs=None):
         try:

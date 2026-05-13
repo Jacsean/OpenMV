@@ -2,7 +2,7 @@
 高斯模糊节点 - 对图像进行高斯模糊处理
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -40,12 +40,22 @@ class GaussianBlurNode(BaseNode):
         # 输出端口
         self.add_output('输出图像', color=(100, 255, 100))
         
-        # 参数配置
-        self.add_text_input('kernel_size', '核大小(3-15,奇数)', tab='properties')
-        self.set_property('kernel_size', '5')
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'gaussian_params', '')
         
-        self.add_text_input('sigma_x', 'Sigma X(0-10)', tab='properties')
-        self.set_property('sigma_x', '0')
+        # 参数配置
+        self._param_container.add_spinbox('kernel_size', '核大小', value=5, min_value=3, max_value=15)
+        self._param_container.add_spinbox('sigma_x', 'Sigma X', value=0.0, min_value=0.0, max_value=10.0, double=True)
+        
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         """
@@ -70,8 +80,9 @@ class GaussianBlurNode(BaseNode):
                 return {'输出图像': None}
             
             # Step 2: 读取参数
-            kernel_size = int(self.get_property('kernel_size'))
-            sigma_x = float(self.get_property('sigma_x'))
+            params = self._param_container.get_values_dict()
+            kernel_size = int(params.get('kernel_size', 5))
+            sigma_x = float(params.get('sigma_x', 0.0))
             
             # Step 3: 确保核大小为奇数且在有效范围内
             if kernel_size < 3:

@@ -46,7 +46,7 @@ class MorphologyNode(BaseNode):
                            items=['erode', 'dilate', 'gradient', 'open', 'close', 'top hat', 'black hat'],
                            tab='properties')
         
-        self.add_text_input('iterations', '处理次数(1-10)', '1', tab='properties')
+        self.add_spinbox('iterations', '处理次数', value=1, min_value=1, max_value=10, tab='properties')
         
         self.add_text_input(
             '_info',

@@ -45,27 +45,21 @@ class PyramidNode(BaseNode):
                            items=['PyrDown', 'PyrUp', 'PyrSegmentation'],
                            tab='properties')
 
-        self.add_text_input('levels', '金字塔层数', tab='properties')
-        self.set_property('levels', '1')
+        self.add_spinbox('levels', '金字塔层数', value=1, min_value=1, max_value=5, tab='properties')
 
         self.add_combo_menu('border_type', '边界处理',
                            items=['BORDER_DEFAULT', 'BORDER_CONSTANT', 'BORDER_REPLICATE', 'BORDER_REFLECT'],
                            tab='properties')
-        self.set_property('border_type', 'BORDER_DEFAULT')
 
-        self.add_text_input('spatial_radius', '空间窗口半径', tab='properties')
-        self.set_property('spatial_radius', '5')
+        self.add_spinbox('spatial_radius', '空间窗口半径', value=5, min_value=1, max_value=50, tab='properties')
 
-        self.add_text_input('color_radius', '颜色窗口半径', tab='properties')
-        self.set_property('color_radius', '10')
+        self.add_spinbox('color_radius', '颜色窗口半径', value=10, min_value=1, max_value=100, tab='properties')
 
-        self.add_text_input('min_size', '最小区域面积', tab='properties')
-        self.set_property('min_size', '100')
+        self.add_spinbox('min_size', '最小区域面积', value=100, min_value=1, max_value=999999, tab='properties')
 
         self.add_combo_menu('connectivity', '连通性',
                            items=['4', '8'],
                            tab='properties')
-        self.set_property('connectivity', '8')
 
     def _get_border_type(self, border_str):
         """获取边界处理类型"""

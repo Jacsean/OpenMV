@@ -2,7 +2,7 @@
 亮度对比度调整节点 - 调整图像的亮度和对比度
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -34,10 +34,21 @@ class BrightnessContrastNode(BaseNode):
         super(BrightnessContrastNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_text_input('alpha', '对比度(0.5-3.0)', tab='properties')
-        self.set_property('alpha', '1.0')
-        self.add_text_input('beta', '亮度(-100~100)', tab='properties')
-        self.set_property('beta', '0')
+        
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'bc_params', '')
+        self._param_container.add_spinbox('alpha', '对比度', value=1.0, min_value=0.5, max_value=3.0, double=True)
+        self._param_container.add_spinbox('beta', '亮度', value=0, min_value=-100, max_value=100)
+        
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         try:
@@ -51,8 +62,9 @@ class BrightnessContrastNode(BaseNode):
                 self.log_error("输入图像格式错误")
                 return {'输出图像': None}
             
-            alpha = float(self.get_property('alpha'))
-            beta = float(self.get_property('beta'))
+            params = self._param_container.get_values_dict()
+            alpha = float(params.get('alpha', 1.0))
+            beta = float(params.get('beta', 0))
             
             adjusted = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
             self.log_success(f"亮度对比度调整完成 (对比度: {alpha}, 亮度: {beta})")

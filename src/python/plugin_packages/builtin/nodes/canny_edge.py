@@ -1,8 +1,8 @@
 """
-Canny边缘检测节点 - 使用Canny算法检测图像边缘
+Canny边缘检测节点 - 使用自定义参数容器控件
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -19,19 +19,35 @@ class CannyEdgeNode(BaseNode):
         super(CannyEdgeNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_text_input('threshold1', '低阈值(0-255)', tab='properties')
-        self.set_property('threshold1', '50')
-        self.add_text_input('threshold2', '高阈值(0-255)', tab='properties')
-        self.set_property('threshold2', '150')
-    
+
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'canny_params', '')
+        
+        # 添加参数控件（使用自定义容器）
+        self._param_container.add_spinbox('threshold1', '低阈值', value=50, min_value=0, max_value=255)
+        self._param_container.add_spinbox('threshold2', '高阈值', value=150, min_value=0, max_value=255)
+        
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
+
     def process(self, inputs=None):
         try:
             if not inputs or len(inputs) == 0 or inputs[0] is None:
                 return {'输出图像': None}
             
             image = inputs[0][0] if isinstance(inputs[0], list) else inputs[0]
-            threshold1 = int(self.get_property('threshold1'))
-            threshold2 = int(self.get_property('threshold2'))
+            
+            # 从参数容器获取值
+            params = self._param_container.get_values_dict()
+            threshold1 = int(params.get('threshold1', 50))
+            threshold2 = int(params.get('threshold2', 150))
             
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
             edges = cv2.Canny(gray, threshold1, threshold2)

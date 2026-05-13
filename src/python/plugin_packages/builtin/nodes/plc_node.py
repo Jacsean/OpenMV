@@ -32,7 +32,7 @@ class PLCNode(BaseNode):
         self.add_output('数据输出', color=(100, 255, 100))
         
         self.add_text_input('ip_address', 'PLC地址', tab='properties', text='192.168.1.100')
-        self.add_text_input('port', '端口', tab='properties', text='502')
+        self.add_spinbox('port', '端口', value=502, min_value=1, max_value=65535, tab='properties')
         self.add_text_input('register', '寄存器', tab='properties', text='0x0000')
     
     def process(self, inputs=None):

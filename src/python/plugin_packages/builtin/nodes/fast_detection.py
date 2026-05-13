@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional
 import numpy as np
 import cv2
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 
 
 class FastDetectionNode(BaseNode):
@@ -53,36 +53,29 @@ class FastDetectionNode(BaseNode):
         # 输出端口（可选：输出检测结果）
         self.add_output('检测结果')
         
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'detection_params', '')
+        
         # === 检测参数 ===
-        self.add_combo_menu(
-            'detection_method',
-            '检测方法',
-            items=['Canny边缘', '颜色分割', '简单阈值'],
-            tab='检测配置'
-        )
+        self._param_container.add_combobox('detection_method', '检测方法', 
+                                          items=['Canny边缘', '颜色分割', '简单阈值'])
+        self._param_container.add_spinbox('threshold_low', '低阈值', value=50, min_value=0, max_value=255)
+        self._param_container.add_spinbox('threshold_high', '高阈值', value=150, min_value=0, max_value=255)
+        self._param_container.add_combobox('max_fps', '最大帧率', 
+                                          items=['10', '15', '20', '25', '30'])
         
-        self.add_text_input(
-            'threshold_low',
-            '低阈值',
-            text='50',
-            tab='检测配置'
-        )
+        # 设置默认值
+        self._param_container.set_value('max_fps', '15')
         
-        self.add_text_input(
-            'threshold_high',
-            '高阈值',
-            text='150',
-            tab='检测配置'
-        )
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
         
-        self.add_combo_menu(
-            'max_fps',
-            '最大帧率',
-            items=['10', '15', '20', '25', '30'],
-            tab='性能配置'
-        )
-        
-        self.set_property('max_fps', '15')
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
         
         # 内部状态
         self._latest_result = None
@@ -101,7 +94,8 @@ class FastDetectionNode(BaseNode):
         Args:
             publisher_node: CameraCaptureNode 实例
         """
-        max_fps = float(self.get_property('max_fps'))
+        params = self._param_container.get_values_dict()
+        max_fps = float(params.get('max_fps', '15'))
         
         def frame_callback(frame):
             """接收帧的回调函数"""
@@ -165,9 +159,10 @@ class FastDetectionNode(BaseNode):
         Returns:
             dict: 检测结果
         """
-        method = self.get_property('detection_method')
-        low_thresh = int(self.get_property('threshold_low'))
-        high_thresh = int(self.get_property('threshold_high'))
+        params = self._param_container.get_values_dict()
+        method = params.get('detection_method', 'Canny边缘')
+        low_thresh = int(params.get('threshold_low', 50))
+        high_thresh = int(params.get('threshold_high', 150))
         
         result = {
             'original': frame.copy(),

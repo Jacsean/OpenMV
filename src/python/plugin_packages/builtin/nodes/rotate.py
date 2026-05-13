@@ -2,7 +2,7 @@
 图像旋转节点 - 按指定角度旋转图像
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -34,10 +34,21 @@ class RotateNode(BaseNode):
         super(RotateNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_text_input('angle', '旋转角度(-180~180)', tab='properties')
-        self.set_property('angle', '0')
-        self.add_text_input('scale', '缩放比例(0.1-2.0)', tab='properties')
-        self.set_property('scale', '1.0')
+        
+        # 创建自定义参数容器控件
+        self._param_container = ParameterContainerWidget(self.view, 'rotate_params', '')
+        self._param_container.add_spinbox('angle', '旋转角度', value=0, min_value=-180, max_value=180)
+        self._param_container.add_spinbox('scale', '缩放比例', value=1.0, min_value=0.1, max_value=2.0, double=True)
+        
+        # 设置值变化回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        
+        # 添加到节点
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        """参数值变化回调"""
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         try:
@@ -51,8 +62,9 @@ class RotateNode(BaseNode):
                 self.log_error("输入图像格式错误")
                 return {'输出图像': None}
             
-            angle = float(self.get_property('angle'))
-            scale = float(self.get_property('scale'))
+            params = self._param_container.get_values_dict()
+            angle = float(params.get('angle', 0))
+            scale = float(params.get('scale', 1.0))
             
             h, w = image.shape[:2]
             center = (w / 2, h / 2)
