@@ -136,6 +136,15 @@ class ImageEvaluationNode(BaseNode):
         return round(float(colorfulness), 2)
 
     def process(self, inputs=None):
+        """
+        执行图像质量评估
+
+        Args:
+            inputs: 输入数据列表，期望包含一个BGR图像
+
+        Returns:
+            dict: 包含评估结果的字典，键为'评估结果(JSON)'
+        """
         try:
             if not inputs or len(inputs) == 0 or inputs[0] is None:
                 self.log_warning("未接收到输入图像")

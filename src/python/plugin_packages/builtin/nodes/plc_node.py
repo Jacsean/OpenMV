@@ -67,3 +67,4 @@ class PLCNode(BaseNode):
         except Exception as e:
             self.log_error(f"PLC通信错误: {e}")
             return {'数据输出': None}
+

@@ -65,3 +65,4 @@ class RobotNode(BaseNode):
         except Exception as e:
             self.log_error(f"机器人通信错误: {e}")
             return {'状态': None}
+
