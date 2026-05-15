@@ -17,7 +17,7 @@ from typing import Dict, Any, Optional
 import numpy as np
 import cv2
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 
 
 class VideoRecorderNode(BaseNode):
@@ -50,39 +50,18 @@ class VideoRecorderNode(BaseNode):
         # 无输入输出端口（通过订阅接收数据）
         
         # === 录制配置 ===
-        self.add_text_input(
-            'output_path',
-            '输出路径',
-            text='./recordings',
-            tab='录制配置'
-        )
+        self._param_container_recording = ParameterContainerWidget(self.view, 'video_recording_params', '')
+        self._param_container_recording.add_text_input('output_path', '输出路径', text='./recordings')
+        self._param_container_recording.add_combobox('codec', '编码格式', items=['MP4V (mp4)', 'XVID (avi)', 'MJPG (avi)'])
+        self._param_container_recording.add_combobox('fps', '目标帧率', items=['15', '20', '25', '30'])
+        self._param_container_recording.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container_recording, tab='录制配置')
         
-        self.add_combo_menu(
-            'codec',
-            '编码格式',
-            items=['MP4V (mp4)', 'XVID (avi)', 'MJPG (avi)'],
-            tab='录制配置'
-        )
-        
-        self.set_property('codec', 'MP4V (mp4)')
-        
-        self.add_combo_menu(
-            'fps',
-            '目标帧率',
-            items=['15', '20', '25', '30'],
-            tab='录制配置'
-        )
-        
-        self.set_property('fps', '25')
-        
-        self.add_combo_menu(
-            'max_fps',
-            '最大处理帧率',
-            items=['15', '20', '25', '30'],
-            tab='性能配置'
-        )
-        
-        self.set_property('max_fps', '25')
+        # === 性能配置 ===
+        self._param_container_performance = ParameterContainerWidget(self.view, 'video_performance_params', '')
+        self._param_container_performance.add_combobox('max_fps', '最大处理帧率', items=['15', '20', '25', '30'])
+        self._param_container_performance.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container_performance, tab='性能配置')
         
         # 内部状态
         self._is_recording = False
@@ -94,6 +73,9 @@ class VideoRecorderNode(BaseNode):
         # 统计信息
         self._total_recorded = 0
         self._total_dropped = 0
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
     
     def on_subscribed_by(self, publisher_node):
         """

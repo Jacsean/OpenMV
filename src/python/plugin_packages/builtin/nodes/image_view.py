@@ -2,7 +2,7 @@
 图像显示节点 - 用于显示图像，支持双击打开预览窗口
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 import json
@@ -50,15 +50,13 @@ class ImageViewNode(BaseNode):
         self.add_output('Mask图像', color=(100, 100, 255))  # 蓝色端口
         
         # 状态信息显示
-        self.add_text_input('status', '状态信息', tab='properties')
+        self._param_container = ParameterContainerWidget(self.view, 'image_view_params', '')
+        self._param_container.add_text_input('status', '状态信息', text='')
+        self._param_container.add_text_input('roi_data', 'ROI数据(JSON)', text='')
+        self._param_container.add_text_input('mask_status', 'Mask状态', text='无Mask')
         
-        # ROI数据显示（JSON格式）
-        self.add_text_input('roi_data', 'ROI数据(JSON)', tab='properties')
-        self.set_property('roi_data', '')
-        
-        # Mask状态显示
-        self.add_text_input('mask_status', 'Mask状态', tab='properties')
-        self.set_property('mask_status', '无Mask')
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
         
         # 缓存最后一张处理的图像（用于预览）
         self._cached_image = None
@@ -68,6 +66,9 @@ class ImageViewNode(BaseNode):
         
         # 缓存Mask图像
         self._mask_image = None
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
 
     def process(self, inputs=None):
         """

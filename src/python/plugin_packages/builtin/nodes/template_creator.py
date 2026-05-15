@@ -8,7 +8,7 @@
 - 模板预览图像绘制
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 from datetime import datetime
@@ -58,43 +58,49 @@ class TemplateCreatorNode(BaseNode):
         self.add_output('模板数据', color=(255, 255, 100))
         self.add_output('模板预览图像', color=(100, 255, 100))
         
+        # 创建参数容器
+        self._param_container = ParameterContainerWidget(self.view, 'template_params', '')
+        
         # 算法选择参数
-        self.add_combo_menu('algorithm', '特征算法',
-                           items=['hu_moments', 'shape_context', 'hausdorff'],
-                           tab='properties')
+        self._param_container.add_combobox('algorithm', '特征算法',
+                                          items=['hu_moments', 'shape_context', 'hausdorff'])
         
         # 目标选择参数
-        self.add_combo_menu('selection_mode', '选择模式',
-                           items=['by_index', 'by_shape', 'by_area', 'advanced'],
-                           tab='properties')
+        self._param_container.add_combobox('selection_mode', '选择模式',
+                                          items=['by_index', 'by_shape', 'by_area', 'advanced'])
         
-        self.add_spinbox('target_index', '目标索引', value=0, min_value=0, max_value=100, tab='properties')
+        self._param_container.add_spinbox('target_index', '目标索引', value=0, min_value=0, max_value=100)
         
-        self.add_combo_menu('shape_filter', '形状类型',
-                           items=['circle', 'rectangle', 'line'],
-                           tab='properties')
+        self._param_container.add_combobox('shape_filter', '形状类型',
+                                          items=['circle', 'rectangle', 'line'])
         
-        self.add_spinbox('confidence_min', '最小置信度', value=0.9, min_value=0.0, max_value=1.0, double=True, tab='properties')
+        self._param_container.add_spinbox('confidence_min', '最小置信度', value=0.9, min_value=0.0, max_value=1.0, double=True)
         
-        self.add_spinbox('area_min', '最小面积', value=100, min_value=1, max_value=999999, tab='properties')
+        self._param_container.add_spinbox('area_min', '最小面积', value=100, min_value=1, max_value=999999)
         
-        self.add_spinbox('area_max', '最大面积', value=1000, min_value=1, max_value=999999, tab='properties')
+        self._param_container.add_spinbox('area_max', '最大面积', value=1000, min_value=1, max_value=999999)
         
         # Shape Context高级参数
-        self.add_spinbox('n_sample_points', '轮廓点采样数', value=100, min_value=50, max_value=500, tab='properties')
-        self.add_spinbox('n_radial_bins', '径向bins数量', value=4, min_value=2, max_value=10, tab='properties')
-        self.add_spinbox('n_angular_bins', '角度bins数量', value=12, min_value=6, max_value=36, tab='properties')
-        self.add_spinbox('inner_radius_ratio', '内半径比例', value=0.1, min_value=0.01, max_value=1.0, double=True, tab='properties')
+        self._param_container.add_spinbox('n_sample_points', '轮廓点采样数', value=100, min_value=50, max_value=500)
+        self._param_container.add_spinbox('n_radial_bins', '径向bins数量', value=4, min_value=2, max_value=10)
+        self._param_container.add_spinbox('n_angular_bins', '角度bins数量', value=12, min_value=6, max_value=36)
+        self._param_container.add_spinbox('inner_radius_ratio', '内半径比例', value=0.1, min_value=0.01, max_value=1.0, double=True)
         
         # 采样策略参数
-        self.add_combo_menu('sampling_strategy', '采样策略',
-                           items=['uniform', 'arc_length', 'douglas_peucker'],
-                           tab='properties')
+        self._param_container.add_combobox('sampling_strategy', '采样策略',
+                                          items=['uniform', 'arc_length', 'douglas_peucker'])
         
         # 鲁棒性增强参数
-        self.add_checkbox('enable_smoothing', '启用轮廓平滑', text='', state=False, tab='properties')
-        self.add_spinbox('smoothing_kernel_size', '平滑核大小', value=5, min_value=3, max_value=15, tab='properties')
-        self.add_checkbox('enable_scale_normalization', '启用尺度归一化', text='', state=False, tab='properties')
+        self._param_container.add_checkbox('enable_smoothing', '启用轮廓平滑', state=False)
+        self._param_container.add_spinbox('smoothing_kernel_size', '平滑核大小', value=5, min_value=3, max_value=15)
+        self._param_container.add_checkbox('enable_scale_normalization', '启用尺度归一化', state=False)
+        
+        # 设置回调
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
     
     def _check_shape_context_availability(self):
         """
@@ -526,11 +532,12 @@ class TemplateCreatorNode(BaseNode):
             self.log_error("❌ 输入轮廓列表为空")
             return None
         
-        selection_mode = self.get_property('selection_mode').lower()
+        params = self._param_container.get_values_dict()
+        selection_mode = params.get('selection_mode', 'by_index').lower()
         
         # 模式1: 按索引选择
         if selection_mode == 'by_index':
-            target_index = int(self.get_property('target_index'))
+            target_index = int(params.get('target_index', 0))
             
             if target_index < 0 or target_index >= len(contours):
                 self.log_error(f"❌ 索引 {target_index} 超出范围（共{len(contours)}个轮廓）")
@@ -542,8 +549,8 @@ class TemplateCreatorNode(BaseNode):
         
         # 模式2: 按形状类型筛选
         elif selection_mode == 'by_shape':
-            shape_filter = self.get_property('shape_filter').lower()
-            confidence_min = float(self.get_property('confidence_min'))
+            shape_filter = params.get('shape_filter', 'circle').lower()
+            confidence_min = float(params.get('confidence_min', 0.9))
             
             candidates = [
                 c for c in contours
@@ -562,8 +569,8 @@ class TemplateCreatorNode(BaseNode):
         
         # 模式3: 按面积范围筛选
         elif selection_mode == 'by_area':
-            area_min = float(self.get_property('area_min'))
-            area_max = float(self.get_property('area_max'))
+            area_min = float(params.get('area_min', 100))
+            area_max = float(params.get('area_max', 1000))
             
             candidates = [
                 c for c in contours
@@ -582,10 +589,10 @@ class TemplateCreatorNode(BaseNode):
         
         # 模式4: 综合筛选
         elif selection_mode == 'advanced':
-            shape_filter = self.get_property('shape_filter').lower()
-            confidence_min = float(self.get_property('confidence_min'))
-            area_min = float(self.get_property('area_min'))
-            area_max = float(self.get_property('area_max'))
+            shape_filter = params.get('shape_filter', 'circle').lower()
+            confidence_min = float(params.get('confidence_min', 0.9))
+            area_min = float(params.get('area_min', 100))
+            area_max = float(params.get('area_max', 1000))
             
             candidates = []
             for c in contours:

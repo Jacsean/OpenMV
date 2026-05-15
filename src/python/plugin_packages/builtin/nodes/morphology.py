@@ -2,7 +2,7 @@
 形态学操作节点 - 支持腐蚀、膨胀、开运算、闭运算等多种形态学操作
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -42,18 +42,16 @@ class MorphologyNode(BaseNode):
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
         
-        self.add_combo_menu('operation', '运算方法',
-                           items=['erode', 'dilate', 'gradient', 'open', 'close', 'top hat', 'black hat'],
-                           tab='properties')
+        self._param_container = ParameterContainerWidget(self.view, 'morphology_params', '')
+        self._param_container.add_combobox('operation', '运算方法',
+                                           items=['erode', 'dilate', 'gradient', 'open', 'close', 'top hat', 'black hat'])
+        self._param_container.add_spinbox('iterations', '处理次数', value=1, min_value=1, max_value=10)
         
-        self.add_spinbox('iterations', '处理次数', value=1, min_value=1, max_value=10, tab='properties')
-        
-        self.add_text_input(
-            '_info',
-            '说明',
-            '💡 erode: 腐蚀\n💡 dilate: 膨胀\n💡 open: 开运算\n💡 close: 闭运算\n💡 gradient: 梯度\n💡 top hat: 顶帽\n💡 black hat: 黑帽',
-            tab='properties'
-        )
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         try:
@@ -67,8 +65,9 @@ class MorphologyNode(BaseNode):
                 self.log_error("输入图像格式错误")
                 return {'输出图像': None}
             
-            operation = self.get_property('operation')
-            iterations = int(self.get_property('iterations'))
+            params = self._param_container.get_values_dict()
+            operation = params.get('operation', 'erode')
+            iterations = int(params.get('iterations', 1))
             
             # 限制处理次数在1-10之间
             iterations = max(1, min(10, iterations))

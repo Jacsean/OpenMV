@@ -1,0 +1,139 @@
+{"timestamp": "2026-05-15 08:55:18.566", "level": "INFO", "message": "\n============================================================", "module": "main_window", "func_name": "_load_plugins", "line_number": 233, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.566", "level": "INFO", "message": "正在加载插件...", "module": "main_window", "func_name": "_load_plugins", "line_number": 234, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.570", "level": "INFO", "message": "============================================================", "module": "main_window", "func_name": "_load_plugins", "line_number": 235, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.574", "level": "INFO", "message": "\n📦 扫描内置插件 (builtin)...", "module": "plugin_manager", "func_name": "scan_plugins", "line_number": 82, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.577", "level": "INFO", "message": "   ✅ builtin (source: builtin, new structure)", "module": "plugin_manager", "func_name": "_scan_directory", "line_number": 120, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.579", "level": "INFO", "message": "\n📦 扫描市场插件 (marketplace)...", "module": "plugin_manager", "func_name": "scan_plugins", "line_number": 88, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.582", "level": "INFO", "message": "   ✅ ocr_vision (source: marketplace)", "module": "plugin_manager", "func_name": "_scan_directory", "line_number": 130, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.585", "level": "INFO", "message": "   ✅ yolo_vision (source: marketplace)", "module": "plugin_manager", "func_name": "_scan_directory", "line_number": 130, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.588", "level": "INFO", "message": "\n✅ 共扫描到 3 个插件", "module": "plugin_manager", "func_name": "scan_plugins", "line_number": 92, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.589", "level": "INFO", "message": "发现 3 个插件\n", "module": "main_window", "func_name": "_load_plugins", "line_number": 239, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.591", "level": "INFO", "message": "📦 待加载插件: 内置节点, OCR识别, YOLO视觉", "module": "main_window", "func_name": "_load_plugins", "line_number": 250, "context": {}}
+{"timestamp": "2026-05-15 08:55:18.594", "level": "INFO", "message": "============================================================\n", "module": "main_window", "func_name": "_load_plugins", "line_number": 252, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.031", "level": "INFO", "message": "✅ ✅ 创建新工程: 默认工程", "module": "project_manager", "func_name": "create_project", "line_number": 433, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.039", "level": "INFO", "message": "\n============================================================", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 95, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.041", "level": "INFO", "message": "📦 开始注册节点到 NodeGraph", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 96, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.044", "level": "INFO", "message": "============================================================", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 97, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.047", "level": "INFO", "message": "发现 3 个插件", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 102, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.049", "level": "INFO", "message": "\n--- 处理插件: 内置节点 ---", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 107, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.213", "level": "INFO", "message": "   ✅ 注册节点: 图像操作", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.216", "level": "INFO", "message": "   ✅ 注册节点: 灰度化", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.219", "level": "INFO", "message": "   ✅ 注册节点: 高斯模糊", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.222", "level": "INFO", "message": "   ✅ 注册节点: 中值滤波", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.253", "level": "INFO", "message": "   ✅ 注册节点: 双边滤波", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.256", "level": "INFO", "message": "   ✅ 注册节点: 亮度对比度", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.267", "level": "INFO", "message": "   ✅ 注册节点: 直方图均衡化", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.272", "level": "INFO", "message": "   ✅ 注册节点: 阈值二值化", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.275", "level": "INFO", "message": "   ✅ 注册节点: 自适应阈值", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.280", "level": "INFO", "message": "   ✅ 注册节点: 形态学操作", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.283", "level": "INFO", "message": "   ✅ 注册节点: 图像缩放", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.286", "level": "INFO", "message": "   ✅ 注册节点: 图像旋转", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.290", "level": "INFO", "message": "   ✅ 注册节点: 图像评估", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.293", "level": "INFO", "message": "   ✅ 注册节点: Canny算子", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.295", "level": "INFO", "message": "   ✅ 注册节点: Sobel算子", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.299", "level": "INFO", "message": "   ✅ 注册节点: 轮廓分析", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.301", "level": "INFO", "message": "   ✅ 注册节点: Laplacian算子", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.303", "level": "INFO", "message": "   ✅ 注册节点: Harris角点", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.307", "level": "INFO", "message": "   ✅ 注册节点: Hough直线", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.310", "level": "INFO", "message": "   ✅ 注册节点: Hough圆", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.313", "level": "INFO", "message": "   ✅ 注册节点: 模板创建", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.316", "level": "INFO", "message": "   ✅ 注册节点: 模板匹配", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.319", "level": "INFO", "message": "   ✅ 注册节点: 加载图像", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.322", "level": "INFO", "message": "   ✅ 注册节点: 保存图像", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.325", "level": "INFO", "message": "   ✅ 注册节点: 图像显示", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.328", "level": "INFO", "message": "   ✅ 注册节点: 相机采集", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.332", "level": "INFO", "message": "   ✅ 注册节点: 实时预览", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.334", "level": "INFO", "message": "   ✅ 注册节点: 视频录制", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.337", "level": "INFO", "message": "   ✅ 注册节点: 快速检测", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.342", "level": "INFO", "message": "   ✅ 注册节点: 数据显示", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.346", "level": "INFO", "message": "   ✅ 注册节点: PLC通信", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.349", "level": "INFO", "message": "   ✅ 注册节点: 数据输出", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.352", "level": "INFO", "message": "   ✅ 注册节点: 机器人通信", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.357", "level": "INFO", "message": "   ✅ 注册节点: 圆检测", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.358", "level": "INFO", "message": "   ✅ 注册节点: 金字塔", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.365", "level": "INFO", "message": "✅ 插件 内置节点 加载完成，注册 35 个节点", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 387, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.395", "level": "INFO", "message": "   📋 注册到工作流: 图像操作", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.398", "level": "INFO", "message": "   📋 注册到工作流: 灰度化", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.401", "level": "INFO", "message": "   📋 注册到工作流: 高斯模糊", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.406", "level": "INFO", "message": "   📋 注册到工作流: 中值模糊", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.410", "level": "INFO", "message": "   📋 注册到工作流: 双边滤波", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.413", "level": "INFO", "message": "   📋 注册到工作流: 亮度对比度", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.416", "level": "INFO", "message": "   📋 注册到工作流: 直方图均衡化", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.420", "level": "INFO", "message": "   📋 注册到工作流: 阈值处理", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.423", "level": "INFO", "message": "   📋 注册到工作流: 自适应阈值", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.426", "level": "INFO", "message": "   📋 注册到工作流: 形态学", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.430", "level": "INFO", "message": "   📋 注册到工作流: 图像缩放", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.433", "level": "INFO", "message": "   📋 注册到工作流: 图像旋转", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.437", "level": "INFO", "message": "   📋 注册到工作流: 图像评估", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.440", "level": "INFO", "message": "   📋 注册到工作流: Canny算子", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.444", "level": "INFO", "message": "   📋 注册到工作流: Sobel算子", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.448", "level": "INFO", "message": "   📋 注册到工作流: 轮廓分析", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.450", "level": "INFO", "message": "   📋 注册到工作流: Laplacian算子", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.455", "level": "INFO", "message": "   📋 注册到工作流: Harris角点", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.460", "level": "INFO", "message": "   📋 注册到工作流: Hough直线", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.464", "level": "INFO", "message": "   📋 注册到工作流: Hough圆", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.466", "level": "INFO", "message": "   📋 注册到工作流: 模板创建", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.470", "level": "INFO", "message": "   📋 注册到工作流: 模板匹配", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.473", "level": "INFO", "message": "   📋 注册到工作流: 图像加载", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.477", "level": "INFO", "message": "   📋 注册到工作流: 图像保存", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.479", "level": "INFO", "message": "   📋 注册到工作流: 图像显示", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.482", "level": "INFO", "message": "   📋 注册到工作流: 相机采集", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.486", "level": "INFO", "message": "   📋 注册到工作流: 实时预览", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.489", "level": "INFO", "message": "   📋 注册到工作流: 视频录制", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.492", "level": "INFO", "message": "   📋 注册到工作流: 快速检测", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.496", "level": "INFO", "message": "   📋 注册到工作流: JSON显示", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.499", "level": "INFO", "message": "   📋 注册到工作流: PLC通信", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.502", "level": "INFO", "message": "   📋 注册到工作流: 数据输出", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.506", "level": "INFO", "message": "   📋 注册到工作流: 机器人通信", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.510", "level": "INFO", "message": "   📋 注册到工作流: 圆检测", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.513", "level": "INFO", "message": "   📋 注册到工作流: 金字塔", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.516", "level": "INFO", "message": "✅ ✅ 插件 内置节点 注册完成", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 124, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.519", "level": "INFO", "message": "\n--- 处理插件: OCR识别 ---", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 107, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.540", "level": "INFO", "message": "   ✅ 注册节点: OCR 文字识别", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.545", "level": "INFO", "message": "   ✅ 注册节点: OCR 表格识别", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.548", "level": "INFO", "message": "   ✅ 注册节点: OCR 版面分析", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.552", "level": "INFO", "message": "✅ 插件 OCR识别 加载完成，注册 3 个节点", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 387, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.560", "level": "INFO", "message": "   📋 注册到工作流: OCR 文字识别", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.564", "level": "INFO", "message": "   📋 注册到工作流: OCR 表格识别", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.567", "level": "INFO", "message": "   📋 注册到工作流: OCR 版面分析", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.571", "level": "INFO", "message": "✅ ✅ 插件 OCR识别 注册完成", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 124, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.575", "level": "INFO", "message": "\n--- 处理插件: YOLO视觉 ---", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 107, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.610", "level": "INFO", "message": "   ✅ 注册节点: 目标检测", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.614", "level": "INFO", "message": "   ✅ 注册节点: 图像分类", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.618", "level": "INFO", "message": "   ✅ 注册节点: 实例分割", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.622", "level": "INFO", "message": "   ✅ 注册节点: 姿态估计", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.626", "level": "INFO", "message": "   ✅ 注册节点: 标注辅助", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.630", "level": "INFO", "message": "   ✅ 注册节点: 模型训练", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.634", "level": "INFO", "message": "   ✅ 注册节点: 模型量化", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.638", "level": "INFO", "message": "✅ 插件 YOLO视觉 加载完成，注册 7 个节点", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 387, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.651", "level": "INFO", "message": "   📋 注册到工作流: 目标检测", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.654", "level": "INFO", "message": "   📋 注册到工作流: 图像分类", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.658", "level": "INFO", "message": "   📋 注册到工作流: 实例分割", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.661", "level": "INFO", "message": "   📋 注册到工作流: 姿态估计", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.664", "level": "INFO", "message": "   📋 注册到工作流: 标注辅助", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.666", "level": "INFO", "message": "   📋 注册到工作流: 模型训练", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.670", "level": "INFO", "message": "   📋 注册到工作流: 模型量化", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.674", "level": "INFO", "message": "✅ ✅ 插件 YOLO视觉 注册完成", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 124, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.676", "level": "INFO", "message": "\n============================================================", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 131, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.682", "level": "INFO", "message": "✅ ✅ 节点注册完成，共注册 45 个节点类型", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 132, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.686", "level": "INFO", "message": "============================================================", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 133, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.703", "level": "INFO", "message": "🔄 切换到工作流: 工作流 1", "module": "project_ui_manager", "func_name": "on_tab_changed", "line_number": 168, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.706", "level": "INFO", "message": "首次创建工作流，初始化共享组件...", "module": "project_ui_manager", "func_name": "add_workflow_tab", "line_number": 109, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.717", "level": "INFO", "message": "📋 从插件 内置节点 获取到 group 排序: ['Image_Source', 'Image_Analysis', 'Image_Transform', 'Image_Process', 'Integration', 'OCR', 'YOLO']", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1796, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.723", "level": "INFO", "message": "🔄 节点库标签重命名: 'Image_Analysis' -> '图像分析'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.733", "level": "INFO", "message": "🔄 节点库标签重命名: 'Image_Transform' -> '图像变换'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.743", "level": "INFO", "message": "🔄 节点库标签重命名: 'Image_Process' -> '图像处理'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.753", "level": "INFO", "message": "🔄 节点库标签重命名: 'Image_Source' -> '图像源'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.766", "level": "INFO", "message": "🔄 节点库标签重命名: 'Integration' -> '系统集成'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.779", "level": "INFO", "message": "🔄 节点库标签重命名: 'ocr_vision' -> 'OCR'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1815, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.793", "level": "INFO", "message": "🔄 节点库标签重命名: 'yolo_vision' -> 'YOLO'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1815, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.803", "level": "INFO", "message": "🔄 排序后的标签顺序: ['图像源', '图像分析', '图像变换', '图像处理', '系统集成', 'OCR', 'YOLO', 'nodeGraphQt.nodes']", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1840, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.814", "level": "INFO", "message": "✅ 节点库标签重命名和排序完成", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1861, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.826", "level": "INFO", "message": "✅ 节点库按知识结构重新分组完成", "module": "main_window", "func_name": "_regroup_nodes_by_knowledge_structure", "line_number": 1757, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.839", "level": "INFO", "message": "✅ nodeGraphQt.nodes 标签已隐藏", "module": "main_window", "func_name": "_customize_node_palette", "line_number": 1549, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.867", "level": "INFO", "message": "✅ 共享组件初始化完成", "module": "main_window", "func_name": "_initialize_shared_components", "line_number": 461, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.880", "level": "INFO", "message": "🔄 切换到工作流: 工作流 1", "module": "project_ui_manager", "func_name": "on_tab_changed", "line_number": 168, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.890", "level": "INFO", "message": "✅ ✅ 添加工作流标签页: 工作流 1", "module": "project_ui_manager", "func_name": "add_workflow_tab", "line_number": 116, "context": {}}
+{"timestamp": "2026-05-15 08:55:19.973", "level": "INFO", "message": "启动时应用保存的主题: light", "module": "theme", "func_name": "_apply_saved_theme", "line_number": 117, "context": {}}
+{"timestamp": "2026-05-15 08:55:20.020", "level": "INFO", "message": "主题已切换为: light", "module": "theme", "func_name": "apply_theme", "line_number": 159, "context": {}}
+{"timestamp": "2026-05-15 08:55:20.054", "level": "INFO", "message": "🎨 启动时应用主题: light", "module": "main_window", "func_name": "_apply_theme_on_startup", "line_number": 1375, "context": {}}

@@ -32,7 +32,7 @@
 import cv2
 import numpy as np
 import logging
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 
 logger = logging.getLogger('image_operation')
 
@@ -779,6 +779,8 @@ class ImageOperationNode(BaseNode):
         self.add_output('输出图像', color=(100, 255, 100))
         self.add_output('JSON数据', color=(200, 200, 200))
 
+        self._param_container = ParameterContainerWidget(self.view, 'image_operation_params', '')
+        
         method_items = []
         for category in ['一元操作', '二元操作', '其他操作']:
             methods_in_category = [
@@ -788,26 +790,21 @@ class ImageOperationNode(BaseNode):
             ]
             method_items.extend(methods_in_category)
 
-        self.add_combo_menu(
-            'method',
-            '方法',
-            items=method_items,
-            tab='properties'
-        )
+        self._param_container.add_combobox('method', '方法', items=method_items)
+        self._param_container.add_text_input('status', '状态', text='就绪')
+        self._param_container.add_text_input('input1_type', '输入1类型', text='image')
+        self._param_container.add_text_input('input2_type', '输入2类型', text='image')
 
-        self.add_text_input('status', '状态', tab='properties')
-        self.set_property('status', '就绪')
-
-        self.add_text_input('input1_type', '输入1类型', tab='properties')
-        self.set_property('input1_type', 'image')
-
-        self.add_text_input('input2_type', '输入2类型', tab='properties')
-        self.set_property('input2_type', 'image')
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
 
         self._cached_image = None
 
     def get_cached_image(self):
         return self._cached_image
+
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
 
     def process(self, inputs=None):
         try:

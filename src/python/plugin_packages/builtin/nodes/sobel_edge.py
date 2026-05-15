@@ -2,7 +2,7 @@
 Sobel边缘检测节点 - 使用Sobel算子计算图像梯度
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -19,8 +19,16 @@ class SobelEdgeNode(BaseNode):
         super(SobelEdgeNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_combo_menu('direction', '方向', items=['X方向', 'Y方向', 'XY方向'], tab='properties')
-        self.add_spinbox('ksize', '核大小', value=3, min_value=1, max_value=7, tab='properties')
+        
+        self._param_container = ParameterContainerWidget(self.view, 'sobel_params', '')
+        self._param_container.add_combobox('direction', '方向', items=['X方向', 'Y方向', 'XY方向'])
+        self._param_container.add_spinbox('ksize', '核大小', value=3, min_value=1, max_value=7)
+        
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         try:
@@ -28,8 +36,9 @@ class SobelEdgeNode(BaseNode):
                 return {'输出图像': None}
             
             image = inputs[0][0] if isinstance(inputs[0], list) else inputs[0]
-            direction = self.get_property('direction')
-            ksize = int(self.get_property('ksize'))
+            params = self._param_container.get_values_dict()
+            direction = params.get('direction', 'X方向')
+            ksize = int(params.get('ksize', 3))
             
             if ksize < 1: ksize = 1
             elif ksize > 7: ksize = 7

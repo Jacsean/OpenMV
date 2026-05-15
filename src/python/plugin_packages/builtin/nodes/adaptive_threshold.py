@@ -2,7 +2,7 @@
 自适应阈值节点 - 根据局部区域自动调整二值化阈值
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -34,8 +34,16 @@ class AdaptiveThresholdNode(BaseNode):
         super(AdaptiveThresholdNode, self).__init__()
         self.add_input('输入图像', color=(100, 255, 100))
         self.add_output('输出图像', color=(100, 255, 100))
-        self.add_spinbox('block_size', '块大小', value=11, min_value=3, max_value=15, tab='properties')
-        self.add_spinbox('C', '常数C', value=2, min_value=-10, max_value=10, tab='properties')
+        
+        self._param_container = ParameterContainerWidget(self.view, 'adaptive_params', '')
+        self._param_container.add_spinbox('block_size', '块大小', value=11, min_value=3, max_value=15)
+        self._param_container.add_spinbox('C', '常数C', value=2, min_value=-10, max_value=10)
+        
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         try:
@@ -49,8 +57,9 @@ class AdaptiveThresholdNode(BaseNode):
                 self.log_error("输入图像格式错误")
                 return {'输出图像': None}
             
-            block_size = int(self.get_property('block_size'))
-            C = int(self.get_property('C'))
+            params = self._param_container.get_values_dict()
+            block_size = int(params.get('block_size', 11))
+            C = int(params.get('C', 2))
             
             # 参数验证和修正
             if block_size < 3:

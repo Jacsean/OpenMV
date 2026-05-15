@@ -2,7 +2,7 @@
 加载图像节点 - 从本地文件加载图像
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -37,9 +37,16 @@ class ImageLoadNode(BaseNode):
         self.add_output('输出图像')
         
         # 参数配置
-        self.add_text_input('file_path', '文件路径', tab='properties')
+        self._param_container = ParameterContainerWidget(self.view, 'image_load_params', '')
+        self._param_container.add_text_input('file_path', '文件路径', text='')
+        
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
         
         self._image = None
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         """
@@ -52,7 +59,8 @@ class ImageLoadNode(BaseNode):
             dict: 包含输出图像的字典
         """
         try:
-            file_path = self.get_property('file_path')
+            params = self._param_container.get_values_dict()
+            file_path = params.get('file_path', '')
             
             if not file_path:
                 self.log_warning("未指定文件路径")

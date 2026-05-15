@@ -2,7 +2,7 @@
 保存图像节点 - 将图像保存到本地文件
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -37,8 +37,15 @@ class ImageSaveNode(BaseNode):
         self.add_input('输入图像', color=(255, 100, 100))
         
         # 参数配置
-        self.add_text_input('save_path', '保存路径', tab='properties')
-        self.add_text_input('status', '状态', tab='properties')
+        self._param_container = ParameterContainerWidget(self.view, 'image_save_params', '')
+        self._param_container.add_text_input('save_path', '保存路径', text='')
+        self._param_container.add_text_input('status', '状态', text='')
+        
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
     
     def process(self, inputs=None):
         """
@@ -61,7 +68,8 @@ class ImageSaveNode(BaseNode):
             image = inputs[0][0] if isinstance(inputs[0], list) else inputs[0]
             
             # Step 2: 获取保存路径
-            save_path = self.get_property('save_path')
+            params = self._param_container.get_values_dict()
+            save_path = params.get('save_path', '')
             
             if not save_path:
                 status_msg = '未指定保存路径'

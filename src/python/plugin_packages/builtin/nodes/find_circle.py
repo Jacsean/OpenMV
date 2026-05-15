@@ -2,7 +2,7 @@
 圆检测节点 - 基于轮廓分析的圆检测
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 import time
@@ -41,12 +41,16 @@ class FindCircleNode(BaseNode):
         self.add_output('检测数量', color=(100, 100, 255))
         self.add_output('统计数据', color=(255, 255, 100))
 
-        self.add_spinbox('gaussian_size', '高斯模糊核大小', value=3, min_value=1, max_value=15, tab='properties')
-        self.add_spinbox('adaptive_win', '自适应窗口大小', value=15, min_value=3, max_value=31, tab='properties')
-        self.add_spinbox('area_min', '最小面积', value=10, min_value=1, max_value=999999, tab='properties')
-        self.add_spinbox('area_max', '最大面积', value=100000, min_value=1, max_value=999999, tab='properties')
-        self.add_spinbox('center_dev_thresh', '中心偏差阈值', value=5.0, min_value=0.0, max_value=100.0, double=True, tab='properties')
-        self.add_spinbox('radius_dev_thresh', '半径偏差阈值', value=0.1, min_value=0.0, max_value=1.0, double=True, tab='properties')
+        self._param_container = ParameterContainerWidget(self.view, 'find_circle_params', '')
+        self._param_container.add_spinbox('gaussian_size', '高斯模糊核大小', value=3, min_value=1, max_value=15)
+        self._param_container.add_spinbox('adaptive_win', '自适应窗口大小', value=15, min_value=3, max_value=31)
+        self._param_container.add_spinbox('area_min', '最小面积', value=10, min_value=1, max_value=999999)
+        self._param_container.add_spinbox('area_max', '最大面积', value=100000, min_value=1, max_value=999999)
+        self._param_container.add_spinbox('center_dev_thresh', '中心偏差阈值', value=5.0, min_value=0.0, max_value=100.0, double=True)
+        self._param_container.add_spinbox('radius_dev_thresh', '半径偏差阈值', value=0.1, min_value=0.0, max_value=1.0, double=True)
+        
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
 
         self._templates: Dict[str, Dict] = {}
         self._current_template: Optional[str] = None
@@ -55,11 +59,13 @@ class FindCircleNode(BaseNode):
             "valid_detect": 0,
             "avg_time_ms": 0.0
         }
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
 
-    def _preprocess(self, src: np.ndarray, adaptive_win: int) -> Tuple[np.ndarray, np.ndarray]:
+    def _preprocess(self, src: np.ndarray, adaptive_win: int, gaussian_size: int) -> Tuple[np.ndarray, np.ndarray]:
         """图像预处理"""
         gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY) if len(src.shape) == 3 else src.copy()
-        gaussian_size = int(self.get_property('gaussian_size'))
         if gaussian_size % 2 == 0:
             gaussian_size += 1
         blur = cv2.GaussianBlur(gray, (gaussian_size, gaussian_size), 0)
@@ -72,7 +78,8 @@ class FindCircleNode(BaseNode):
         return binary, gray
 
     def _calc_deviation(self, detect_center: Tuple[float, float], detect_radius: float,
-                       std_center: Tuple[float, float], std_radius: float) -> Dict:
+                       std_center: Tuple[float, float], std_radius: float,
+                       center_dev_thresh: float, radius_dev_thresh: float) -> Dict:
         """计算检测结果与标准模板的偏差"""
         dx = abs(detect_center[0] - std_center[0])
         dy = abs(detect_center[1] - std_center[1])
@@ -81,12 +88,12 @@ class FindCircleNode(BaseNode):
         return {
             "center_dev": round(center_dev, 3),
             "radius_dev": round(radius_dev, 3),
-            "within_threshold": (center_dev <= float(self.get_property('center_dev_thresh'))) and
-                                (radius_dev <= float(self.get_property('radius_dev_thresh')))
+            "within_threshold": (center_dev <= center_dev_thresh) and (radius_dev <= radius_dev_thresh)
         }
 
     def _detect_hole(self, src: np.ndarray, roi: Optional[Tuple[int, int, int, int]] = None) -> Dict:
         """检测圆"""
+        params = self._param_container.get_values_dict()
         start = time.time()
         result = {
             "center": (0.0, 0.0),
@@ -98,8 +105,9 @@ class FindCircleNode(BaseNode):
             "circles": []
         }
 
-        adaptive_win = int(self.get_property('adaptive_win'))
-        bin_img, _ = self._preprocess(src, adaptive_win)
+        adaptive_win = int(params.get('adaptive_win', 15))
+        gaussian_size = int(params.get('gaussian_size', 3))
+        bin_img, _ = self._preprocess(src, adaptive_win, gaussian_size)
         roi_img = bin_img
         roi_x, roi_y = 0, 0
         if roi is not None:
@@ -109,8 +117,8 @@ class FindCircleNode(BaseNode):
         contours, _ = cv2.findContours(roi_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         result["contour_count"] = len(contours)
 
-        area_min = float(self.get_property('area_min'))
-        area_max = float(self.get_property('area_max'))
+        area_min = float(params.get('area_min', 10))
+        area_max = float(params.get('area_max', 100000))
 
         for cnt in contours:
             area = cv2.contourArea(cnt)
@@ -154,8 +162,10 @@ class FindCircleNode(BaseNode):
         if src_img is None or template_name in self._templates:
             return False
 
-        adaptive_win = int(self.get_property('adaptive_win'))
-        bin_img, _ = self._preprocess(src_img, adaptive_win)
+        params = self._param_container.get_values_dict()
+        adaptive_win = int(params.get('adaptive_win', 15))
+        gaussian_size = int(params.get('gaussian_size', 3))
+        bin_img, _ = self._preprocess(src_img, adaptive_win, gaussian_size)
         roi_bin = bin_img[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
         edge_tpl = cv2.Canny(roi_bin, 50, 150)
 
@@ -228,6 +238,10 @@ class FindCircleNode(BaseNode):
             detect_count = 0
 
             if self._current_template is not None:
+                params = self._param_container.get_values_dict()
+                center_dev_thresh = float(params.get('center_dev_thresh', 5.0))
+                radius_dev_thresh = float(params.get('radius_dev_thresh', 0.1))
+                
                 template = self._templates[self._current_template]
                 hole = self._detect_hole(image, template["roi"])
 
@@ -243,7 +257,9 @@ class FindCircleNode(BaseNode):
                             (circle["center"]["x"], circle["center"]["y"]),
                             circle["radius"],
                             template["std_center"],
-                            template["std_radius"]
+                            template["std_radius"],
+                            center_dev_thresh,
+                            radius_dev_thresh
                         )
                         circle["deviation"] = deviation
                         circle["within_threshold"] = deviation["within_threshold"]

@@ -2,7 +2,7 @@
 图像金字塔节点 - 支持 PyrDown、PyrUp 和 PyrSegmentation 算法
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -41,25 +41,22 @@ class PyramidNode(BaseNode):
         self.add_output('输出图像', color=(100, 255, 100))
         self.add_output('Blob信息', color=(255, 255, 100))
 
-        self.add_combo_menu('algorithm', '算法类型',
-                           items=['PyrDown', 'PyrUp', 'PyrSegmentation'],
-                           tab='properties')
-
-        self.add_spinbox('levels', '金字塔层数', value=1, min_value=1, max_value=5, tab='properties')
-
-        self.add_combo_menu('border_type', '边界处理',
-                           items=['BORDER_DEFAULT', 'BORDER_CONSTANT', 'BORDER_REPLICATE', 'BORDER_REFLECT'],
-                           tab='properties')
-
-        self.add_spinbox('spatial_radius', '空间窗口半径', value=5, min_value=1, max_value=50, tab='properties')
-
-        self.add_spinbox('color_radius', '颜色窗口半径', value=10, min_value=1, max_value=100, tab='properties')
-
-        self.add_spinbox('min_size', '最小区域面积', value=100, min_value=1, max_value=999999, tab='properties')
-
-        self.add_combo_menu('connectivity', '连通性',
-                           items=['4', '8'],
-                           tab='properties')
+        self._param_container = ParameterContainerWidget(self.view, 'pyramid_params', '')
+        self._param_container.add_combobox('algorithm', '算法类型',
+                                           items=['PyrDown', 'PyrUp', 'PyrSegmentation'])
+        self._param_container.add_spinbox('levels', '金字塔层数', value=1, min_value=1, max_value=5)
+        self._param_container.add_combobox('border_type', '边界处理',
+                                           items=['BORDER_DEFAULT', 'BORDER_CONSTANT', 'BORDER_REPLICATE', 'BORDER_REFLECT'])
+        self._param_container.add_spinbox('spatial_radius', '空间窗口半径', value=5, min_value=1, max_value=50)
+        self._param_container.add_spinbox('color_radius', '颜色窗口半径', value=10, min_value=1, max_value=100)
+        self._param_container.add_spinbox('min_size', '最小区域面积', value=100, min_value=1, max_value=999999)
+        self._param_container.add_combobox('connectivity', '连通性', items=['4', '8'])
+        
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
 
     def _get_border_type(self, border_str):
         """获取边界处理类型"""
@@ -190,27 +187,28 @@ class PyramidNode(BaseNode):
                     'Blob信息': None
                 }
 
-            algorithm = self.get_property('algorithm')
+            params = self._param_container.get_values_dict()
+            algorithm = params.get('algorithm', 'PyrDown')
             result_image = image.copy()
             blob_info = None
 
             if algorithm == 'PyrDown':
-                levels = max(1, min(5, int(self.get_property('levels'))))
-                border_type = self._get_border_type(self.get_property('border_type'))
+                levels = max(1, min(5, int(params.get('levels', 1))))
+                border_type = self._get_border_type(params.get('border_type', 'BORDER_DEFAULT'))
                 result_image = self._pyr_down(image, levels, border_type)
                 self.log_success(f"PyrDown 完成 (层数: {levels})")
 
             elif algorithm == 'PyrUp':
-                levels = max(1, min(5, int(self.get_property('levels'))))
-                border_type = self._get_border_type(self.get_property('border_type'))
+                levels = max(1, min(5, int(params.get('levels', 1))))
+                border_type = self._get_border_type(params.get('border_type', 'BORDER_DEFAULT'))
                 result_image = self._pyr_up(image, levels, border_type)
                 self.log_success(f"PyrUp 完成 (层数: {levels})")
 
             elif algorithm == 'PyrSegmentation':
-                spatial_radius = max(1, int(self.get_property('spatial_radius')))
-                color_radius = max(1, int(self.get_property('color_radius')))
-                min_size = max(1, int(self.get_property('min_size')))
-                connectivity = int(self.get_property('connectivity'))
+                spatial_radius = max(1, int(params.get('spatial_radius', 5)))
+                color_radius = max(1, int(params.get('color_radius', 10)))
+                min_size = max(1, int(params.get('min_size', 100)))
+                connectivity = int(params.get('connectivity', 4))
 
                 result_image, blob_info = self._pyr_segmentation(
                     image, spatial_radius, color_radius, min_size, connectivity

@@ -2,7 +2,7 @@
 JSON数据显示节点 - 以独立文本框方式显示JSON数据结果
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import json
 
 
@@ -46,10 +46,12 @@ class JsonDisplayNode(BaseNode):
         self.add_output('原始数据', color=(100, 100, 255))
         
         # 属性面板中的完整JSON文本显示（放在最顶部）
-        self.add_text_input('full_json_text', '=== 完整JSON文本 ===', tab='properties')
+        self._param_container = ParameterContainerWidget(self.view, 'json_display_params', '')
+        self._param_container.add_text_input('full_json_text', '=== 完整JSON文本 ===', text='')
+        self._param_container.add_text_input('_separator_1', '--- 字段详情 ---', text='--- 字段详情 ---')
         
-        # 分隔线标记
-        self.add_text_input('_separator_1', '--- 字段详情 ---', tab='properties')
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='properties')
         
         # 缓存解析后的数据和字段数量
         self._parsed_data = None
@@ -57,6 +59,9 @@ class JsonDisplayNode(BaseNode):
         
         # 用于跟踪已添加的动态属性（字段名 -> 属性名映射）
         self._dynamic_properties = {}
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
     
     def _clear_dynamic_properties(self):
         """清除之前添加的动态字段属性"""

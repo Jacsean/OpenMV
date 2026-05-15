@@ -15,7 +15,7 @@ import time
 from typing import Dict, Any, Optional, Callable
 import numpy as np
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -73,39 +73,21 @@ class CameraCaptureNode(BaseNode):
         self.add_output('连续图像流')
         
         # === 基本配置标签页 ===
-        self.add_combo_menu(
-            'seat_index', 
-            'Seat索引', 
-            items=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],  # 支持最多10个Seat
-            tab='基本配置'
-        )
-        
-        self.add_text_input(
-            'serial_number', 
-            '相机序列号', 
-            text='',
-            tab='基本配置'
-        )
-        
-        self.add_spinbox('magnification', '镜头倍率', value=1.0, min_value=0.1, max_value=10.0, double=True, tab='基本配置')
-        
-        self.add_combo_menu(
-            'acquisition_mode', 
-            '采集模式', 
-            items=['连续采集', '软件触发', '外部触发'],
-            tab='基本配置'
-        )
+        self._param_container_basic = ParameterContainerWidget(self.view, 'camera_basic_params', '')
+        self._param_container_basic.add_combobox('seat_index', 'Seat索引', items=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])
+        self._param_container_basic.add_text_input('serial_number', '相机序列号', text='')
+        self._param_container_basic.add_spinbox('magnification', '镜头倍率', value=1.0, min_value=0.1, max_value=10.0, double=True)
+        self._param_container_basic.add_combobox('acquisition_mode', '采集模式', items=['连续采集', '软件触发', '外部触发'])
+        self._param_container_basic.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container_basic, tab='基本配置')
         
         # === 图像参数标签页 ===
-        self.add_spinbox('exposure_us', '曝光时间(μs)', value=10000, min_value=10, max_value=1000000, tab='图像参数')
-        self.add_spinbox('gain', '增益', value=0, min_value=0, max_value=100, tab='图像参数')
-        
-        self.add_combo_menu(
-            'white_balance_mode', 
-            '白平衡模式', 
-            items=['Auto', 'Manual', 'Once'],
-            tab='图像参数'
-        )
+        self._param_container_image = ParameterContainerWidget(self.view, 'camera_image_params', '')
+        self._param_container_image.add_spinbox('exposure_us', '曝光时间(μs)', value=10000, min_value=10, max_value=1000000)
+        self._param_container_image.add_spinbox('gain', '增益', value=0, min_value=0, max_value=100)
+        self._param_container_image.add_combobox('white_balance_mode', '白平衡模式', items=['Auto', 'Manual', 'Once'])
+        self._param_container_image.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container_image, tab='图像参数')
         
         # 内部状态
         self._camera_manager = CameraManager.get_instance()
@@ -134,6 +116,9 @@ class CameraCaptureNode(BaseNode):
         
         # 初始化Seat列表（已移除动态更新，使用固定选项）
         # self._update_seat_list()  # NodeGraphQt不支持动态修改combo_menu items
+    
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
     
     def _on_seat_index_changed(self):
         """Seat索引变化时的回调"""

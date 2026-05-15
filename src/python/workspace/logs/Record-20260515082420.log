@@ -1,0 +1,307 @@
+{"timestamp": "2026-05-15 08:24:21.534", "level": "INFO", "message": "\n============================================================", "module": "main_window", "func_name": "_load_plugins", "line_number": 233, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.536", "level": "INFO", "message": "正在加载插件...", "module": "main_window", "func_name": "_load_plugins", "line_number": 234, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.536", "level": "INFO", "message": "============================================================", "module": "main_window", "func_name": "_load_plugins", "line_number": 235, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.546", "level": "INFO", "message": "\n📦 扫描内置插件 (builtin)...", "module": "plugin_manager", "func_name": "scan_plugins", "line_number": 82, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.554", "level": "INFO", "message": "   ✅ builtin (source: builtin, new structure)", "module": "plugin_manager", "func_name": "_scan_directory", "line_number": 120, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.557", "level": "INFO", "message": "\n📦 扫描市场插件 (marketplace)...", "module": "plugin_manager", "func_name": "scan_plugins", "line_number": 88, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.563", "level": "INFO", "message": "   ✅ ocr_vision (source: marketplace)", "module": "plugin_manager", "func_name": "_scan_directory", "line_number": 130, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.566", "level": "INFO", "message": "   ✅ yolo_vision (source: marketplace)", "module": "plugin_manager", "func_name": "_scan_directory", "line_number": 130, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.570", "level": "INFO", "message": "\n✅ 共扫描到 3 个插件", "module": "plugin_manager", "func_name": "scan_plugins", "line_number": 92, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.572", "level": "INFO", "message": "发现 3 个插件\n", "module": "main_window", "func_name": "_load_plugins", "line_number": 239, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.580", "level": "INFO", "message": "📦 待加载插件: 内置节点, OCR识别, YOLO视觉", "module": "main_window", "func_name": "_load_plugins", "line_number": 250, "context": {}}
+{"timestamp": "2026-05-15 08:24:21.583", "level": "INFO", "message": "============================================================\n", "module": "main_window", "func_name": "_load_plugins", "line_number": 252, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.459", "level": "INFO", "message": "✅ ✅ 创建新工程: 默认工程", "module": "project_manager", "func_name": "create_project", "line_number": 433, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.468", "level": "INFO", "message": "\n============================================================", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 95, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.472", "level": "INFO", "message": "📦 开始注册节点到 NodeGraph", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 96, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.478", "level": "INFO", "message": "============================================================", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 97, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.481", "level": "INFO", "message": "发现 3 个插件", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 102, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.485", "level": "INFO", "message": "\n--- 处理插件: 内置节点 ---", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 107, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.836", "level": "INFO", "message": "   ✅ 注册节点: 图像操作", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.838", "level": "INFO", "message": "   ✅ 注册节点: 灰度化", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.844", "level": "INFO", "message": "   ✅ 注册节点: 高斯模糊", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.846", "level": "INFO", "message": "   ✅ 注册节点: 中值滤波", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.850", "level": "INFO", "message": "   ✅ 注册节点: 双边滤波", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.854", "level": "INFO", "message": "   ✅ 注册节点: 亮度对比度", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.857", "level": "INFO", "message": "   ✅ 注册节点: 直方图均衡化", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.861", "level": "INFO", "message": "   ✅ 注册节点: 阈值二值化", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.866", "level": "INFO", "message": "   ✅ 注册节点: 自适应阈值", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.869", "level": "INFO", "message": "   ✅ 注册节点: 形态学操作", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.872", "level": "INFO", "message": "   ✅ 注册节点: 图像缩放", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.878", "level": "INFO", "message": "   ✅ 注册节点: 图像旋转", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.884", "level": "INFO", "message": "   ✅ 注册节点: 图像评估", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.888", "level": "INFO", "message": "   ✅ 注册节点: Canny算子", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.895", "level": "INFO", "message": "   ✅ 注册节点: Sobel算子", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.897", "level": "INFO", "message": "   ✅ 注册节点: 轮廓分析", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.903", "level": "INFO", "message": "   ✅ 注册节点: Laplacian算子", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.907", "level": "INFO", "message": "   ✅ 注册节点: Harris角点", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.912", "level": "INFO", "message": "   ✅ 注册节点: Hough直线", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.915", "level": "INFO", "message": "   ✅ 注册节点: Hough圆", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.920", "level": "INFO", "message": "   ✅ 注册节点: 模板创建", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.924", "level": "INFO", "message": "   ✅ 注册节点: 模板匹配", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.927", "level": "INFO", "message": "   ✅ 注册节点: 加载图像", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.931", "level": "INFO", "message": "   ✅ 注册节点: 保存图像", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.936", "level": "INFO", "message": "   ✅ 注册节点: 图像显示", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.940", "level": "INFO", "message": "   ✅ 注册节点: 相机采集", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.947", "level": "INFO", "message": "   ✅ 注册节点: 实时预览", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.950", "level": "INFO", "message": "   ✅ 注册节点: 视频录制", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.956", "level": "INFO", "message": "   ✅ 注册节点: 快速检测", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.959", "level": "INFO", "message": "   ✅ 注册节点: 数据显示", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.965", "level": "INFO", "message": "   ✅ 注册节点: PLC通信", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.968", "level": "INFO", "message": "   ✅ 注册节点: 数据输出", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.972", "level": "INFO", "message": "   ✅ 注册节点: 机器人通信", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.977", "level": "INFO", "message": "   ✅ 注册节点: 圆检测", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.982", "level": "INFO", "message": "   ✅ 注册节点: 金字塔", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:22.986", "level": "INFO", "message": "✅ 插件 内置节点 加载完成，注册 35 个节点", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 387, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.011", "level": "INFO", "message": "   📋 注册到工作流: 图像操作", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.015", "level": "INFO", "message": "   📋 注册到工作流: 灰度化", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.021", "level": "INFO", "message": "   📋 注册到工作流: 高斯模糊", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.024", "level": "INFO", "message": "   📋 注册到工作流: 中值模糊", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.028", "level": "INFO", "message": "   📋 注册到工作流: 双边滤波", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.032", "level": "INFO", "message": "   📋 注册到工作流: 亮度对比度", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.038", "level": "INFO", "message": "   📋 注册到工作流: 直方图均衡化", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.042", "level": "INFO", "message": "   📋 注册到工作流: 阈值处理", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.045", "level": "INFO", "message": "   📋 注册到工作流: 自适应阈值", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.049", "level": "INFO", "message": "   📋 注册到工作流: 形态学", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.053", "level": "INFO", "message": "   📋 注册到工作流: 图像缩放", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.057", "level": "INFO", "message": "   📋 注册到工作流: 图像旋转", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.060", "level": "INFO", "message": "   📋 注册到工作流: 图像评估", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.066", "level": "INFO", "message": "   📋 注册到工作流: Canny算子", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.071", "level": "INFO", "message": "   📋 注册到工作流: Sobel算子", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.076", "level": "INFO", "message": "   📋 注册到工作流: 轮廓分析", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.080", "level": "INFO", "message": "   📋 注册到工作流: Laplacian算子", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.087", "level": "INFO", "message": "   📋 注册到工作流: Harris角点", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.091", "level": "INFO", "message": "   📋 注册到工作流: Hough直线", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.096", "level": "INFO", "message": "   📋 注册到工作流: Hough圆", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.101", "level": "INFO", "message": "   📋 注册到工作流: 模板创建", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.106", "level": "INFO", "message": "   📋 注册到工作流: 模板匹配", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.111", "level": "INFO", "message": "   📋 注册到工作流: 图像加载", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.115", "level": "INFO", "message": "   📋 注册到工作流: 图像保存", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.119", "level": "INFO", "message": "   📋 注册到工作流: 图像显示", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.122", "level": "INFO", "message": "   📋 注册到工作流: 相机采集", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.126", "level": "INFO", "message": "   📋 注册到工作流: 实时预览", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.130", "level": "INFO", "message": "   📋 注册到工作流: 视频录制", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.132", "level": "INFO", "message": "   📋 注册到工作流: 快速检测", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.137", "level": "INFO", "message": "   📋 注册到工作流: JSON显示", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.139", "level": "INFO", "message": "   📋 注册到工作流: PLC通信", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.145", "level": "INFO", "message": "   📋 注册到工作流: 数据输出", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.148", "level": "INFO", "message": "   📋 注册到工作流: 机器人通信", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.155", "level": "INFO", "message": "   📋 注册到工作流: 圆检测", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.158", "level": "INFO", "message": "   📋 注册到工作流: 金字塔", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.161", "level": "INFO", "message": "✅ ✅ 插件 内置节点 注册完成", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 124, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.165", "level": "INFO", "message": "\n--- 处理插件: OCR识别 ---", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 107, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.199", "level": "INFO", "message": "   ✅ 注册节点: OCR 文字识别", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.203", "level": "INFO", "message": "   ✅ 注册节点: OCR 表格识别", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.206", "level": "INFO", "message": "   ✅ 注册节点: OCR 版面分析", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.209", "level": "INFO", "message": "✅ 插件 OCR识别 加载完成，注册 3 个节点", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 387, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.217", "level": "INFO", "message": "   📋 注册到工作流: OCR 文字识别", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.221", "level": "INFO", "message": "   📋 注册到工作流: OCR 表格识别", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.225", "level": "INFO", "message": "   📋 注册到工作流: OCR 版面分析", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.229", "level": "INFO", "message": "✅ ✅ 插件 OCR识别 注册完成", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 124, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.231", "level": "INFO", "message": "\n--- 处理插件: YOLO视觉 ---", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 107, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.266", "level": "INFO", "message": "   ✅ 注册节点: 目标检测", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.271", "level": "INFO", "message": "   ✅ 注册节点: 图像分类", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.274", "level": "INFO", "message": "   ✅ 注册节点: 实例分割", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.278", "level": "INFO", "message": "   ✅ 注册节点: 姿态估计", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.282", "level": "INFO", "message": "   ✅ 注册节点: 标注辅助", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.285", "level": "INFO", "message": "   ✅ 注册节点: 模型训练", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.288", "level": "INFO", "message": "   ✅ 注册节点: 模型量化", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 383, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.292", "level": "INFO", "message": "✅ 插件 YOLO视觉 加载完成，注册 7 个节点", "module": "plugin_manager", "func_name": "load_plugin_nodes", "line_number": 387, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.312", "level": "INFO", "message": "   📋 注册到工作流: 目标检测", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.316", "level": "INFO", "message": "   📋 注册到工作流: 图像分类", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.321", "level": "INFO", "message": "   📋 注册到工作流: 实例分割", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.325", "level": "INFO", "message": "   📋 注册到工作流: 姿态估计", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.330", "level": "INFO", "message": "   📋 注册到工作流: 标注辅助", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.334", "level": "INFO", "message": "   📋 注册到工作流: 模型训练", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.336", "level": "INFO", "message": "   📋 注册到工作流: 模型量化", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 121, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.340", "level": "INFO", "message": "✅ ✅ 插件 YOLO视觉 注册完成", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 124, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.345", "level": "INFO", "message": "\n============================================================", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 131, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.351", "level": "INFO", "message": "✅ ✅ 节点注册完成，共注册 45 个节点类型", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 132, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.357", "level": "INFO", "message": "============================================================", "module": "node_registry", "func_name": "register_nodes_to_graph", "line_number": 133, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.379", "level": "INFO", "message": "🔄 切换到工作流: 工作流 1", "module": "project_ui_manager", "func_name": "on_tab_changed", "line_number": 168, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.382", "level": "INFO", "message": "首次创建工作流，初始化共享组件...", "module": "project_ui_manager", "func_name": "add_workflow_tab", "line_number": 109, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.394", "level": "INFO", "message": "📋 从插件 内置节点 获取到 group 排序: ['Image_Source', 'Image_Analysis', 'Image_Transform', 'Image_Process', 'Integration', 'OCR', 'YOLO']", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1796, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.398", "level": "INFO", "message": "🔄 节点库标签重命名: 'Image_Analysis' -> '图像分析'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.402", "level": "INFO", "message": "🔄 节点库标签重命名: 'Image_Transform' -> '图像变换'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.405", "level": "INFO", "message": "🔄 节点库标签重命名: 'Image_Process' -> '图像处理'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.412", "level": "INFO", "message": "🔄 节点库标签重命名: 'Image_Source' -> '图像源'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.419", "level": "INFO", "message": "🔄 节点库标签重命名: 'Integration' -> '系统集成'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1811, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.424", "level": "INFO", "message": "🔄 节点库标签重命名: 'ocr_vision' -> 'OCR'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1815, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.429", "level": "INFO", "message": "🔄 节点库标签重命名: 'yolo_vision' -> 'YOLO'", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1815, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.433", "level": "INFO", "message": "🔄 排序后的标签顺序: ['图像源', '图像分析', '图像变换', '图像处理', '系统集成', 'OCR', 'YOLO', 'nodeGraphQt.nodes']", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1840, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.439", "level": "INFO", "message": "✅ 节点库标签重命名和排序完成", "module": "main_window", "func_name": "_rename_palette_tabs_by_category", "line_number": 1861, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.445", "level": "INFO", "message": "✅ 节点库按知识结构重新分组完成", "module": "main_window", "func_name": "_regroup_nodes_by_knowledge_structure", "line_number": 1757, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.448", "level": "INFO", "message": "✅ nodeGraphQt.nodes 标签已隐藏", "module": "main_window", "func_name": "_customize_node_palette", "line_number": 1549, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.464", "level": "INFO", "message": "✅ 共享组件初始化完成", "module": "main_window", "func_name": "_initialize_shared_components", "line_number": 461, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.469", "level": "INFO", "message": "🔄 切换到工作流: 工作流 1", "module": "project_ui_manager", "func_name": "on_tab_changed", "line_number": 168, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.477", "level": "INFO", "message": "✅ ✅ 添加工作流标签页: 工作流 1", "module": "project_ui_manager", "func_name": "add_workflow_tab", "line_number": 116, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.515", "level": "INFO", "message": "启动时应用保存的主题: light", "module": "theme", "func_name": "_apply_saved_theme", "line_number": 117, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.538", "level": "INFO", "message": "主题已切换为: light", "module": "theme", "func_name": "apply_theme", "line_number": 159, "context": {}}
+{"timestamp": "2026-05-15 08:24:23.570", "level": "INFO", "message": "🎨 启动时应用主题: light", "module": "main_window", "func_name": "_apply_theme_on_startup", "line_number": 1375, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.752", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.756", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.772", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.777", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.783", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.788", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.800", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.805", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.810", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.815", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.819", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.823", "level": "ERROR", "message": "No property \"74.0\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.947", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.954", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.959", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.964", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.969", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.974", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.979", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.985", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.989", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.994", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:56.999", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.003", "level": "ERROR", "message": "No property \"73.0\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.164", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.170", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.175", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.179", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.184", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.189", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.193", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.199", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.203", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.207", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.212", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:57.216", "level": "ERROR", "message": "No property \"72.0\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.432", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.441", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.451", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.459", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.464", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.472", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.477", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.482", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.487", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.492", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.495", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.500", "level": "ERROR", "message": "No property \"71.0\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.768", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.774", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.777", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.783", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.790", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.794", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.798", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.803", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.807", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.810", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.815", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:58.820", "level": "ERROR", "message": "No property \"70.0\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.275", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.284", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.294", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.299", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.306", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.312", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.317", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.322", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.328", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.333", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.336", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.341", "level": "ERROR", "message": "No property \"71.0\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.560", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.568", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.579", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.588", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.595", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.600", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.605", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.609", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.614", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.618", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.623", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.627", "level": "ERROR", "message": "No property \"72.0\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.795", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.801", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.808", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.814", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.820", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.826", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.833", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.836", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.843", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.848", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.852", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:24:59.857", "level": "ERROR", "message": "No property \"73.0\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.011", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.025", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.032", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.040", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.045", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.050", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.054", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.059", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.061", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.068", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.072", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.076", "level": "ERROR", "message": "No property \"74.0\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.573", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.584", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.594", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.600", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.606", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.614", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.619", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.623", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.631", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.636", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.640", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.645", "level": "ERROR", "message": "No property \"10\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.838", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.843", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.849", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.854", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.859", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.863", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.867", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.872", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.878", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.882", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.888", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:00.892", "level": "ERROR", "message": "No property \"11\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.049", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.055", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.060", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.065", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.071", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.075", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.079", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.084", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.088", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.092", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.097", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.100", "level": "ERROR", "message": "No property \"12\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.505", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.514", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.522", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.527", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.533", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.539", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.545", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.550", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.554", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.558", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.563", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.567", "level": "ERROR", "message": "No property \"11\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.779", "level": "ERROR", "message": "Traceback (most recent call last):", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.783", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 60, in redo", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.788", "level": "ERROR", "message": "self.set_node_property(self.name, self.new_val)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.792", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\commands.py\", line 31, in set_node_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.796", "level": "ERROR", "message": "model.set_property(name, value)", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.802", "level": "ERROR", "message": "File \"D:\\example\\projects\\StduyOpenCV\\.venv\\lib\\site-packages\\NodeGraphQt\\base\\model.py\", line 188, in set_property", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.806", "level": "ERROR", "message": "raise NodePropertyError('No property \"{}\"'.format(name))", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.811", "level": "ERROR", "message": "NodeGraphQt.errors", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.814", "level": "ERROR", "message": ".", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.820", "level": "ERROR", "message": "NodePropertyError", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.823", "level": "ERROR", "message": ":", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}
+{"timestamp": "2026-05-15 08:25:01.829", "level": "ERROR", "message": "No property \"10\"", "module": "stderr", "func_name": "write", "line_number": 75, "context": {}}

@@ -18,7 +18,7 @@ from PySide2.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLa
 from PySide2.QtCore import Qt, QTimer
 from PySide2.QtGui import QImage, QPixmap
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 
 
 class RealTimePreviewNode(BaseNode):
@@ -50,14 +50,10 @@ class RealTimePreviewNode(BaseNode):
         # 无输入输出端口（通过订阅接收数据）
         
         # === 配置参数 ===
-        self.add_combo_menu(
-            'max_fps',
-            '最大帧率',
-            items=['15', '20', '25', '30', '60'],
-            tab='基本配置'
-        )
-        
-        self.set_property('max_fps', '30')
+        self._param_container = ParameterContainerWidget(self.view, 'realtime_preview_params', '')
+        self._param_container.add_combobox('max_fps', '最大帧率', items=['15', '20', '25', '30', '60'])
+        self._param_container.set_value_changed_callback(self._on_param_changed)
+        self.add_custom_widget(self._param_container, tab='基本配置')
         
         # 内部状态
         self._latest_frame = None
@@ -69,6 +65,9 @@ class RealTimePreviewNode(BaseNode):
         self._frame_count = 0
         self._last_stats_time = time.time()
         self._current_fps = 0.0
+        
+    def _on_param_changed(self, name, value):
+        self.set_property(name, str(value))
         
     def on_subscribed_by(self, publisher_node):
         """
