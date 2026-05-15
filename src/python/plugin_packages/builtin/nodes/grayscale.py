@@ -2,7 +2,7 @@
 灰度化节点 - 将彩色图像转换为灰度图像
 """
 
-from shared_libs.node_base import BaseNode
+from shared_libs.node_base import BaseNode, ParameterContainerWidget
 import cv2
 import numpy as np
 
@@ -22,7 +22,6 @@ class GrayscaleNode(BaseNode):
     __identifier__ = 'preprocessing'
     NODE_NAME = '灰度化'
     
-    # 资源等级声明
     resource_level = "light"
     hardware_requirements = {
         'cpu_cores': 1,
@@ -34,11 +33,12 @@ class GrayscaleNode(BaseNode):
     def __init__(self):
         super(GrayscaleNode, self).__init__()
         
-        # 输入端口
         self.add_input('输入图像', color=(100, 255, 100))
-        
-        # 输出端口
         self.add_output('输出图像', color=(100, 255, 100))
+        
+        self._param_container = ParameterContainerWidget(self.view, 'grayscale_params', '')
+        # self._param_container.add_text_input('_placeholder', '', text='')
+        self.add_custom_widget(self._param_container, tab='properties')
     
     def process(self, inputs=None):
         """
@@ -51,7 +51,6 @@ class GrayscaleNode(BaseNode):
             dict: 包含输出图像的字典
         """
         try:
-            # Step 1: 获取输入图像
             if not inputs or len(inputs) == 0 or inputs[0] is None:
                 self.log_warning("未接收到输入图像")
                 return {'输出图像': None}
@@ -62,10 +61,7 @@ class GrayscaleNode(BaseNode):
                 self.log_error("输入图像格式错误")
                 return {'输出图像': None}
             
-            # Step 2: 执行灰度化转换
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            
-            # Step 3: 转换回 BGR 格式以便显示
             gray_bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
             
             self.log_success("灰度化完成")
