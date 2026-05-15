@@ -37,7 +37,7 @@ class GrayscaleNode(BaseNode):
         self.add_output('输出图像', color=(100, 255, 100))
         
         self._param_container = ParameterContainerWidget(self.view, 'grayscale_params', '')
-        self._param_container.add_text_input('_placeholder', '', text='')
+        # self._param_container.add_text_input('_placeholder', '', text='')
         self.add_custom_widget(self._param_container, tab='properties')
     
     def process(self, inputs=None):
